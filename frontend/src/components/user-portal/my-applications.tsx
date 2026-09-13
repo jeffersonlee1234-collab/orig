@@ -1262,16 +1262,13 @@ function DigitalIdCardModal({
         </div>
 
         {/* ── MODAL FOOTER ACTION BAR ── */}
-        <div className="p-4 border-t border-gray-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[11px] text-gray-500 leading-snug">
-            Compliant with official Quezon City PDAO &amp; OSCA card issuance guidelines.
-          </p>
+        <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={isDownloading}
               onClick={() => handleDownloadSide("front")}
-              className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Front (PNG)</span>
@@ -1280,20 +1277,20 @@ function DigitalIdCardModal({
               type="button"
               disabled={isDownloading}
               onClick={() => handleDownloadSide("back")}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Back (PNG)</span>
             </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
-            >
-              Close
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
