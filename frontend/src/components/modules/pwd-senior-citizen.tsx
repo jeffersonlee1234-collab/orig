@@ -618,20 +618,6 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function getSampleFallbackDoc(name: string): string {
-  const n = (name || "").toLowerCase()
-  if (n.includes("loss") || n.includes("affidavit")) return "/samples/AFFIDAVIT OF LOSS.webp"
-  if (n.includes("2x2") || n.includes("picture (2x2)") || n.includes("id picture") || n.includes("id photo") || n.includes("idphoto") || n.includes("1x1") || n.includes("photo") || n.includes("picture")) return "/samples/ID PICTURE (2X2).webp"
-  if (n.includes("whole body") || n.includes("body")) return "/samples/WHOLE BODY.jpg"
-  if (n.includes("signature") || n.includes("pirma")) return "/samples/SIGNATURE.avif"
-  if (n.includes("disability") || n.includes("medical") || n.includes("certificate of disability")) return "/samples/CERTIFICATE OF DISABILITY.jpg"
-  if (n.includes("residence") || n.includes("residency")) return "/samples/PROOF OF RESIDENCE.webp"
-  if (n.includes("barangay")) return "/samples/BARANGAY CERTIFICATE.webp"
-  if (n.includes("birth") || n.includes("psa")) return "/samples/BIRTH CERTIFICATE OF MINOR.jpg"
-  if (n.includes("gov") || n.includes("valid id") || n.includes("government")) return "/samples/sample_valid_id.png"
-  return "/samples/sample_valid_id.png"
-}
-
 function getDocImageUrl(doc: ApplicationDocument | null): string {
   if (!doc) return ""
   const candidate = doc.fileUrl || (doc as any).url || (doc as any).previewUrl || (doc as any).path || (doc as any).filePath || (doc as any).dataUrl || (doc as any).base64
