@@ -645,85 +645,53 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
 async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
   let soloApps: SoloParentSubmission[] = []
   let childApps: ChildWelfareSubmission[] = []
+  let backendFetched = false
 
   try {
     const [soloRes, childRes] = await Promise.all([
-      fetch(`${API_BASE}/solo-parent/admin/all?limit=100&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
-      fetch(`${API_BASE}/child-welfare/admin/all?limit=100&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+      fetch(`${API_BASE}/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+      fetch(`${API_BASE}/child-welfare/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
     ])
 
     if (soloRes && soloRes.ok) {
       const soloData = await soloRes.json()
-      soloApps = (soloData.applications || []).map(mapSoloParentRow)
+      const rawSolo = Array.isArray(soloData) ? soloData : soloData.applications || []
+      soloApps = rawSolo.map(mapSoloParentRow)
+      backendFetched = true
     }
     if (childRes && childRes.ok) {
       const childData = await childRes.json()
-      childApps = (childData.applications || []).map(mapChildWelfareRow)
+      const rawChild = Array.isArray(childData) ? childData : childData.applications || []
+      childApps = rawChild.map(mapChildWelfareRow)
+      backendFetched = true
     }
   } catch (e) {
     console.warn("API fetch error in welfare admin:", e)
   }
 
-  // Also sync / merge any locally stored offline/live submissions
-  try {
-    const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-    if (Array.isArray(localSolo) && localSolo.length > 0) {
-      let changed = false
-      for (const item of localSolo) {
-        const ref = item.reference_number || item.referenceNumber || item.ref
-        const existing = soloApps.find((a) => (ref && a.referenceNumber === ref) || a.id === `SP-${item.id}` || a.id === item.id)
-        if (!existing && ref) {
-          soloApps.unshift(mapSoloParentRow({
-            ...item,
-            id: item.id || Date.now(),
-            reference_number: ref,
-            created_at: item.created_at || item.submittedAt || new Date().toISOString(),
-            application_status: item.application_status || item.status || "pending",
-          }))
-        } else if (existing) {
-          // If backend has approved/rejected it, sync local storage copy
-          if (existing.status !== item.status || existing.status !== item.application_status) {
-            item.status = existing.status
-            item.application_status = existing.status
-            item.assigned_id_number = existing.assignedIdNumber || item.assigned_id_number
-            item.solo_parent_id_number = existing.soloParentIdNumber || item.solo_parent_id_number
-            changed = true
-          }
-        }
+  // If backend returned data, save fresh copy to localStorage
+  if (backendFetched) {
+    try {
+      if (soloApps.length > 0) {
+        localStorage.setItem("solo_parent_applications", JSON.stringify(soloApps))
       }
-      if (changed) {
-        localStorage.setItem("solo_parent_applications", JSON.stringify(localSolo))
+      if (childApps.length > 0) {
+        localStorage.setItem("child_welfare_applications", JSON.stringify(childApps))
       }
-    }
-
-    const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
-    if (Array.isArray(localChild) && localChild.length > 0) {
-      let changed = false
-      for (const item of localChild) {
-        const ref = item.reference_number || item.referenceNumber || item.ref
-        const existing = childApps.find((a) => (ref && a.referenceNumber === ref) || a.id === `CW-${item.id}` || a.id === item.id)
-        if (!existing && ref) {
-          childApps.unshift(mapChildWelfareRow({
-            ...item,
-            id: item.id || Date.now(),
-            reference_number: ref,
-            created_at: item.created_at || item.submittedAt || new Date().toISOString(),
-            application_status: item.application_status || item.status || "pending",
-          }))
-        } else if (existing) {
-          if (existing.status !== item.status || existing.status !== item.application_status) {
-            item.status = existing.status
-            item.application_status = existing.status
-            item.approved_amount = existing.approvedAmount || item.approved_amount
-            changed = true
-          }
-        }
+    } catch {}
+  } else {
+    // Only use localStorage if backend was completely offline
+    try {
+      const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+      if (Array.isArray(localSolo) && localSolo.length > 0) {
+        soloApps = localSolo.map(mapSoloParentRow)
       }
-      if (changed) {
-        localStorage.setItem("child_welfare_applications", JSON.stringify(localChild))
+      const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+      if (Array.isArray(localChild) && localChild.length > 0) {
+        childApps = localChild.map(mapChildWelfareRow)
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   return [...soloApps, ...childApps].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
@@ -2504,7 +2472,7 @@ export default function SoloParentChildWelfareAdmin() {
 
     const interval = setInterval(() => {
       loadApplications(true)
-    }, 8000)
+    }, 1500)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       loadApplications(true)
@@ -2519,6 +2487,23 @@ export default function SoloParentChildWelfareAdmin() {
       window.removeEventListener("focus", handleSync)
     }
   }, [])
+
+  // Persist applications to state & localStorage & broadcast realtime
+  const updateApplications = (updater: (prev: WelfareSubmission[]) => WelfareSubmission[]) => {
+    setApplications((prev) => {
+      const next = updater(prev)
+      try {
+        const solo = next.filter(isSoloParent)
+        const child = next.filter((a) => !isSoloParent(a))
+        localStorage.setItem("solo_parent_applications", JSON.stringify(solo))
+        localStorage.setItem("child_welfare_applications", JSON.stringify(child))
+        notifyApplicationChange("STATUS_CHANGED", "solo_parent")
+        notifyApplicationChange("STATUS_CHANGED", "child_welfare")
+      } catch {}
+      return next
+    })
+  }
+
   const [selectedApp, setSelectedApp] = useState<WelfareSubmission | null>(null)
   const [cardApp, setCardApp] = useState<WelfareSubmission | null>(null)
   const [filterCategory, setFilterCategory] = useState<"all" | "Solo Parent" | "Child Welfare">("all")
@@ -2529,65 +2514,26 @@ export default function SoloParentChildWelfareAdmin() {
     const app = applications.find((a) => a.id === id || a.referenceNumber === id)
     if (!app) return
 
-    // 1. Instant 0ms Optimistic UI update
-    setApplications((prev) =>
+    const approvedDate = new Date().toISOString()
+    const targetRef = app.referenceNumber || ""
+
+    // 1. Instant 0ms Optimistic UI + Storage + Real-time Notification
+    updateApplications((prev) =>
       prev.map((a) => {
-        if (a.id === app.id || a.referenceNumber === app.referenceNumber) {
+        if (a.id === app.id || (targetRef && a.referenceNumber === targetRef)) {
           return {
             ...a,
             status: "approved",
             assignedIdNumber: value,
             soloParentIdNumber: value,
             approvedAmount: isSoloParent(app) ? undefined : value,
-            approvedDate: new Date().toISOString(),
+            approvedBy: "Social Worker Staff",
+            approvedDate,
           }
         }
         return a
       })
     )
-
-    // 2. Instant Local Storage Sync
-    try {
-      if (isSoloParent(app)) {
-        const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-        const updatedSolo = localSolo.map((item: any) => {
-          const itemRef = item.reference_number || item.referenceNumber || item.ref
-          if (item.id === app.id || itemRef === app.referenceNumber) {
-            return {
-              ...item,
-              status: "approved",
-              application_status: "approved",
-              assignedIdNumber: value,
-              soloParentIdNumber: value,
-              assigned_id_number: value,
-              solo_parent_id_number: value,
-              approved_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }
-          }
-          return item
-        })
-        localStorage.setItem("solo_parent_applications", JSON.stringify(updatedSolo))
-      } else {
-        const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
-        const updatedChild = localChild.map((item: any) => {
-          const itemRef = item.reference_number || item.referenceNumber || item.ref
-          if (item.id === app.id || itemRef === app.referenceNumber) {
-            return {
-              ...item,
-              status: "approved",
-              application_status: "approved",
-              approvedAmount: value,
-              approved_amount: value,
-              approved_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }
-          }
-          return item
-        })
-        localStorage.setItem("child_welfare_applications", JSON.stringify(updatedChild))
-      }
-    } catch {}
 
     try {
       await approveSubmission(app, value)
@@ -2605,7 +2551,7 @@ export default function SoloParentChildWelfareAdmin() {
                 referenceNumber: app.referenceNumber,
                 classification: app.classification,
                 applicationType: app.applicationType,
-                approvedDate: new Date().toISOString(),
+                approvedDate,
                 contactNumber: app.contactNo,
                 address: [app.addressHouseNo, app.addressStreet, app.addressBarangay, app.addressCityMunicipality].filter(Boolean).join(", "),
               }),
@@ -2700,7 +2646,6 @@ export default function SoloParentChildWelfareAdmin() {
       await loadApplications(true)
     } catch (err) {
       console.error(err)
-      // Non-blocking fallback since local state & cache already updated
       notifyApplicationChange("APPLICATION_APPROVED", isSoloParent(app) ? "solo_parent" : "child_welfare", app.referenceNumber)
     }
   }
@@ -2709,10 +2654,12 @@ export default function SoloParentChildWelfareAdmin() {
     const app = applications.find((a) => a.id === id || a.referenceNumber === id)
     if (!app) return
 
-    // 1. Instant Optimistic UI Update
-    setApplications((prev) =>
+    const targetRef = app.referenceNumber || ""
+
+    // 1. Instant Optimistic UI Update + Storage
+    updateApplications((prev) =>
       prev.map((a) => {
-        if (a.id === app.id || a.referenceNumber === app.referenceNumber) {
+        if (a.id === app.id || (targetRef && a.referenceNumber === targetRef)) {
           return {
             ...a,
             status: "rejected",
@@ -2722,45 +2669,6 @@ export default function SoloParentChildWelfareAdmin() {
         return a
       })
     )
-
-    // 2. Instant Local Storage Sync
-    try {
-      if (isSoloParent(app)) {
-        const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-        const updatedSolo = localSolo.map((item: any) => {
-          const itemRef = item.reference_number || item.referenceNumber || item.ref
-          if (item.id === app.id || itemRef === app.referenceNumber) {
-            return {
-              ...item,
-              status: "rejected",
-              application_status: "rejected",
-              rejection_reason: reason,
-              rejectionReason: reason,
-              updated_at: new Date().toISOString(),
-            }
-          }
-          return item
-        })
-        localStorage.setItem("solo_parent_applications", JSON.stringify(updatedSolo))
-      } else {
-        const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
-        const updatedChild = localChild.map((item: any) => {
-          const itemRef = item.reference_number || item.referenceNumber || item.ref
-          if (item.id === app.id || itemRef === app.referenceNumber) {
-            return {
-              ...item,
-              status: "rejected",
-              application_status: "rejected",
-              rejection_reason: reason,
-              rejectionReason: reason,
-              updated_at: new Date().toISOString(),
-            }
-          }
-          return item
-        })
-        localStorage.setItem("child_welfare_applications", JSON.stringify(updatedChild))
-      }
-    } catch {}
 
     try {
       await rejectSubmission(app, reason)
