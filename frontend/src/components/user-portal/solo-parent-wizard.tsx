@@ -934,26 +934,6 @@ export default function SoloParentApplicationWizard({
   }
 
   const fetchAllSoloParentApps = async () => {
-    const allApps: any[] = []
-    const seenIds = new Set<string>()
-
-    // 1. Read local cache synchronously first
-    try {
-      const raw = localStorage.getItem("solo_parent_applications")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          parsed.forEach((a: any) => {
-            const key = a?.id || a?.reference_number || a?.referenceNumber
-            if (key && !seenIds.has(String(key))) {
-              seenIds.add(String(key))
-              allApps.push(a)
-            }
-          })
-        }
-      }
-    } catch {}
-
     const prof = getCurrentUserProfile()
     const uid = userId || prof.id || ""
     const qcid = (formData?.qcidNumber || prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").trim()
@@ -962,7 +942,6 @@ export default function SoloParentApplicationWizard({
     const ln = (formData?.lastName || prof.lastName || userProfile?.lastName || "").trim()
     const activeRef = reference || blockedReference || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : "")
 
-    // 2. Fetch in parallel with reliable timeout so it never blocks or takes long
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 6000)
@@ -987,6 +966,9 @@ export default function SoloParentApplicationWizard({
       const results = await Promise.allSettled(promises)
       clearTimeout(timeoutId)
 
+      const backendApps: any[] = []
+      const seenIds = new Set<string>()
+
       for (const resResult of results) {
         if (resResult.status === "fulfilled" && resResult.value.ok) {
           try {
@@ -997,7 +979,7 @@ export default function SoloParentApplicationWizard({
                 const key = a?.id || a?.reference_number || a?.referenceNumber
                 if (key && !seenIds.has(String(key))) {
                   seenIds.add(String(key))
-                  allApps.unshift(a)
+                  backendApps.push(a)
                 }
               })
             }
@@ -1005,14 +987,31 @@ export default function SoloParentApplicationWizard({
         }
       }
 
-      if (allApps.length > 0) {
+      // If backend returned valid responses, synchronize localStorage
+      if (backendApps.length > 0) {
         try {
-          localStorage.setItem("solo_parent_applications", JSON.stringify(allApps))
+          localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
         } catch {}
+        return backendApps
+      } else {
+        // Backend has 0 active applications — purge stale cache
+        try {
+          localStorage.removeItem("solo_parent_applications")
+        } catch {}
+        return []
       }
     } catch {}
 
-    return allApps
+    // Fallback to local cache only if network failed completely
+    try {
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+
+    return []
   }
 
   const handleVerifyId = async () => {
@@ -1497,11 +1496,24 @@ export default function SoloParentApplicationWizard({
           }
         }
 
+        if (matchedUserApps.length === 0 && !isBlockedFound) {
+          isBlockedFound = false
+          reasonFound = null
+          refFound = ""
+          appFound = null
+          try {
+            localStorage.removeItem("solo_parent_applications")
+          } catch {}
+        }
+
         if (isMounted) {
           setIsBlocked(isBlockedFound)
           setBlockReason(reasonFound)
           setBlockedReference(refFound)
           setBlockedApp(appFound)
+          if (!isBlockedFound) {
+            setSubmissionStage("form")
+          }
           onBlockedStatusChange?.(isBlockedFound)
         }
       } catch (err) {
@@ -1517,7 +1529,18 @@ export default function SoloParentApplicationWizard({
     const interval = setInterval(() => checkEligibility(false), 1000)
     const handleUpdate = () => checkEligibility(false)
 
-    const unsubscribe = subscribeToRealtimeChanges(() => {
+    const unsubscribe = subscribeToRealtimeChanges((event) => {
+      if (event?.type === "APPLICATION_DELETED" || event?.type === "APPLICATION_STATUS_CHANGED") {
+        try {
+          localStorage.removeItem("solo_parent_applications")
+        } catch {}
+        setIsBlocked(false)
+        setBlockReason(null)
+        setBlockedReference("")
+        setBlockedApp(null)
+        setSubmissionStage("form")
+        setStep(1)
+      }
       checkEligibility(false)
     })
 
@@ -2244,6 +2267,27 @@ export default function SoloParentApplicationWizard({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 max-w-md mx-auto w-full">
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  localStorage.removeItem("solo_parent_applications")
+                  localStorage.removeItem("solo_parent_reapplying")
+                  localStorage.removeItem(`solo_parent_reapplying_${idStatus || "new"}`)
+                } catch {}
+                ;(window as any).__isFormDirty = false
+                setIsBlocked(false)
+                setBlockReason(null)
+                setBlockedReference("")
+                setBlockedApp(null)
+                setSubmissionStage("form")
+                setStep(1)
+                setReference("")
+              }}
+              className="w-full py-2.5 px-4 rounded-xl border border-blue-600 bg-white hover:bg-blue-50 text-blue-700 text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
+            >
+              {language === "bis" ? "PAG-APPLY PAG-USAB / BAG-ONG FORM" : "MAG-APPLY ULIT / BAGONG FORM"}
+            </button>
             <button
               type="button"
               onClick={() => {
