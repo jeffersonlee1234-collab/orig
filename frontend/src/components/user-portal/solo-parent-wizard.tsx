@@ -1537,7 +1537,7 @@ export default function SoloParentApplicationWizard({
   // ---- Submission & Application State ----
   const [submissionStage, setSubmissionStage] = useState<"form" | "matching" | "pending">("form")
   const [reference, setReference] = useState("")
-  const [redirectCountdown, setRedirectCountdown] = useState<number>(1)
+
 
   useEffect(() => {
     onSubmissionStageChange?.(submissionStage)
