@@ -17,17 +17,6 @@ import ApplyLivelihood from "./components/user-portal/apply-livelihood"
 import ApplyFinancialAid from "./components/user-portal/apply-financial-aid"
 import MyApplications from "./components/user-portal/my-applications"
 
-// Super Admin imports
-import SuperAdminLayout from "./components/Super-admin/SuperAdminLayout"
-import SuperAdminLogin from "./components/Super-admin/SuperAdminLogin"
-import SuperAdminDashboard from "./components/Super-admin/SuperAdminDashboard"
-import UserManagement from "./components/Super-admin/UserManagement"
-import ModuleAccessControl from "./components/Super-admin/ModuleAccessControl"
-import Reports from "./components/Super-admin/Reports"
-import ActivityLog from "./components/Super-admin/ActivityLog"
-import SystemSettings from "./components/Super-admin/SystemSettings"
-import StaffManagement from "./components/Super-admin/StaffManagement"
-
 import { LanguageProvider } from "./components/ui/language-context"
 import { SessionInactivityWatcher } from "./components/ui/session-inactivity-modal"
 
@@ -48,13 +37,10 @@ function getAuthContext() {
   }
 
   const resolvedRole = role || (isAuth ? 'user' : null);
-  const isSuperAdmin = isAuth && resolvedRole === 'super_admin';
   const isStaff = isAuth && (resolvedRole === 'staff' || resolvedRole === 'admin');
-  const isResident = isAuth && !isSuperAdmin && !isStaff;
+  const isResident = isAuth && !isStaff;
 
-  const homePath = isSuperAdmin
-    ? "/super-admin"
-    : isStaff
+  const homePath = isStaff
     ? defaultModulePath
     : isResident
     ? "/portal/overview"
@@ -63,7 +49,6 @@ function getAuthContext() {
   return {
     isAuthenticated: isAuth,
     userRole: resolvedRole,
-    isSuperAdmin,
     isStaff,
     isResident,
     homePath,
@@ -85,30 +70,7 @@ export default function App() {
           <Route path="/register" element={!auth.isAuthenticated ? <Register /> : <Navigate to={auth.homePath} replace />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Super Admin Login */}
-          <Route path="/super-admin/login" element={!auth.isAuthenticated ? <SuperAdminLogin /> : <Navigate to={auth.homePath} replace />} />
-
-          {/* Super Admin Routes */}
-          <Route
-            path="/super-admin"
-            element={
-              auth.isSuperAdmin ? (
-                <SuperAdminLayout />
-              ) : (
-                <Navigate to={auth.isAuthenticated ? auth.homePath : "/super-admin/login"} replace />
-              )
-            }
-          >
-            <Route index element={<SuperAdminDashboard />} />
-            <Route path="user-management" element={<UserManagement />} />
-            <Route path="module-access-control" element={<ModuleAccessControl />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="activity-log" element={<ActivityLog />} />
-            <Route path="settings" element={<SystemSettings />} />
-            <Route path="staff-management" element={<StaffManagement />} />
-          </Route>
-
-          {/* Staff Routes */}
+          {/* Staff / Admin Routes */}
           <Route
             element={
               auth.isStaff ? (
