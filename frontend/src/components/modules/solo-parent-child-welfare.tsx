@@ -21,7 +21,7 @@ import {
   Download,
 } from "lucide-react"
 import { toPng } from "html-to-image"
-import { API_BASE as APP_API_BASE } from "../../config/api"
+import { API_BASE } from "../../config/api"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { useLanguage } from "../ui/language-context"
 import {
@@ -206,8 +206,6 @@ function isSoloParent(app: WelfareSubmission): app is SoloParentSubmission {
 // Backend wiring — fetch mula sa PostgreSQL via Express API
 // =====================================================================================
 
-const API_BASE = `${APP_API_BASE}/api`
-
 function getAdminAuthToken() {
   if (typeof window === "undefined") return ""
   return (
@@ -266,11 +264,11 @@ function resolveFileUrl(fileUrl?: string, filename?: string, isChildWelfare: boo
       return fileUrl
     }
     const clean = fileUrl.startsWith("/") ? fileUrl : `/${fileUrl}`
-    return `${APP_API_BASE}${clean}`
+    return `${API_BASE}${clean}`
   }
   if (filename) {
     const folder = isChildWelfare ? "child-welfare" : "solo-parent"
-    return `${APP_API_BASE}/uploads/${folder}/${filename}`
+    return `${API_BASE}/uploads/${folder}/${filename}`
   }
   return ""
 }
@@ -2650,7 +2648,7 @@ export default function SoloParentChildWelfareAdmin() {
       if (isSoloParent(app)) {
         if (app.email) {
           try {
-            fetch(`${API_BASE}/email/send-solo-parent-id`, {
+            fetch(`${API_BASE}/api/email/send-solo-parent-id`, {
               method: "POST",
               headers: authHeaders(),
               body: JSON.stringify({
@@ -2672,7 +2670,7 @@ export default function SoloParentChildWelfareAdmin() {
 
         // Sync Solo Parent ID claiming to Appointments
         try {
-          fetch(`${APP_API_BASE}/api/appointments`, {
+          fetch(`${API_BASE}/api/appointments`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -2722,7 +2720,7 @@ export default function SoloParentChildWelfareAdmin() {
 
         // 2. Sync to Appointments for payout scheduling
         try {
-          fetch(`${APP_API_BASE}/api/appointments`, {
+          fetch(`${API_BASE}/api/appointments`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
