@@ -208,25 +208,25 @@ function findExistingIdForApplicant(app: ApplicationSubmission, allApps?: Applic
   const isPwdApp = isPWD(app)
   const candidateFields = isPwdApp
     ? [
-        (app as any).existingPwdIdNumber,
-        (app as any).pwdIdNumber,
-        (app as any).oldPwdId,
-        (app as any).existingIdNumber,
-        (app as any).existing_id_number,
-        app.assignedIdNumber,
-        (app as any).assigned_id_number,
-        (app as any).idNumber,
-      ]
+      (app as any).existingPwdIdNumber,
+      (app as any).pwdIdNumber,
+      (app as any).oldPwdId,
+      (app as any).existingIdNumber,
+      (app as any).existing_id_number,
+      app.assignedIdNumber,
+      (app as any).assigned_id_number,
+      (app as any).idNumber,
+    ]
     : [
-        (app as any).seniorIdNumber,
-        (app as any).oldSeniorId,
-        (app as any).oscaId,
-        (app as any).existingIdNumber,
-        (app as any).existing_id_number,
-        app.assignedIdNumber,
-        (app as any).assigned_id_number,
-        (app as any).idNumber,
-      ]
+      (app as any).seniorIdNumber,
+      (app as any).oldSeniorId,
+      (app as any).oscaId,
+      (app as any).existingIdNumber,
+      (app as any).existing_id_number,
+      app.assignedIdNumber,
+      (app as any).assigned_id_number,
+      (app as any).idNumber,
+    ]
 
   for (const c of candidateFields) {
     if (c && typeof c === "string") {
@@ -255,7 +255,7 @@ function findExistingIdForApplicant(app: ApplicationSubmission, allApps?: Applic
     try {
       const raw = localStorage.getItem("pwd_senior_applications")
       if (raw) pool = JSON.parse(raw)
-    } catch {}
+    } catch { }
   }
 
   const appEmail = String(app.email || "").trim().toLowerCase()
@@ -543,9 +543,8 @@ function AvatarCircle({
 }) {
   return (
     <div
-      className={`${sizeClass} shrink-0 gw-avatar ${
-        isPWD(app) ? "gw-avatar--pwd" : "gw-avatar--senior"
-      } text-sm font-bold flex items-center justify-center`}
+      className={`${sizeClass} shrink-0 gw-avatar ${isPWD(app) ? "gw-avatar--pwd" : "gw-avatar--senior"
+        } text-sm font-bold flex items-center justify-center`}
     >
       {initials(app)}
     </div>
@@ -867,9 +866,9 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
             }
           }
         }
-      } catch {}
+      } catch { }
     }
-  } catch {}
+  } catch { }
 
   return fallbackBlob || ""
 }
@@ -902,7 +901,7 @@ export function ApplicantPhotoDisplay({
           setHasFailed(false)
           return
         }
-      } catch {}
+      } catch { }
       setImgSrc("")
       setHasFailed(true)
     }
@@ -919,7 +918,7 @@ export function ApplicantPhotoDisplay({
           setHasFailed(false)
           return
         }
-      } catch {}
+      } catch { }
       setHasFailed(true)
       return
     }
@@ -956,9 +955,8 @@ export function ApplicantPhotoDisplay({
         </div>
       )}
       <div
-        className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${
-          isPwd ? "bg-amber-600" : tag.includes("SOLO") || tag.includes("SSDD") ? "bg-red-900" : "bg-blue-900"
-        }`}
+        className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${isPwd ? "bg-amber-600" : tag.includes("SOLO") || tag.includes("SSDD") ? "bg-red-900" : "bg-blue-900"
+          }`}
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         {tag}
@@ -1089,11 +1087,10 @@ function OfficialIdCardFront({
     >
       {/* Header */}
       <div
-        className={`px-3.5 py-2.5 flex items-center justify-between shadow-xs ${
-          isPwdApp
+        className={`px-3.5 py-2.5 flex items-center justify-between shadow-xs ${isPwdApp
             ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
             : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
-        }`}
+          }`}
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-2">
@@ -1108,11 +1105,10 @@ function OfficialIdCardFront({
           </div>
         </div>
         <span
-          className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-            isPwdApp
+          className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${isPwdApp
               ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
               : "bg-white/20 text-white border-white/30"
-          }`}
+            }`}
           style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
         >
           {isPwdApp ? "PDAO CARD" : "OSCA CARD"}
@@ -1121,11 +1117,10 @@ function OfficialIdCardFront({
 
       {/* Sub-header */}
       <div
-        className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
-          isPwdApp
+        className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${isPwdApp
             ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
             : "bg-amber-400 text-slate-950"
-        }`}
+          }`}
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         {isPwdApp ? "Persons with Disability Affairs Office" : "Office for Senior Citizens Affairs"}
@@ -1253,11 +1248,10 @@ function OfficialIdCardBack({
 
       {/* Back Header Strip */}
       <div
-        className={`px-3.5 py-1.5 flex items-center justify-between shadow-xs relative z-10 ${
-          isPwdApp
+        className={`px-3.5 py-1.5 flex items-center justify-between shadow-xs relative z-10 ${isPwdApp
             ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
             : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
-        }`}
+          }`}
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-1.5">
@@ -1269,11 +1263,10 @@ function OfficialIdCardBack({
           </p>
         </div>
         <span
-          className={`text-[7.5px] font-black px-2 py-0.5 rounded-full border shadow-xs ${
-            isPwdApp
+          className={`text-[7.5px] font-black px-2 py-0.5 rounded-full border shadow-xs ${isPwdApp
               ? "bg-slate-950 text-amber-300 border-slate-800"
               : "bg-amber-400 text-slate-950 border-amber-500"
-          }`}
+            }`}
           style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
         >
           {isPwdApp ? "QC-PDAO" : "QC-OSCA"}
@@ -1283,9 +1276,8 @@ function OfficialIdCardBack({
       <div className="p-3 pt-2 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
         {/* Benefits / Rights List */}
         <div
-          className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
-            isPwdApp ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
-          }`}
+          className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${isPwdApp ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
+            }`}
           style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
         >
           <p className="flex items-start gap-1">
@@ -1309,9 +1301,8 @@ function OfficialIdCardBack({
         >
           <p className="text-[7.5px] font-black text-slate-800 uppercase tracking-wider mb-1">In case of emergency, please notify:</p>
           <div
-            className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${
-              isPwdApp ? "border-amber-200/60" : "border-blue-200/60"
-            }`}
+            className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${isPwdApp ? "border-amber-200/60" : "border-blue-200/60"
+              }`}
             style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
           >
             <div>
@@ -1437,7 +1428,7 @@ function OfficialIdCardModal({
         localEmergencyAddr = u.emergencyAddress || ""
       }
     }
-  } catch {}
+  } catch { }
 
   const emergencyPerson =
     [(app as any).emergencyFirstName, (app as any).emergencyLastName].filter(Boolean).join(" ") ||
@@ -1503,17 +1494,15 @@ function OfficialIdCardModal({
         <div className="flex border-b border-gray-200 bg-gray-50 px-6 pt-3 gap-3">
           <button
             onClick={() => setActiveSide("front")}
-            className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
-              activeSide === "front" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
-            }`}
+            className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${activeSide === "front" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
+              }`}
           >
             FRONT OF ID CARD
           </button>
           <button
             onClick={() => setActiveSide("back")}
-            className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
-              activeSide === "back" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
-            }`}
+            className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${activeSide === "back" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
+              }`}
           >
             BACK OF ID CARD (PRIVILEGES &amp; EMERGENCY)
           </button>
@@ -1683,8 +1672,8 @@ function ApplicationCard({ app, onView, onShowCard }: ApplicationCardProps) {
                 {isSeniorBooklet
                   ? `Booklet ${app.assignedIdNumber.replace(/^(PWD|SENIOR|OSCA)-/i, "")}`
                   : isPWD(app)
-                  ? `ID ${app.assignedIdNumber.replace(/^(SENIOR|OSCA)-/i, "PWD-")}`
-                  : `ID ${app.assignedIdNumber.replace(/^(PWD|OSCA)-/i, "SENIOR-")}`}
+                    ? `ID ${app.assignedIdNumber.replace(/^(SENIOR|OSCA)-/i, "PWD-")}`
+                    : `ID ${app.assignedIdNumber.replace(/^(PWD|OSCA)-/i, "SENIOR-")}`}
               </span>
             )}
           </div>
@@ -1750,8 +1739,8 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
   const idNumber = isPWD(app)
     ? rawIdNumber.replace(/^(SENIOR|OSCA)-/i, "PWD-")
     : isSeniorBooklet
-    ? rawIdNumber.replace(/^(PWD|SENIOR|OSCA)-/i, "")
-    : rawIdNumber.replace(/^PWD-/i, "SENIOR-")
+      ? rawIdNumber.replace(/^(PWD|SENIOR|OSCA)-/i, "")
+      : rawIdNumber.replace(/^PWD-/i, "SENIOR-")
 
   const [rejectionReason, setRejectionReason] = useState(app.rejectionReason || "")
   const [actionMode, setActionMode] = useState<"view" | "approve" | "reject">("view")
@@ -1780,7 +1769,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
         localEmail = u.email || ""
       }
     }
-  } catch {}
+  } catch { }
 
   const emailAddress =
     app.email ||
@@ -1981,20 +1970,20 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                   (app as any).extra_data?.briefDescription ||
                   (app as any).extra_data?.description
                 ) && (
-                  <div className="col-span-2">
-                    <Field
-                      label="Brief description of disability"
-                      value={
-                        (app as any).disabilityDescription ||
-                        (app as any).briefDescription ||
-                        (app as any).description ||
-                        (app as any).extra_data?.disabilityDescription ||
-                        (app as any).extra_data?.briefDescription ||
-                        (app as any).extra_data?.description
-                      }
-                    />
-                  </div>
-                )}
+                    <div className="col-span-2">
+                      <Field
+                        label="Brief description of disability"
+                        value={
+                          (app as any).disabilityDescription ||
+                          (app as any).briefDescription ||
+                          (app as any).description ||
+                          (app as any).extra_data?.disabilityDescription ||
+                          (app as any).extra_data?.briefDescription ||
+                          (app as any).extra_data?.description
+                        }
+                      />
+                    </div>
+                  )}
               </div>
             </div>
           )}
@@ -2124,22 +2113,22 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                 {Boolean(
                   !isSeniorBooklet && !String((app as any).service || "").toLowerCase().includes("senior") &&
                   ((app as any).monthlyHouseholdExpenses ||
-                  (app as any).monthlyExpenses ||
-                  (app as any).householdExpenses ||
-                  (app as any).extra_data?.monthlyHouseholdExpenses)
+                    (app as any).monthlyExpenses ||
+                    (app as any).householdExpenses ||
+                    (app as any).extra_data?.monthlyHouseholdExpenses)
                 ) && (
-                  <div className="col-span-2">
-                    <Field
-                      label="Total monthly household expenses (₱)"
-                      value={
-                        (app as any).monthlyHouseholdExpenses ||
-                        (app as any).monthlyExpenses ||
-                        (app as any).householdExpenses ||
-                        (app as any).extra_data?.monthlyHouseholdExpenses
-                      }
-                    />
-                  </div>
-                )}
+                    <div className="col-span-2">
+                      <Field
+                        label="Total monthly household expenses (₱)"
+                        value={
+                          (app as any).monthlyHouseholdExpenses ||
+                          (app as any).monthlyExpenses ||
+                          (app as any).householdExpenses ||
+                          (app as any).extra_data?.monthlyHouseholdExpenses
+                        }
+                      />
+                    </div>
+                  )}
               </div>
             </div>
           )}
@@ -2523,7 +2512,7 @@ export default function PWDSeniorCitizen() {
               backendFetched = true
               try {
                 localStorage.setItem("pwd_senior_applications", JSON.stringify(combined))
-              } catch {}
+              } catch { }
             }
           }
         } catch (err) {
@@ -2544,7 +2533,7 @@ export default function PWDSeniorCitizen() {
                 )
               }
             }
-          } catch {}
+          } catch { }
         }
 
         combined = combined.map((a: any) => {
@@ -2597,7 +2586,7 @@ export default function PWDSeniorCitizen() {
       try {
         localStorage.setItem("pwd_senior_applications", JSON.stringify(next))
         notifyApplicationChange("STATUS_CHANGED", "pwd_senior")
-      } catch {}
+      } catch { }
       return next
     })
   }
@@ -2612,12 +2601,12 @@ export default function PWDSeniorCitizen() {
       prev.map((app) =>
         app.id === id || (refNo && (app.referenceNumber === refNo || (app as any).reference_no === refNo))
           ? {
-              ...app,
-              status: "approved" as const,
-              assignedIdNumber: idNumber,
-              approvedBy: "Social Worker Admin",
-              approvedDate,
-            }
+            ...app,
+            status: "approved" as const,
+            assignedIdNumber: idNumber,
+            approvedBy: "Social Worker Admin",
+            approvedDate,
+          }
           : app
       )
     )
@@ -2687,8 +2676,8 @@ export default function PWDSeniorCitizen() {
             concern: assistanceName,
             status: "pending",
           }),
-        }).catch(() => {})
-      } catch {}
+        }).catch(() => { })
+      } catch { }
 
       window.dispatchEvent(new Event("appointments_updated"))
       window.dispatchEvent(new Event("financial_disbursements_updated"))
@@ -2719,17 +2708,17 @@ export default function PWDSeniorCitizen() {
           rawType === "renewal"
             ? "Renewal"
             : rawType === "replacement" || rawType === "loss"
-            ? "Replacement / Lost ID"
-            : isSeniorBooklet
-            ? "New Booklet"
-            : "New Application"
+              ? "Replacement / Lost ID"
+              : isSeniorBooklet
+                ? "New Booklet"
+                : "New Application"
         const serviceName = isSeniorBooklet
           ? isMovieBooklet
             ? "Free Movie Booklet"
             : "Medicine Discount Booklet"
           : isPWD(targetApp)
-          ? "PWD ID"
-          : "Senior Citizen ID"
+            ? "PWD ID"
+            : "Senior Citizen ID"
         const targetEmail = targetApp.email
 
         pushUserNotification({
@@ -2764,27 +2753,27 @@ export default function PWDSeniorCitizen() {
             const endpoint = isPWD(targetApp) ? `${API_BASE}/api/email/send-pwd-id` : `${API_BASE}/api/email/send-senior-id`
             const payload = isPWD(targetApp)
               ? {
-                  recipientEmail: targetEmail,
-                  recipientName: displayName(targetApp),
-                  pwdIdNumber: idNumber,
-                  referenceNumber: targetApp.referenceNumber,
-                  disabilityType: (targetApp as any).disabilityType || "Physical / Visual Disability",
-                  bloodType: (targetApp as any).bloodType || "O+",
-                  approvedDate,
-                  contactNumber: targetApp.contactNo || (targetApp as any).cellphoneNo,
-                  address: targetApp.address,
-                }
+                recipientEmail: targetEmail,
+                recipientName: displayName(targetApp),
+                pwdIdNumber: idNumber,
+                referenceNumber: targetApp.referenceNumber,
+                disabilityType: (targetApp as any).disabilityType || "Physical / Visual Disability",
+                bloodType: (targetApp as any).bloodType || "O+",
+                approvedDate,
+                contactNumber: targetApp.contactNo || (targetApp as any).cellphoneNo,
+                address: targetApp.address,
+              }
               : {
-                  recipientEmail: targetEmail,
-                  recipientName: displayName(targetApp),
-                  seniorIdNumber: idNumber,
-                  referenceNumber: targetApp.referenceNumber,
-                  applicationType: typeLabel,
-                  bloodType: (targetApp as any).bloodType || "O+",
-                  approvedDate,
-                  contactNumber: targetApp.contactNo || (targetApp as any).cellphoneNo,
-                  address: targetApp.address,
-                }
+                recipientEmail: targetEmail,
+                recipientName: displayName(targetApp),
+                seniorIdNumber: idNumber,
+                referenceNumber: targetApp.referenceNumber,
+                applicationType: typeLabel,
+                bloodType: (targetApp as any).bloodType || "O+",
+                approvedDate,
+                contactNumber: targetApp.contactNo || (targetApp as any).cellphoneNo,
+                address: targetApp.address,
+              }
 
             fetch(endpoint, {
               method: "POST",
@@ -2803,10 +2792,10 @@ export default function PWDSeniorCitizen() {
       prev.map((app) =>
         app.id === id
           ? {
-              ...app,
-              status: "rejected" as const,
-              rejectionReason: reason,
-            }
+            ...app,
+            status: "rejected" as const,
+            rejectionReason: reason,
+          }
           : app
       )
     )
@@ -2950,9 +2939,8 @@ export default function PWDSeniorCitizen() {
                   <button
                     key={opt.value}
                     onClick={() => setFilterCategory(opt.value)}
-                    className={`gw-tag gw-tag--btn ${
-                      opt.value === "all" ? "gw-tag--ghost" : opt.value === "PWD" ? "gw-tag--pwd" : "gw-tag--senior"
-                    } ${filterCategory === opt.value ? "is-active" : ""}`}
+                    className={`gw-tag gw-tag--btn ${opt.value === "all" ? "gw-tag--ghost" : opt.value === "PWD" ? "gw-tag--pwd" : "gw-tag--senior"
+                      } ${filterCategory === opt.value ? "is-active" : ""}`}
                   >
                     {opt.label}
                   </button>
