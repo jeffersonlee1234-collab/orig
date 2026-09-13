@@ -1530,7 +1530,7 @@ export default function SoloParentApplicationWizard({
     const handleUpdate = () => checkEligibility(false)
 
     const unsubscribe = subscribeToRealtimeChanges((event) => {
-      if (event?.type === "APPLICATION_DELETED" || event?.type === "APPLICATION_STATUS_CHANGED") {
+      if (event?.type === "APPLICATION_DELETED" || event?.type === "STATUS_CHANGED") {
         try {
           localStorage.removeItem("solo_parent_applications")
         } catch {}
