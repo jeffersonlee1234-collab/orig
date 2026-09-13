@@ -274,6 +274,40 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
         createdAt: l.created_at,
       });
     }
+
+    // 8. Sync applicants from Training Program applications
+    let trainingList = [];
+    try {
+      const trRes = await db.query(`SELECT * FROM training_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+      trainingList = trRes.rows || [];
+    } catch {}
+    try {
+      const trainJsonPath = path.join(__dirname, '../data/training_applications.json');
+      if (fs.existsSync(trainJsonPath)) {
+        const parsed = JSON.parse(fs.readFileSync(trainJsonPath, 'utf8'));
+        if (Array.isArray(parsed)) {
+          trainingList = [...trainingList, ...parsed];
+        }
+      }
+    } catch {}
+
+    for (const t of trainingList) {
+      const info = t.applicantInfo || (typeof t.applicant_info === 'string' ? JSON.parse(t.applicant_info) : (t.applicant_info || {}));
+      await insertBeneficiaryIfMissing({
+        firstName: t.first_name || info.firstName,
+        middleName: t.middle_name || info.middleName,
+        lastName: t.last_name || info.lastName,
+        suffix: t.suffix || info.suffix,
+        age: t.age || info.age,
+        sex: t.gender || t.sex || info.gender || info.sex,
+        civilStatus: t.civil_status || info.civilStatus,
+        address: t.address || info.address,
+        contactNo: t.contact_no || t.phone || info.contactNo || info.phone,
+        email: t.email || info.email,
+        qcid: t.qcid || t.reference_number || t.referenceNumber || info.qcid,
+        createdAt: t.submitted_at || t.submittedAt || t.created_at,
+      });
+    }
   } catch (err) {
     console.warn('⚠️ Syncing real users to beneficiaries failed:', err.message);
   }
@@ -284,6 +318,8 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
  */
 function matchesApplicant(b, app) {
   if (!b || !app) return false;
+  const info = app.applicantInfo || (typeof app.applicant_info === 'string' ? JSON.parse(app.applicant_info) : (app.applicant_info || {}));
+
   const bQcid = String(b.qcid_number || b.id_number || '').trim().toLowerCase();
   const bEmail = String(b.email || '').trim().toLowerCase();
   const bName = String(b.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -291,13 +327,13 @@ function matchesApplicant(b, app) {
   const bLast = String(b.last_name || '').trim().toLowerCase();
   const bUserId = b.user_id ? String(b.user_id) : null;
 
-  const appQc = String(app.qc_id || app.qcid || app.qcid_number || app.reference_number || app.reference_no || '').trim().toLowerCase();
-  const appEmail = String(app.email || app.guardian_email || '').trim().toLowerCase();
-  const appUserId = app.user_id ? String(app.user_id) : null;
-  const appFirst = String(app.first_name || app.guardian_first_name || '').trim().toLowerCase();
-  const appMiddle = String(app.middle_name || app.guardian_middle_name || '').trim().toLowerCase();
-  const appLast = String(app.last_name || app.guardian_last_name || '').trim().toLowerCase();
-  const appFullName = [appFirst, appMiddle, appLast].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+  const appQc = String(app.qc_id || app.qcid || app.qcid_number || app.reference_number || app.referenceNumber || app.reference_no || info.qcid || '').trim().toLowerCase();
+  const appEmail = String(app.email || app.guardian_email || info.email || '').trim().toLowerCase();
+  const appUserId = app.user_id || app.userId || info.userId ? String(app.user_id || app.userId || info.userId) : null;
+  const appFirst = String(app.first_name || app.guardian_first_name || info.firstName || '').trim().toLowerCase();
+  const appMiddle = String(app.middle_name || app.guardian_middle_name || info.middleName || '').trim().toLowerCase();
+  const appLast = String(app.last_name || app.guardian_last_name || info.lastName || '').trim().toLowerCase();
+  const appFullName = String(app.full_name || app.applicantName || info.fullName || [appFirst, appMiddle, appLast].filter(Boolean).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
   const appFirstLast = [appFirst, appLast].filter(Boolean).join(' ').replace(/\s+/g, ' ');
 
   // 1. User ID match
@@ -605,7 +641,7 @@ async function getAllBeneficiaries(req, res) {
     }
 
     // Cross-link applications from all service tables
-    let aicsList = [], pwdList = [], soloList = [], childList = [], livList = [];
+    let aicsList = [], pwdList = [], soloList = [], childList = [], livList = [], trainingList = [];
     try {
       const a = await db.query(`SELECT * FROM aics_applications`).catch(() => ({ rows: [] }));
       aicsList = a.rows;
@@ -625,6 +661,19 @@ async function getAllBeneficiaries(req, res) {
     try {
       const l = await db.query(`SELECT * FROM livelihood_applications`).catch(() => ({ rows: [] }));
       livList = l.rows;
+    } catch {}
+    try {
+      const trRes = await db.query(`SELECT * FROM training_applications`).catch(() => ({ rows: [] }));
+      trainingList = trRes.rows || [];
+    } catch {}
+    try {
+      const trainJsonPath = path.join(__dirname, '../data/training_applications.json');
+      if (fs.existsSync(trainJsonPath)) {
+        const parsed = JSON.parse(fs.readFileSync(trainJsonPath, 'utf8'));
+        if (Array.isArray(parsed)) {
+          trainingList = [...trainingList, ...parsed];
+        }
+      }
     } catch {}
 
     const results = dbBeneficiaries.map((b) => {
@@ -693,6 +742,35 @@ async function getAllBeneficiaries(req, res) {
             referenceNo: app.reference_number || `LP-${app.id}`,
             status: (app.application_status || 'Pending').charAt(0).toUpperCase() + (app.application_status || 'Pending').slice(1),
             dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
+          });
+        }
+      });
+
+      // Check Training Program
+      const trainingSeen = new Set();
+      trainingList.forEach((app) => {
+        if (matchesApplicant(b, app)) {
+          const tKey = app.reference_number || app.referenceNumber || app.id || app.training_name || app.trainingName;
+          if (trainingSeen.has(tKey)) return;
+          trainingSeen.add(tKey);
+
+          const tName = app.training_name || app.trainingName || "Skills Training Program";
+          const rawStatus = String(app.status || "Pending").toLowerCase();
+          let cleanStatus = "Pending";
+          if (rawStatus.includes("approv") || rawStatus.includes("enrol") || rawStatus.includes("complet") || rawStatus.includes("certif")) {
+            cleanStatus = "Approved";
+          } else if (rawStatus.includes("reject") || rawStatus.includes("decline")) {
+            cleanStatus = "Rejected";
+          } else {
+            cleanStatus = "Pending";
+          }
+
+          enrolledPrograms.push({
+            program: "Training",
+            assistanceType: tName,
+            referenceNo: String(app.reference_number || app.referenceNumber || app.qcid || `TR-${app.id}`),
+            status: cleanStatus,
+            dateEnrolled: new Date(app.submitted_at || app.submittedAt || app.created_at || Date.now()).toISOString().split('T')[0],
           });
         }
       });

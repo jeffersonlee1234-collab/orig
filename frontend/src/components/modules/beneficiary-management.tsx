@@ -24,7 +24,7 @@ import MaskedText from "../ui/masked-text"
 // Types
 // =====================================================================================
 
-type ProgramKey = "AICS" | "PWD" | "Senior Citizen" | "Solo Parent" | "Child Welfare" | "Livelihood" | "General" | "System"
+type ProgramKey = "AICS" | "PWD" | "Senior Citizen" | "Solo Parent" | "Child Welfare" | "Livelihood" | "Training" | "General" | "System"
 type VerificationStatus = "verified" | "pending" | "unverified"
 
 interface EnrolledProgram {
@@ -85,11 +85,12 @@ const programColors: Record<string, string> = {
   "Solo Parent": "bg-violet-50 text-violet-700 border-violet-200",
   "Child Welfare": "bg-rose-50 text-rose-700 border-rose-200",
   Livelihood: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Training: "bg-teal-50 text-teal-700 border-teal-200",
   General: "bg-slate-50 text-slate-700 border-slate-200",
   System: "bg-gray-100 text-gray-700 border-gray-300",
 }
 
-const PROGRAM_OPTIONS: ProgramKey[] = ["AICS", "PWD", "Senior Citizen", "Solo Parent", "Child Welfare", "Livelihood"]
+const PROGRAM_OPTIONS: ProgramKey[] = ["AICS", "PWD", "Senior Citizen", "Solo Parent", "Child Welfare", "Livelihood", "Training"]
 
 const verificationTheme: Record<VerificationStatus, { chip: string; icon: ReactElement; label: string }> = {
   verified: { chip: "bg-emerald-100 text-emerald-700", icon: <CheckCircle2 className="h-3.5 w-3.5" />, label: "Verified" },
@@ -297,6 +298,12 @@ function renderProgramIdCard(b: Beneficiary, currentProg: EnrolledProgram | null
     idLabel = "Livelihood ID";
     bottomBadge = "GRANTEE";
     subheaderText = "Quezon City Livelihood Program Beneficiary";
+  } else if (prog === "Training") {
+    headerGradient = "from-teal-800 via-teal-700 to-cyan-900";
+    subheaderBg = "bg-teal-300 text-teal-950";
+    idLabel = "Training ID";
+    bottomBadge = "TRAINEE / GRADUATE";
+    subheaderText = currentProg?.assistanceType ? `Skills Training – ${currentProg.assistanceType}` : "Quezon City Skills & Livelihood Training Program";
   } else if (prog === "Child Welfare") {
     headerGradient = "from-rose-800 via-rose-700 to-pink-900";
     subheaderBg = "bg-rose-300 text-rose-950";
