@@ -32,27 +32,16 @@ let soloColsInitialized = false;
 async function initSoloParentColumns() {
   if (soloColsInitialized) return;
   const columnDefs = [
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP WITH TIME ZONE",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS application_status VARCHAR(50) DEFAULT 'pending'",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS application_type VARCHAR(50) DEFAULT 'new'",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_resident BOOLEAN DEFAULT true",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_id VARCHAR(100)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_title VARCHAR(255)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS first_name VARCHAR(150)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS middle_name VARCHAR(150)",
@@ -71,8 +60,26 @@ async function initSoloParentColumns() {
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP WITH TIME ZONE",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
   ];
 
   try {
@@ -146,6 +153,7 @@ initSoloParentColumns();
 // Create new application
 exports.createApplication = async (req, res) => {
   try {
+    await initSoloParentColumns();
     const { userId, applicationData, requiredDocumentIds } = req.body;
     const appData = applicationData || req.body || {};
     const fd = appData.formData || req.body.formData || {};
@@ -228,7 +236,7 @@ exports.createApplication = async (req, res) => {
           applicant_photo, photo_url
         ) VALUES (
           $1, $2, $3, $4,
-          $5, $6, $7, $8,
+          $5, $6, $7, $8::jsonb,
           $9, $10,
           $11, $12, $13, $14, $15, $16,
           $17, $18, $19, $20, $21,
@@ -236,7 +244,7 @@ exports.createApplication = async (req, res) => {
           $26, $27,
           $28, $29, $30,
           $31, $32, $33,
-          $34, $35, $36, $37, $38,
+          $34, $35::jsonb, $36::jsonb, $37::jsonb, $38::jsonb,
           $39, $40
         ) RETURNING id, reference_number`,
         [
@@ -261,12 +269,11 @@ exports.createApplication = async (req, res) => {
     } catch (insertErr) {
       console.warn('[Solo Parent Create] Primary insert failed, retrying with flexible schema:', insertErr.message);
       try {
-        await initSoloParentColumns();
         const fallbackResult = await db.query(
           `INSERT INTO solo_parent_applications (
             reference_number, user_id, application_status, application_type,
             form_data, extra_data, uploaded_documents
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb)
           ON CONFLICT (reference_number) DO UPDATE SET
             application_status = EXCLUDED.application_status,
             form_data = EXCLUDED.form_data,
