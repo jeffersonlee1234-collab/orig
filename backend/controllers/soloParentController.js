@@ -23,7 +23,9 @@ async function getUniqueReferenceNumber(baseRef, appType) {
   }
 }
 
+let soloColsInitialized = false;
 async function initSoloParentColumns() {
+  if (soloColsInitialized) return;
   const columnDefs = [
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100)",
@@ -74,10 +76,51 @@ async function initSoloParentColumns() {
         user_id VARCHAR(100) NOT NULL,
         application_status VARCHAR(50) DEFAULT 'draft',
         application_type VARCHAR(50) DEFAULT 'new',
+        is_resident BOOLEAN DEFAULT true,
+        classification_id VARCHAR(100),
+        classification_title VARCHAR(255),
+        required_document_ids JSONB DEFAULT '[]'::jsonb,
+        solo_parent_id_number VARCHAR(100),
+        assigned_id_number VARCHAR(100),
+        is_id_verified BOOLEAN DEFAULT false,
+        first_name VARCHAR(150),
+        middle_name VARCHAR(150),
+        last_name VARCHAR(150),
+        suffix VARCHAR(50),
+        age INTEGER,
+        sex VARCHAR(50),
+        dob_month VARCHAR(50),
+        dob_day VARCHAR(50),
+        dob_year VARCHAR(50),
+        civil_status VARCHAR(100),
+        contact_no VARCHAR(50),
+        address_house_no VARCHAR(100),
+        address_street VARCHAR(255),
+        address_barangay VARCHAR(255),
+        address_city_municipality VARCHAR(255),
+        qcid_number VARCHAR(100),
+        email VARCHAR(150),
+        emergency_first_name VARCHAR(100),
+        emergency_last_name VARCHAR(100),
+        emergency_name VARCHAR(200),
+        emergency_contact_no VARCHAR(50),
+        emergency_relationship VARCHAR(100),
+        emergency_address TEXT,
+        blood_type VARCHAR(20),
+        form_data JSONB DEFAULT '{}'::jsonb,
+        family_members JSONB DEFAULT '[]'::jsonb,
+        extra_data JSONB DEFAULT '{}'::jsonb,
+        uploaded_documents JSONB DEFAULT '[]'::jsonb,
+        rejection_reason TEXT,
+        admin_notes TEXT,
+        approved_by VARCHAR(100),
+        approved_date TIMESTAMP WITH TIME ZONE,
+        is_archived BOOLEAN DEFAULT false,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )
     `);
+    soloColsInitialized = true;
   } catch (err) {
     console.warn('[Solo Parent Table Init]:', err.message);
   }
@@ -87,6 +130,7 @@ async function initSoloParentColumns() {
       await db.query(colQuery);
     } catch {}
   }
+  soloColsInitialized = true;
 }
 initSoloParentColumns();
 
@@ -552,7 +596,14 @@ exports.updateApplicationStatus = async (req, res) => {
              solo_parent_id_number = COALESCE($5, solo_parent_id_number),
              assigned_id_number = COALESCE($5, assigned_id_number),
              updated_at = NOW()
-         WHERE reference_number = $6 OR reference_number = $7 OR id::text = $6 OR id::text = $8
+         WHERE reference_number = $6
+            OR reference_number = $7
+            OR reference_number = $8
+            OR id::text = $6
+            OR id::text = $8
+            OR LOWER(reference_number) = LOWER($6)
+            OR LOWER(reference_number) = LOWER($7)
+            OR LOWER(reference_number) = LOWER($8)
          RETURNING *`,
         [
           status,
@@ -575,7 +626,13 @@ exports.updateApplicationStatus = async (req, res) => {
           `UPDATE solo_parent_applications
            SET application_status = $1,
                updated_at = NOW()
-           WHERE reference_number = $2 OR reference_number = $3 OR id::text = $2 OR id::text = $4
+           WHERE reference_number = $2
+              OR reference_number = $3
+              OR reference_number = $4
+              OR id::text = $2
+              OR id::text = $4
+              OR LOWER(reference_number) = LOWER($2)
+              OR LOWER(reference_number) = LOWER($3)
            RETURNING *`,
           [status, applicationId, targetRef, cleanId]
         );
@@ -585,6 +642,26 @@ exports.updateApplicationStatus = async (req, res) => {
       } catch (fallbackErr) {
         console.warn('[Fallback Error]:', fallbackErr.message);
       }
+    }
+
+    if (!updatedRow) {
+      try {
+        const broadQ = await db.query(
+          `UPDATE solo_parent_applications
+           SET application_status = $1,
+               solo_parent_id_number = COALESCE($2, solo_parent_id_number),
+               assigned_id_number = COALESCE($2, assigned_id_number),
+               updated_at = NOW()
+           WHERE reference_number ILIKE '%' || $3 || '%'
+              OR form_data->>'qcidNumber' = $3
+              OR qcid_number = $3
+           RETURNING *`,
+          [status, isApproved ? assignedId : null, cleanId || targetRef]
+        );
+        if (broadQ.rows.length > 0) {
+          updatedRow = broadQ.rows[0];
+        }
+      } catch (err) {}
     }
 
     if (updatedRow) {

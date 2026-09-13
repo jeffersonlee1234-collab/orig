@@ -22,7 +22,9 @@ async function getUniqueReferenceNumber(baseRef) {
   }
 }
 
+let childColsInitialized = false;
 async function initChildWelfareColumns() {
+  if (childColsInitialized) return;
   const columnDefs = [
     "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
     "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(50)",
@@ -551,7 +553,14 @@ exports.updateApplicationStatus = async (req, res) => {
              approved_by = $4,
              approved_amount = $5,
              updated_at = NOW()
-         WHERE reference_number = $6 OR reference_number = $7 OR id::text = $6 OR id::text = $8
+         WHERE reference_number = $6
+            OR reference_number = $7
+            OR reference_number = $8
+            OR id::text = $6
+            OR id::text = $8
+            OR LOWER(reference_number) = LOWER($6)
+            OR LOWER(reference_number) = LOWER($7)
+            OR LOWER(reference_number) = LOWER($8)
          RETURNING *`,
         [
           status,
@@ -573,7 +582,13 @@ exports.updateApplicationStatus = async (req, res) => {
         const fallbackQ = await db.query(
           `UPDATE child_welfare_applications
            SET application_status = $1, updated_at = NOW()
-           WHERE reference_number = $2 OR reference_number = $3 OR id::text = $2 OR id::text = $4
+           WHERE reference_number = $2
+              OR reference_number = $3
+              OR reference_number = $4
+              OR id::text = $2
+              OR id::text = $4
+              OR LOWER(reference_number) = LOWER($2)
+              OR LOWER(reference_number) = LOWER($3)
            RETURNING *`,
           [status, applicationId, targetRef, cleanId]
         );
@@ -583,6 +598,25 @@ exports.updateApplicationStatus = async (req, res) => {
       } catch (fErr) {
         console.warn('[Fallback Error]:', fErr.message);
       }
+    }
+
+    if (!app) {
+      try {
+        const broadQ = await db.query(
+          `UPDATE child_welfare_applications
+           SET application_status = $1,
+               approved_amount = COALESCE($2, approved_amount),
+               updated_at = NOW()
+           WHERE reference_number ILIKE '%' || $3 || '%'
+              OR form_data->>'referenceNumber' = $3
+              OR guardian_email = $3
+           RETURNING *`,
+          [status, finalAmount, cleanId || targetRef]
+        );
+        if (broadQ.rows.length > 0) {
+          app = broadQ.rows[0];
+        }
+      } catch (err) {}
     }
 
     // Auto-sync with Financial Aid Disbursements and Appointments upon approval

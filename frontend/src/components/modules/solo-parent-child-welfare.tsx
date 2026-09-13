@@ -2620,8 +2620,8 @@ export default function SoloParentChildWelfareAdmin() {
     const approvedDate = new Date().toISOString()
     const targetRef = app.referenceNumber || ""
 
-    // 1. Instant 0ms Optimistic UI + Storage + Real-time Notification
-    updateApplications((prev) =>
+    // 1. Instant Optimistic UI + Storage
+    setApplications((prev) =>
       prev.map((a) => {
         if (a.id === app.id || (targetRef && a.referenceNumber === targetRef)) {
           return {
@@ -2639,6 +2639,27 @@ export default function SoloParentChildWelfareAdmin() {
     )
 
     try {
+      if (isSoloParent(app)) {
+        const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+        const nextSolo = localSolo.map((a: any) =>
+          a.id === app.id || (targetRef && a.referenceNumber === targetRef)
+            ? { ...a, status: "approved", assigned_id_number: value, solo_parent_id_number: value, approved_by: "Social Worker Staff", updated_at: approvedDate }
+            : a
+        )
+        localStorage.setItem("solo_parent_applications", JSON.stringify(nextSolo))
+      } else {
+        const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+        const nextChild = localChild.map((a: any) =>
+          a.id === app.id || (targetRef && a.referenceNumber === targetRef)
+            ? { ...a, status: "approved", approved_amount: value, approved_by: "Social Worker Staff", updated_at: approvedDate }
+            : a
+        )
+        localStorage.setItem("child_welfare_applications", JSON.stringify(nextChild))
+      }
+    } catch {}
+
+    try {
+      // 2. Persist to PostgreSQL Database
       await approveSubmission(app, value)
 
       if (isSoloParent(app)) {
@@ -2748,8 +2769,8 @@ export default function SoloParentChildWelfareAdmin() {
       notifyApplicationChange("APPLICATION_APPROVED", isSoloParent(app) ? "solo_parent" : "child_welfare", app.referenceNumber)
       await loadApplications(true)
     } catch (err) {
-      console.error(err)
-      notifyApplicationChange("APPLICATION_APPROVED", isSoloParent(app) ? "solo_parent" : "child_welfare", app.referenceNumber)
+      console.error("Approval error:", err)
+      await loadApplications(true)
     }
   }
 
@@ -2760,7 +2781,7 @@ export default function SoloParentChildWelfareAdmin() {
     const targetRef = app.referenceNumber || ""
 
     // 1. Instant Optimistic UI Update + Storage
-    updateApplications((prev) =>
+    setApplications((prev) =>
       prev.map((a) => {
         if (a.id === app.id || (targetRef && a.referenceNumber === targetRef)) {
           return {
@@ -2775,11 +2796,12 @@ export default function SoloParentChildWelfareAdmin() {
 
     try {
       await rejectSubmission(app, reason)
+      window.dispatchEvent(new Event("storage"))
       notifyApplicationChange("APPLICATION_REJECTED", isSoloParent(app) ? "solo_parent" : "child_welfare", app.referenceNumber)
       await loadApplications(true)
     } catch (err) {
-      console.error(err)
-      notifyApplicationChange("APPLICATION_REJECTED", isSoloParent(app) ? "solo_parent" : "child_welfare", app.referenceNumber)
+      console.error("Reject error:", err)
+      await loadApplications(true)
     }
   }
 
