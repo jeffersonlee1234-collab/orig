@@ -1365,12 +1365,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           let fileUrl = up?.previewUrl || ""
           if (!fileUrl || fileUrl.startsWith("blob:")) {
             if (up?.file) {
-              fileUrl = await new Promise<string>((resolve) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve((reader.result as string) || "")
-                reader.onerror = () => resolve("")
-                reader.readAsDataURL(up.file)
-              })
+              fileUrl = await readFileAsDataUrl(up.file)
             }
           }
           return {

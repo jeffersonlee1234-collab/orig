@@ -212,7 +212,7 @@ export default function DocumentCameraModal({
           {!capturedPhotoUrl && !cameraError && (
             <button
               type="button"
-              onClick={toggleFacingMode}
+              onClick={handleSwitchCamera}
               className="absolute top-3 right-3 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors backdrop-blur-xs cursor-pointer"
               title={t("switchCamera") || "Palitan ang Camera"}
             >
