@@ -857,4 +857,61 @@ exports.clearApplications = async (req, res) => {
   }
 };
 
+// Direct verify Solo Parent ID endpoint
+exports.verifySoloParentId = async (req, res) => {
+  try {
+    const { idNumber } = req.params;
+    if (!idNumber) {
+      return res.status(400).json({ success: false, message: 'ID Number is required' });
+    }
+
+    const cleanInput = String(idNumber).trim();
+    const cleanDigits = cleanInput.replace(/\D/g, '');
+
+    const query = `
+      SELECT * FROM solo_parent_applications
+      WHERE application_status IN ('approved', 'completed', 'for_release', 'active')
+      AND (
+        solo_parent_id_number = $1
+        OR assigned_id_number = $1
+        OR reference_number = $1
+        OR solo_parent_id_number ILIKE '%' || $1 || '%'
+        OR assigned_id_number ILIKE '%' || $1 || '%'
+        OR ($2 != '' AND (
+          regexp_replace(COALESCE(assigned_id_number, ''), '[^0-9]', '', 'g') = $2
+          OR regexp_replace(COALESCE(solo_parent_id_number, ''), '[^0-9]', '', 'g') = $2
+          OR regexp_replace(COALESCE(reference_number, ''), '[^0-9]', '', 'g') = $2
+          OR regexp_replace(COALESCE(assigned_id_number, ''), '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
+          OR regexp_replace(COALESCE(solo_parent_id_number, ''), '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
+        ))
+      )
+      ORDER BY created_at DESC LIMIT 1
+    `;
+
+    const result = await db.query(query, [cleanInput, cleanDigits]);
+
+    if (result.rows.length > 0) {
+      const app = result.rows[0];
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        application: app,
+        idNumber: app.assigned_id_number || app.solo_parent_id_number || cleanInput,
+        name: `${app.first_name || ''} ${app.last_name || ''}`.trim(),
+        barangay: app.address_barangay || 'SAUYO',
+        status: 'Active / Expired',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      verified: false,
+      message: 'No approved Solo Parent ID record found matching this ID number.',
+    });
+  } catch (error) {
+    console.error('Error verifying solo parent ID:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 

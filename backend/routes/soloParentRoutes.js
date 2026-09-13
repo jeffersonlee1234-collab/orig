@@ -47,6 +47,11 @@ router.get(
 );
 
 router.get(
+  '/verify-id/:idNumber',
+  soloParentController.verifySoloParentId
+);
+
+router.get(
   '/reference/:referenceNumber',
   soloParentController.getApplicationByReference
 );

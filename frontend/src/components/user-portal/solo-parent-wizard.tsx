@@ -1036,7 +1036,7 @@ export default function SoloParentApplicationWizard({
       const apps = await fetchAllSoloParentApps()
       const prof = getCurrentUserProfile()
 
-      // Find approved Solo Parent applications
+      // 1. Find approved Solo Parent applications from local cache & user apps
       const approvedApps = apps.filter((a) => {
         if (!a) return false
         const cat = String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase()
@@ -1061,7 +1061,7 @@ export default function SoloParentApplicationWizard({
       })
 
       // Match strictly against approved records
-      const matchedApp = approvedApps.find((a) => {
+      let matchedApp = approvedApps.find((a) => {
         const aAssignedDigits = String(a.assigned_id_number || a.assignedIdNumber || "").replace(/\D/g, "")
         const aSoloIdDigits = String(a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
         const aRefDigits = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
@@ -1077,6 +1077,22 @@ export default function SoloParentApplicationWizard({
 
         return Boolean(matchDigits || matchExactString)
       })
+
+      // 2. Direct backend query fallback if not in local cache
+      if (!matchedApp) {
+        try {
+          const resVerify = await fetch(`${API_BASE}/api/solo-parent/verify-id/${encodeURIComponent(typed)}?_t=${Date.now()}`, {
+            headers: getAuthHeaders(),
+            cache: "no-store",
+          })
+          if (resVerify.ok) {
+            const dataVerify = await resVerify.json()
+            if (dataVerify.verified && dataVerify.application) {
+              matchedApp = dataVerify.application
+            }
+          }
+        } catch {}
+      }
 
       if (matchedApp) {
         setIsIdVerified(true)
