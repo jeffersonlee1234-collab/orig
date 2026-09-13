@@ -1543,26 +1543,13 @@ export default function SoloParentApplicationWizard({
     onSubmissionStageChange?.(submissionStage)
   }, [submissionStage, onSubmissionStageChange])
 
-  // Auto-redirect to pending status screen after 1 second on pending
+  // When on pending stage, mark blocked state so user cannot re-fill
   useEffect(() => {
-    if (submissionStage !== "pending") return
-
-    setRedirectCountdown(1)
-    const interval = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          setIsBlocked(true)
-          setBlockReason("pending")
-          setBlockedReference(reference)
-          setSubmissionStage("form")
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(interval)
+    if (submissionStage === "pending") {
+      setIsBlocked(true)
+      setBlockReason("pending")
+      setBlockedReference(reference)
+    }
   }, [submissionStage, reference])
   const familyMembers: FamilyMember[] = []
 
@@ -1690,9 +1677,14 @@ export default function SoloParentApplicationWizard({
 
   const handleFinalSubmit = async () => {
     ;(window as any).__isFormDirty = false
-    setSubmissionStage("matching")
     const fallbackRef = reference || generateReference(idStatus, userProfile?.qcidNo || formData?.qcidNumber)
     setReference(fallbackRef)
+
+    // Instantly transition to pending state (0ms delay)
+    setSubmissionStage("pending")
+    setIsBlocked(true)
+    setBlockReason("pending")
+    setBlockedReference(fallbackRef)
 
     const emFirst = (formData.emergencyFirstName || "").trim()
     const emLast = (formData.emergencyLastName || "").trim()
@@ -1731,6 +1723,32 @@ export default function SoloParentApplicationWizard({
         uploadedAt: new Date().toISOString(),
       })),
     }))
+
+    // Instant local cache sync for 0ms display on user portal and admin
+    try {
+      const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+      const localRecord = {
+        id: String(Date.now()),
+        reference_number: fallbackRef,
+        referenceNumber: fallbackRef,
+        category: "Solo Parent",
+        applicantPhoto: applicantPhoto,
+        photoUrl: applicantPhoto,
+        idPhoto: applicantPhoto,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        documents: newDocItems,
+        form_data: finalFormData,
+        extra_data: { formData: finalFormData, applicantPhoto },
+        application_status: "pending",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      }
+      localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
+      window.dispatchEvent(new Event("storage"))
+      notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
+    } catch {}
 
     try {
       // 1. Create application record sa backend
@@ -1775,24 +1793,26 @@ export default function SoloParentApplicationWizard({
           setReference(data.referenceNumber)
         }
 
-        // 2. I-upload ang lahat ng nakalakip na dokumento via multipart
-        for (const doc of requiredDocs) {
+        // 2. Upload documents in parallel
+        const token = getAuthToken()
+        const uploadPromises = requiredDocs.map(async (doc) => {
           const files = uploadedDocs[doc.id] || []
           if (files.length > 0 && appId) {
             const uploadFormData = new FormData()
             files.forEach((f) => uploadFormData.append("documents", f))
             uploadFormData.append("documentId", doc.id)
             uploadFormData.append("documentLabel", doc.label)
-            const token = getAuthToken()
-            await fetch(`${API_BASE}/api/solo-parent/${appId}/upload-documents`, {
+            return fetch(`${API_BASE}/api/solo-parent/${appId}/upload-documents`, {
               method: "POST",
               headers: token ? { Authorization: `Bearer ${token}`, "x-access-token": token, "x-session-token": token } : undefined,
               body: uploadFormData,
-            }).catch(() => {})
+            }).catch(() => null)
           }
-        }
+        })
 
-        // 3. Markahan bilang pending / submitted
+        await Promise.all(uploadPromises)
+
+        // 3. Submit
         if (appId) {
           await fetch(`${API_BASE}/api/solo-parent/${appId}/submit`, {
             method: "POST",
@@ -1800,88 +1820,12 @@ export default function SoloParentApplicationWizard({
           }).catch(() => {})
         }
 
-        // Local cache sync for instant rendering across all portals
-        try {
-          const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-          const localRecord = {
-            id: appId || String(Date.now()),
-            reference_number: data.referenceNumber || fallbackRef,
-            referenceNumber: data.referenceNumber || fallbackRef,
-            category: "Solo Parent",
-            applicantPhoto: applicantPhoto,
-            photoUrl: applicantPhoto,
-            idPhoto: applicantPhoto,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            middleName: formData.middleName,
-            documents: newDocItems,
-            form_data: finalFormData,
-            extra_data: { formData: finalFormData, applicantPhoto },
-            application_status: "pending",
-            status: "pending",
-            created_at: new Date().toISOString(),
-          }
-          localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
-        } catch {}
-
-        // 4. Dispatch real-time event to Admin dashboard
+        // Final broadcast to Admin
         notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", data.referenceNumber || fallbackRef)
-      } else {
-        // Fallback local save if server error
-        try {
-          const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-          const localRecord = {
-            id: String(Date.now()),
-            reference_number: fallbackRef,
-            referenceNumber: fallbackRef,
-            category: "Solo Parent",
-            applicantPhoto: applicantPhoto,
-            photoUrl: applicantPhoto,
-            idPhoto: applicantPhoto,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            middleName: formData.middleName,
-            documents: newDocItems,
-            form_data: finalFormData,
-            extra_data: { formData: finalFormData, applicantPhoto },
-            application_status: "pending",
-            status: "pending",
-            created_at: new Date().toISOString(),
-          }
-          localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
-        } catch {}
-        notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
       }
     } catch (err) {
-      console.warn("Final submit error / offline fallback:", err)
-      try {
-        const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
-        const localRecord = {
-          id: String(Date.now()),
-          reference_number: fallbackRef,
-          referenceNumber: fallbackRef,
-          category: "Solo Parent",
-          applicantPhoto: applicantPhoto,
-          photoUrl: applicantPhoto,
-          idPhoto: applicantPhoto,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          middleName: formData.middleName,
-          documents: newDocItems,
-          form_data: finalFormData,
-          extra_data: { formData: finalFormData, applicantPhoto },
-          application_status: "pending",
-          status: "pending",
-          created_at: new Date().toISOString(),
-        }
-        localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
-      } catch {}
-      notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
+      console.warn("Submit background sync:", err)
     }
-
-    setTimeout(() => {
-      setSubmissionStage("pending")
-    }, 1000)
   }
 
   const step1Valid =
@@ -2200,18 +2144,7 @@ export default function SoloParentApplicationWizard({
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-3 pt-1">
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3b82f6]" />
-              <span>
-                {language === "en"
-                  ? `Redirecting to application status in ${redirectCountdown} seconds...`
-                  : language === "bis"
-                  ? `Mibalhin sa status sa aplikasyon sulod sa ${redirectCountdown} segundo...`
-                  : `Awtomatikong lilipat sa application status sa loob ng ${redirectCountdown} segundo...`}
-              </span>
-            </div>
-
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 max-w-md mx-auto w-full">
             <button
               type="button"
               onClick={() => {
@@ -2222,7 +2155,7 @@ export default function SoloParentApplicationWizard({
                 ;(window as any).__isFormDirty = false
                 window.location.href = "/portal/my-applications"
               }}
-              className="w-full max-w-md py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
             >
               {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
             </button>

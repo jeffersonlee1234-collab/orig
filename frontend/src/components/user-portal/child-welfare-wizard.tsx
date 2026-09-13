@@ -1216,22 +1216,24 @@ export default function ChildWelfareApplicationWizard({
           setReference(data.referenceNumber)
         }
 
-        // Upload all attached documents
-        for (const doc of selectedProgram.documents) {
+        // Upload all attached documents in parallel
+        const token = getAuthToken()
+        const uploadPromises = selectedProgram.documents.map(async (doc) => {
           const files = uploadedFiles[doc.id] || []
           if (files.length > 0 && appId) {
             const uploadData = new FormData()
             files.forEach((f) => uploadData.append("documents", f))
             uploadData.append("documentId", doc.id)
             uploadData.append("documentLabel", doc.label)
-            const token = getAuthToken()
-            await fetch(`${API_BASE}/api/child-welfare/${appId}/upload-documents`, {
+            return fetch(`${API_BASE}/api/child-welfare/${appId}/upload-documents`, {
               method: "POST",
               headers: token ? { Authorization: `Bearer ${token}`, "x-access-token": token, "x-session-token": token } : undefined,
               body: uploadData,
-            }).catch(() => {})
+            }).catch(() => null)
           }
-        }
+        })
+
+        await Promise.all(uploadPromises)
 
         // Submit application
         if (appId) {
