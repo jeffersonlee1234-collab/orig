@@ -13,7 +13,6 @@ import {
   Image as ImageIcon,
   HeartHandshake,
   IdCard,
-  Trash2,
   Download,
 } from "lucide-react"
 import { toPng } from "html-to-image"
@@ -1699,19 +1698,6 @@ function ApplicationCard({ app, onView, onShowCard, onDelete }: ApplicationCardP
         <div className="flex flex-col items-end gap-2.5 shrink-0">
           <div className="flex items-center gap-1.5">
             <StatusBadge status={app.status} />
-            {onDelete && (
-              <button
-                type="button"
-                title="Delete application"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(app)
-                }}
-                className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
           </div>
           {onShowCard && app.status === "approved" && !isSeniorBooklet && !isAssistance && (
             <button
@@ -2472,21 +2458,6 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, onDelete,
             >
               Close
             </button>
-            {onDelete && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(`Delete application for ${displayName(app)}?`)) {
-                    onDelete(app)
-                    onClose()
-                  }
-                }}
-                className="px-3 h-10 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors border border-red-200"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Record
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-3">
