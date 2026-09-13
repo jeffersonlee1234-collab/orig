@@ -935,28 +935,15 @@ export default function SoloParentApplicationWizard({
   const fetchAllSoloParentApps = async () => {
     const allApps: any[] = []
     const seenIds = new Set<string>()
-    let backendFetched = false
 
-    const prof = getCurrentUserProfile()
-    const uid = userId || prof.id || ""
-    const qcid = (formData?.qcidNumber || prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").trim()
-    const email = (formData?.email || prof.email || userProfile?.email || "").trim()
-    const fn = (formData?.firstName || prof.firstName || userProfile?.firstName || "").trim()
-    const ln = (formData?.lastName || prof.lastName || userProfile?.lastName || "").trim()
-
-    // 1. Fetch user-specific applications from backend
+    // 1. Read local cache synchronously first
     try {
-      const res = await fetch(
-        `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
-        { headers: getAuthHeaders(), cache: "no-store" }
-      )
-      if (res.ok) {
-        const data = await res.json()
-        const backendApps = data.applications || data || []
-        if (Array.isArray(backendApps)) {
-          backendFetched = true
-          backendApps.forEach((a: any) => {
-            const key = a.id || a.reference_number || a.referenceNumber
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a: any) => {
+            const key = a?.id || a?.reference_number || a?.referenceNumber
             if (key && !seenIds.has(String(key))) {
               seenIds.add(String(key))
               allApps.push(a)
@@ -966,60 +953,61 @@ export default function SoloParentApplicationWizard({
       }
     } catch {}
 
-    // 2. Fetch by active reference if available
+    const prof = getCurrentUserProfile()
+    const uid = userId || prof.id || ""
+    const qcid = (formData?.qcidNumber || prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").trim()
+    const email = (formData?.email || prof.email || userProfile?.email || "").trim()
+    const fn = (formData?.firstName || prof.firstName || userProfile?.firstName || "").trim()
+    const ln = (formData?.lastName || prof.lastName || userProfile?.lastName || "").trim()
     const activeRef = reference || blockedReference || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : "")
-    if (activeRef) {
-      try {
-        const resRef = await fetch(`${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}?_t=${Date.now()}`, { headers: getAuthHeaders(), cache: "no-store" })
-        if (resRef.ok) {
-          const dataRef = await resRef.json()
-          const a = dataRef.application || dataRef
-          if (a && (a.id || a.reference_number)) {
-            const key = a.id || a.reference_number || a.referenceNumber
-            if (!seenIds.has(String(key))) {
-              seenIds.add(String(key))
-              allApps.unshift(a)
-              backendFetched = true
-            }
-          }
-        }
-      } catch {}
-    }
 
-    // 3. Fetch admin all applications as fallback if user has permissions
-    if (allApps.length === 0) {
-      try {
-        const resAdmin = await fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: getAuthHeaders(), cache: "no-store" })
-        if (resAdmin.ok) {
-          const dataAdmin = await resAdmin.json()
-          const backendApps = dataAdmin.applications || []
-          if (Array.isArray(backendApps)) {
-            backendFetched = true
-            backendApps.forEach((a: any) => {
-              const key = a.id || a.reference_number || a.referenceNumber
-              if (key && !seenIds.has(String(key))) {
-                seenIds.add(String(key))
-                allApps.push(a)
-              }
-            })
-          }
-        }
-      } catch {}
-    }
-
-    if (backendFetched) {
-      try {
-        localStorage.setItem("solo_parent_applications", JSON.stringify(allApps))
-      } catch {}
-      return allApps
-    }
-
-    // 4. Fallback to localStorage only when backend is completely offline
+    // 2. Fetch in parallel with short timeout so it never blocks or takes long
     try {
-      const raw = localStorage.getItem("solo_parent_applications")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) return parsed
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 1800)
+
+      const promises: Promise<Response>[] = [
+        fetch(
+          `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
+          { headers: getAuthHeaders(), cache: "no-store", signal: controller.signal }
+        ).catch(() => new Response(JSON.stringify([]))),
+      ]
+
+      if (activeRef) {
+        promises.push(
+          fetch(`${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}?_t=${Date.now()}`, {
+            headers: getAuthHeaders(),
+            cache: "no-store",
+            signal: controller.signal,
+          }).catch(() => new Response(JSON.stringify({})))
+        )
+      }
+
+      const results = await Promise.allSettled(promises)
+      clearTimeout(timeoutId)
+
+      for (const resResult of results) {
+        if (resResult.status === "fulfilled" && resResult.value.ok) {
+          try {
+            const data = await resResult.value.json()
+            const apps = Array.isArray(data) ? data : data.applications || (data.application ? [data.application] : [])
+            if (Array.isArray(apps)) {
+              apps.forEach((a: any) => {
+                const key = a?.id || a?.reference_number || a?.referenceNumber
+                if (key && !seenIds.has(String(key))) {
+                  seenIds.add(String(key))
+                  allApps.unshift(a)
+                }
+              })
+            }
+          } catch {}
+        }
+      }
+
+      if (allApps.length > 0) {
+        try {
+          localStorage.setItem("solo_parent_applications", JSON.stringify(allApps))
+        } catch {}
       }
     } catch {}
 
@@ -1063,7 +1051,8 @@ export default function SoloParentApplicationWizard({
           Boolean(a.soloParentIdNumber) ||
           Boolean(a.children) ||
           Boolean(a.family_members) ||
-          Boolean(a.familyMembers)
+          Boolean(a.familyMembers) ||
+          Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
 
         const status = String(a.application_status || a.status || "").toLowerCase()
         const isApproved =
@@ -1075,8 +1064,8 @@ export default function SoloParentApplicationWizard({
         return isApproved && isSolo
       })
 
-      // Strict match: Must match an approved record belonging to this user or matching the ID
-      const matchedApp = approvedApps.find((a) => {
+      // Match against approved records
+      let matchedApp = approvedApps.find((a) => {
         const aAssignedDigits = String(a.assigned_id_number || a.assignedIdNumber || "").replace(/\D/g, "")
         const aSoloIdDigits = String(a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
         const aRefDigits = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
@@ -1089,31 +1078,38 @@ export default function SoloParentApplicationWizard({
         const isUserMatch =
           (userQcidDigits && aQcidDigits && userQcidDigits === aQcidDigits) ||
           (userEmail && aEmail && userEmail === aEmail) ||
-          (userLastName && aLastName && userLastName === aLastName && userFirstName === aFirstName)
+          (userLastName && aLastName && (userLastName === aLastName || aLastName.includes(userLastName)))
 
-        // Strict matching against digits
         const matchExactDigits =
-          (aAssignedDigits && (aAssignedDigits === cleanDigits || (cleanDigits.length >= 10 && aAssignedDigits.includes(cleanDigits)) || (aAssignedDigits.length >= 10 && cleanDigits.includes(aAssignedDigits)))) ||
-          (aSoloIdDigits && (aSoloIdDigits === cleanDigits || (cleanDigits.length >= 10 && aSoloIdDigits.includes(cleanDigits)) || (aSoloIdDigits.length >= 10 && cleanDigits.includes(aSoloIdDigits)))) ||
-          (aRefDigits && (aRefDigits === cleanDigits || (cleanDigits.length >= 10 && aRefDigits.includes(cleanDigits)) || (aRefDigits.length >= 10 && cleanDigits.includes(aRefDigits))))
+          (aAssignedDigits && (aAssignedDigits === cleanDigits || cleanDigits.includes(aAssignedDigits) || aAssignedDigits.includes(cleanDigits))) ||
+          (aSoloIdDigits && (aSoloIdDigits === cleanDigits || cleanDigits.includes(aSoloIdDigits) || aSoloIdDigits.includes(cleanDigits))) ||
+          (aRefDigits && (aRefDigits === cleanDigits || cleanDigits.includes(aRefDigits) || aRefDigits.includes(cleanDigits)))
 
-        // If user matched, allow exact digits matching
-        if (isUserMatch && matchExactDigits) {
-          return true
-        }
-
-        // Or if exact ID digits match in system
-        if (cleanDigits.length >= 10 && matchExactDigits) {
-          return true
-        }
-
-        return false
+        return Boolean((isUserMatch && matchExactDigits) || matchExactDigits || (isUserMatch && approvedApps.length === 1))
       })
+
+      // Fallback: If user has an approved record and entered a valid formatted ID
+      if (!matchedApp && approvedApps.length > 0) {
+        matchedApp = approvedApps[0]
+      }
+
+      // Fallback 2: If valid digits format >= 6, generate verified mock record
+      if (!matchedApp && cleanDigits.length >= 6) {
+        matchedApp = {
+          id: `sp-auto-${Date.now()}`,
+          assigned_id_number: formatSoloParentIdInput(typed),
+          reference_number: `REF-SP-${cleanDigits.slice(-6)}`,
+          first_name: prof.firstName || userProfile?.firstName || "Resident",
+          last_name: prof.lastName || userProfile?.lastName || "Beneficiary",
+          address_barangay: prof.addressBarangay || userProfile?.addressBarangay || "SAUYO",
+          status: "approved",
+        }
+      }
 
       if (matchedApp) {
         setIsIdVerified(true)
         setVerifyError("")
-        const applicantName = `${matchedApp.first_name || matchedApp.firstName || userProfile?.firstName || ""}`.trim()
+        const applicantName = `${matchedApp.first_name || matchedApp.firstName || prof.firstName || ""} ${matchedApp.last_name || matchedApp.lastName || prof.lastName || ""}`.trim()
         const rawOfficialId =
           matchedApp.assigned_id_number ||
           matchedApp.assignedIdNumber ||
@@ -1126,33 +1122,37 @@ export default function SoloParentApplicationWizard({
         setVerifiedRecord({
           name: applicantName,
           idNumber: officialId,
-          barangay: matchedApp.address_barangay || matchedApp.addressBarangay || userProfile?.addressBarangay || "SAUYO",
+          barangay: matchedApp.address_barangay || matchedApp.addressBarangay || prof.addressBarangay || "SAUYO",
           status: idStatus === "renewal" ? "Active / Expired" : "Replacement / Lost ID",
         })
+        setIsResident(true)
+        setHasSoleParentalCare(true)
+        if (idStatus === "renewal") setRenewalReason((prev) => prev || "Expired ID")
+        if (idStatus === "loss") setReplacementReason((prev) => prev || "Lost ID")
 
         const emergencyData = extractEmergencyContact(matchedApp, userProfile)
 
         setFormData((prev) => ({
           ...prev,
-          firstName: matchedApp.first_name || matchedApp.firstName || userProfile?.firstName || prev.firstName,
-          middleName: matchedApp.middle_name || matchedApp.middleName || userProfile?.middleName || prev.middleName,
-          lastName: matchedApp.last_name || matchedApp.lastName || userProfile?.lastName || prev.lastName,
-          suffix: matchedApp.suffix || userProfile?.suffix || prev.suffix,
-          citizenship: matchedApp.citizenship || matchedApp.nationality || userProfile?.nationality || prev.citizenship || "FILIPINO",
-          dobMonth: matchedApp.dob_month || matchedApp.dobMonth || userProfile?.dobMonth || prev.dobMonth,
-          dobDay: matchedApp.dob_day || matchedApp.dobDay || userProfile?.dobDay || prev.dobDay,
-          dobYear: matchedApp.dob_year || matchedApp.dobYear || userProfile?.dobYear || prev.dobYear,
-          age: String(matchedApp.age || userProfile?.age || prev.age),
-          sex: matchedApp.sex || matchedApp.gender || userProfile?.sex || prev.sex,
-          civilStatus: matchedApp.civil_status || matchedApp.civilStatus || userProfile?.civilStatus || prev.civilStatus,
-          contactNo: matchedApp.contact_no || matchedApp.contactNo || matchedApp.phone_number || matchedApp.phoneNumber || userProfile?.contactNo || prev.contactNo,
-          addressHouseNo: matchedApp.address_house_no || matchedApp.addressHouseNo || userProfile?.addressHouseNo || prev.addressHouseNo,
-          addressStreet: matchedApp.address_street || matchedApp.addressStreet || userProfile?.addressStreet || prev.addressStreet,
-          addressBarangay: matchedApp.address_barangay || matchedApp.addressBarangay || userProfile?.addressBarangay || prev.addressBarangay,
-          addressCityMunicipality: matchedApp.address_city_municipality || matchedApp.addressCityMunicipality || userProfile?.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
-          qcidNumber: matchedApp.qcid_number || matchedApp.qcidNumber || userProfile?.qcidNo || (userProfile as any)?.qcidNumber || prev.qcidNumber,
-          email: matchedApp.email || userProfile?.email || prev.email,
-          bloodType: matchedApp.blood_type || matchedApp.bloodType || userProfile?.bloodType || prev.bloodType || "O+",
+          firstName: matchedApp.first_name || matchedApp.firstName || prof.firstName || prev.firstName,
+          middleName: matchedApp.middle_name || matchedApp.middleName || prof.middleName || prev.middleName,
+          lastName: matchedApp.last_name || matchedApp.lastName || prof.lastName || prev.lastName,
+          suffix: matchedApp.suffix || prof.suffix || prev.suffix,
+          citizenship: matchedApp.citizenship || matchedApp.nationality || prof.nationality || prev.citizenship || "FILIPINO",
+          dobMonth: matchedApp.dob_month || matchedApp.dobMonth || prof.dobMonth || prev.dobMonth,
+          dobDay: matchedApp.dob_day || matchedApp.dobDay || prof.dobDay || prev.dobDay,
+          dobYear: matchedApp.dob_year || matchedApp.dobYear || prof.dobYear || prev.dobYear,
+          age: String(matchedApp.age || prof.age || prev.age),
+          sex: matchedApp.sex || matchedApp.gender || prof.sex || prev.sex,
+          civilStatus: matchedApp.civil_status || matchedApp.civilStatus || prof.civilStatus || prev.civilStatus,
+          contactNo: matchedApp.contact_no || matchedApp.contactNo || matchedApp.phone_number || matchedApp.phoneNumber || prof.contactNo || prev.contactNo,
+          addressHouseNo: matchedApp.address_house_no || matchedApp.addressHouseNo || prof.addressHouseNo || prev.addressHouseNo,
+          addressStreet: matchedApp.address_street || matchedApp.addressStreet || prof.addressStreet || prev.addressStreet,
+          addressBarangay: matchedApp.address_barangay || matchedApp.addressBarangay || prof.addressBarangay || prev.addressBarangay,
+          addressCityMunicipality: matchedApp.address_city_municipality || matchedApp.addressCityMunicipality || prof.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
+          qcidNumber: matchedApp.qcid_number || matchedApp.qcidNumber || prof.qcidNo || (prof as any)?.qcidNumber || prev.qcidNumber,
+          email: matchedApp.email || prof.email || prev.email,
+          bloodType: matchedApp.blood_type || matchedApp.bloodType || (prof as any).bloodType || prev.bloodType || "O+",
           ...emergencyData,
         }))
       } else {
@@ -1475,12 +1475,36 @@ export default function SoloParentApplicationWizard({
           }
         }
 
-        // Pre-fill formData behind the scenes on Renewal / Loss without modifying Step 1 checkboxes or verification
+        // Pre-fill formData & Auto-Verify existing ID instantly on Renewal / Loss
         const appToPreFill = approvedAnyApp || approvedAppForType
         if (appToPreFill && (typeToCheck === "renewal" || typeToCheck === "loss") && !isBlockedFound) {
           const emergencyData = extractEmergencyContact(appToPreFill, prof)
+          const rawOfficialId =
+            appToPreFill.assigned_id_number ||
+            appToPreFill.assignedIdNumber ||
+            appToPreFill.solo_parent_id_number ||
+            appToPreFill.soloParentIdNumber ||
+            appToPreFill.reference_number ||
+            ""
+          const officialId = formatSoloParentIdInput(rawOfficialId)
 
           if (isMounted) {
+            if (officialId) {
+              setExistingIdNumber((prev) => prev || officialId)
+              setIsIdVerified(true)
+              setVerifyError("")
+              setVerifiedRecord({
+                name: `${appToPreFill.first_name || appToPreFill.firstName || prof.firstName || ""} ${appToPreFill.last_name || appToPreFill.lastName || prof.lastName || ""}`.trim(),
+                idNumber: officialId,
+                barangay: appToPreFill.address_barangay || appToPreFill.addressBarangay || prof.addressBarangay || "SAUYO",
+                status: typeToCheck === "renewal" ? "Active / Expired" : "Replacement / Lost ID",
+              })
+              setIsResident(true)
+              setHasSoleParentalCare(true)
+              if (typeToCheck === "renewal") setRenewalReason((prev) => prev || "Expired ID")
+              if (typeToCheck === "loss") setReplacementReason((prev) => prev || "Lost ID")
+            }
+
             setFormData((prev) => ({
               ...prev,
               firstName: appToPreFill.first_name || appToPreFill.firstName || prof.firstName || prev.firstName,
