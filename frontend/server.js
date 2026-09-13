@@ -19,7 +19,7 @@ let rawBackendUrl = (
   process.env.BACKEND_URL ||
   process.env.VITE_API_URL ||
   process.env.VITE_API_BASE_URL ||
-  'https://backend-production-1716.up.railway.app'
+  'https://backend-production-1736.up.railway.app'
 ).trim();
 
 if (rawBackendUrl.startsWith('VITE_API_URL=')) {

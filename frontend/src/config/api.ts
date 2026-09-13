@@ -23,10 +23,10 @@ export function getApiBase(): string {
     if (isLocal) {
       return "http://localhost:5000";
     }
-    return "https://backend-production-1716.up.railway.app";
+    return "https://backend-production-1736.up.railway.app";
   }
 
-  // If provided as a domain without protocol (e.g. backend-production-1716.up.railway.app)
+  // If provided as a domain without protocol (e.g. backend-production-1736.up.railway.app)
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
