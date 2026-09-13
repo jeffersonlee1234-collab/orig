@@ -1184,10 +1184,102 @@ export default function SoloParentApplicationWizard({
   const currentProf = getCurrentUserProfile()
   const userId = userProfile?.userId || (userProfile as any)?.id || currentProf?.id || ""
   const [checkingEligibility, setCheckingEligibility] = useState(false)
-  const [isBlocked, setIsBlocked] = useState(false)
-  const [blockReason, setBlockReason] = useState<"draft" | "pending" | "approved" | null>(null)
-  const [blockedReference, setBlockedReference] = useState("")
-  const [blockedApp, setBlockedApp] = useState<any>(null)
+  
+  const [isBlocked, setIsBlocked] = useState(() => {
+    try {
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof.qcidNo || prof.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) return true
+        }
+      }
+      return false
+    } catch {
+      return false
+    }
+  })
+
+  const [blockReason, setBlockReason] = useState<"draft" | "pending" | "approved" | null>(() => {
+    try {
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof.qcidNo || prof.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) {
+            const st = String(match.application_status || match.status || "").toLowerCase()
+            return st === "approved" || st === "completed" || st === "for_release" ? "approved" : "pending"
+          }
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  })
+
+  const [blockedReference, setBlockedReference] = useState(() => {
+    try {
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof.qcidNo || prof.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) return match.reference_number || match.referenceNumber || ""
+        }
+      }
+      return ""
+    } catch {
+      return ""
+    }
+  })
+
+  const [blockedApp, setBlockedApp] = useState<any>(() => {
+    try {
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof.qcidNo || prof.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) return match
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  })
+
   const [isReapplying, setIsReapplying] = useState(() => {
     try {
       if (typeof window !== "undefined") {
@@ -1231,7 +1323,7 @@ export default function SoloParentApplicationWizard({
     let isMounted = true
 
     const checkEligibility = async (isInitial = false) => {
-      if (isInitial) setCheckingEligibility(true)
+      if (isInitial && !isBlocked) setCheckingEligibility(true)
       try {
         const typeToCheck = idStatus || "new"
         const prof = getCurrentUserProfile()
@@ -1258,8 +1350,8 @@ export default function SoloParentApplicationWizard({
             const data = await res.json()
             if (data.blocked) {
               isBlockedFound = true
-              reasonFound = data.reason || null
-              refFound = data.referenceNumber || ""
+              reasonFound = data.reason || (data.application?.application_status === "approved" ? "approved" : "pending")
+              refFound = data.referenceNumber || data.application?.reference_number || ""
               appFound = data.application || null
             }
           }
@@ -1374,7 +1466,7 @@ export default function SoloParentApplicationWizard({
     }
 
     checkEligibility(true)
-    const interval = setInterval(() => checkEligibility(false), 2000)
+    const interval = setInterval(() => checkEligibility(false), 1000)
     const handleUpdate = () => checkEligibility(false)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {

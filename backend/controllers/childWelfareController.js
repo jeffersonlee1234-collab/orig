@@ -518,6 +518,7 @@ exports.getApplicationById = async (req, res) => {
 // Update application status (admin) — may approved_amount para dito
 exports.updateApplicationStatus = async (req, res) => {
   try {
+    await initChildWelfareColumns();
     const { applicationId } = req.params;
     const { status, adminNotes, rejectionReason, approvedAmount, referenceNumber, reference_number } = req.body;
 
@@ -529,26 +530,32 @@ exports.updateApplicationStatus = async (req, res) => {
     const targetRef = referenceNumber || reference_number || applicationId;
     const cleanId = String(applicationId).replace(/^CW-/, '').trim();
 
+    const findRes = await db.query(
+      `SELECT * FROM child_welfare_applications
+       WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 OR id::text = $3 LIMIT 1`,
+      [applicationId, targetRef, cleanId]
+    );
+
+    if (findRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    const targetRow = findRes.rows[0];
+
     const result = await db.query(
       `UPDATE child_welfare_applications
        SET application_status = $1, admin_notes = $2, rejection_reason = $3,
            approved_by = $4, approved_amount = $5, updated_at = NOW()
-       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 OR id::text = $8 RETURNING *`,
+       WHERE id = $6 RETURNING *`,
       [
         status,
         adminNotes || null,
         status === 'rejected' ? rejectionReason : null,
         status === 'approved' ? (req.user?.id || 'admin') : null,
         finalAmount,
-        applicationId,
-        targetRef,
-        cleanId,
+        targetRow.id,
       ]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Application not found' });
-    }
 
     const app = result.rows[0];
 

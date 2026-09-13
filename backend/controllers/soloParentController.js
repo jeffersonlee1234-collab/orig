@@ -26,7 +26,22 @@ async function getUniqueReferenceNumber(baseRef, appType) {
 async function initSoloParentColumns() {
   try {
     await db.query(`
+      CREATE TABLE IF NOT EXISTS solo_parent_applications (
+        id SERIAL PRIMARY KEY,
+        reference_number VARCHAR(100) UNIQUE NOT NULL,
+        user_id VARCHAR(100) NOT NULL,
+        application_status VARCHAR(50) DEFAULT 'draft',
+        application_type VARCHAR(50) DEFAULT 'new',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100);
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100);
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200);
@@ -38,6 +53,27 @@ async function initSoloParentColumns() {
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_resident BOOLEAN DEFAULT true;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_id VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_title VARCHAR(255);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS first_name VARCHAR(150);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS middle_name VARCHAR(150);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS last_name VARCHAR(150);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS suffix VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS age INTEGER;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS sex VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS civil_status VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_month VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_day VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_year VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS contact_no VARCHAR(50);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150);
     `);
   } catch (e) {
     console.warn('[Solo Parent DB init columns]:', e.message);
@@ -478,6 +514,7 @@ exports.getApplicationById = async (req, res) => {
 // Update application status (admin)
 exports.updateApplicationStatus = async (req, res) => {
   try {
+    await initSoloParentColumns();
     const { applicationId } = req.params;
     const { status, adminNotes, rejectionReason, assignedIdNumber, soloParentIdNumber, referenceNumber, reference_number } = req.body;
 
@@ -489,31 +526,39 @@ exports.updateApplicationStatus = async (req, res) => {
     const targetRef = referenceNumber || reference_number || applicationId;
     const cleanId = String(applicationId).replace(/^SP-/, '').trim();
 
+    // Check if record exists first
+    const findRes = await db.query(
+      `SELECT * FROM solo_parent_applications
+       WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 OR id::text = $3 LIMIT 1`,
+      [applicationId, targetRef, cleanId]
+    );
+
+    if (findRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    const targetRow = findRes.rows[0];
+
     const result = await db.query(
       `UPDATE solo_parent_applications
        SET application_status = $1,
            admin_notes = $2,
            rejection_reason = $3,
            approved_by = $4,
+           approved_date = CASE WHEN $1 = 'approved' THEN NOW() ELSE approved_date END,
            solo_parent_id_number = COALESCE($5, solo_parent_id_number),
            assigned_id_number = COALESCE($5, assigned_id_number),
            updated_at = NOW()
-       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 OR id::text = $8 RETURNING *`,
+       WHERE id = $6 RETURNING *`,
       [
         status,
         adminNotes || null,
         status === 'rejected' ? rejectionReason : null,
         status === 'approved' ? (req.user?.id || 'admin') : null,
         status === 'approved' ? assignedId : null,
-        applicationId,
-        targetRef,
-        cleanId,
+        targetRow.id,
       ]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Application not found' });
-    }
 
     res.status(200).json({ success: true, message: 'Application status updated', application: result.rows[0] });
   } catch (error) {
