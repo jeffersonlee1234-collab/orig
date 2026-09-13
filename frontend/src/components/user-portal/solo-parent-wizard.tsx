@@ -13,6 +13,7 @@ import {
   Loader2,
   Sparkles,
   User,
+  Clock,
 } from "lucide-react"
 
 import { useLanguage } from "../ui/language-context"
@@ -2074,30 +2075,91 @@ export default function SoloParentApplicationWizard({
   }
 
   if (submissionStage === "pending") {
+    const activeRef = reference || blockedReference
+    let liveApp =
+      (blockedApp && (blockedApp.reference_number === activeRef || blockedApp.referenceNumber === activeRef || blockedApp.id === activeRef) ? blockedApp : null)
+
+    if (!liveApp) {
+      try {
+        const local = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+        if (Array.isArray(local)) {
+          liveApp = local.find((a: any) =>
+            a.reference_number === activeRef ||
+            a.referenceNumber === activeRef ||
+            String(a.id) === String(activeRef) ||
+            (activeRef && String(a.reference_number || "").includes(activeRef))
+          )
+        }
+      } catch {}
+    }
+
+    const isLiveApproved =
+      liveApp?.application_status === "approved" ||
+      liveApp?.status === "approved" ||
+      blockReason === "approved"
+
+    const liveAssignedId =
+      liveApp?.assigned_id_number ||
+      liveApp?.assignedIdNumber ||
+      liveApp?.solo_parent_id_number ||
+      liveApp?.soloParentIdNumber
+
     return (
       <div className="max-w-3xl mx-auto p-4 md:p-6 animate-in fade-in duration-300">
         <div className="bg-white border border-border rounded-2xl p-6 md:p-8 text-center shadow-lg space-y-6">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50">
-            <Check className="w-8 h-8" />
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ring-8 ${
+              isLiveApproved
+                ? "bg-emerald-100 text-emerald-600 ring-emerald-50"
+                : "bg-amber-100 text-amber-600 ring-amber-50"
+            }`}
+          >
+            {isLiveApproved ? <Check className="w-8 h-8 text-emerald-600" /> : <Clock className="w-8 h-8 text-amber-600" />}
           </div>
 
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <Sparkles className="w-3.5 h-3.5" /> Application Submitted Successfully!
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                isLiveApproved
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+            >
+              {isLiveApproved ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Official Solo Parent ID Approved!
+                </>
+              ) : (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" /> Application Pending Review
+                </>
+              )}
             </span>
             <h2 className="text-2xl font-bold text-foreground">
-              {language === "en"
-                ? "Application Received!"
+              {isLiveApproved
+                ? language === "en"
+                  ? "Congratulations! Your Solo Parent ID is Approved!"
+                  : language === "bis"
+                  ? "Pahalipay! Na-aprobahan ang Imong Solo Parent ID!"
+                  : "Malugod na Pagbati! Ang Inyong Solo Parent ID ay Approved Na!"
+                : language === "en"
+                ? "Application Received & Pending Review"
                 : language === "bis"
-                ? "Nadawat na ang Imong Aplikasyon!"
-                : "Mabuhay! Ang inyong aplikasyon ay Natanggap Na"}
+                ? "Nadawat na ang Aplikasyon ug Kasamtangang Gisusi"
+                : "Aplikasyon ay Natanggap Na at Kasalukuyang Sinusuri"}
             </h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              {language === "en"
-                ? "Your Solo Parent ID application has been submitted and is currently being assessed."
+              {isLiveApproved
+                ? language === "en"
+                  ? "Your Solo Parent ID application has been officially approved by the SSDD. Your official ID is ready."
+                  : language === "bis"
+                  ? "Ang imong aplikasyon na-aprobahan na sa SSDD. Ang opisyal nga ID na-generate na."
+                  : "Ang inyong aplikasyon para sa Solo Parent ID ay opisyal nang na-apruba ng SSDD. Naka-forward na ito sa Appointments para sa claiming schedule."
+                : language === "en"
+                ? "Your Solo Parent ID application has been submitted and is currently pending review by a Social Worker."
                 : language === "bis"
-                ? "Ang imong aplikasyon para sa Solo Parent ID nasumite na ug kasamtangang gisusi."
-                : "Ang inyong Solo Parent ID application ay matagumpay na naisumite at kasalukuyang sinusuri."}
+                ? "Ang imong aplikasyon para sa Solo Parent ID nasumite na ug kasamtangang girebyu sa Social Worker."
+                : "Ang inyong Solo Parent ID application ay matagumpay na naisumite at kasalukuyang sinusuri ng Social Worker."}
             </p>
           </div>
 
@@ -2107,8 +2169,35 @@ export default function SoloParentApplicationWizard({
               <span className="font-semibold text-muted-foreground">
                 {language === "en" ? "Reference Number:" : language === "bis" ? "Numero sa Reperensya:" : "Application Reference No.:"}
               </span>
-              <span className="font-mono font-bold text-blue-700 text-sm">{reference}</span>
+              <span className="font-mono font-bold text-blue-700 text-sm">{activeRef || reference}</span>
             </div>
+
+            {liveAssignedId && (
+              <div className="flex justify-between items-center text-xs text-foreground border-b border-border/80 pb-2">
+                <span className="font-semibold text-muted-foreground">
+                  {language === "en" ? "Official ID Number:" : language === "bis" ? "Opisyal nga Numero sa ID:" : "Opisyal na Numero ng ID:"}
+                </span>
+                <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-300">
+                  {liveAssignedId}
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center text-xs text-foreground border-b border-border/80 pb-2">
+              <span className="font-semibold text-muted-foreground">Status:</span>
+              {isLiveApproved ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {language === "en" ? "Approved" : language === "bis" ? "Aprobado" : "Approved"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  {language === "en" ? "Under Review (Pending)" : language === "bis" ? "Gisusi Pa (Pending)" : "Kasalukuyang Sinusuri (Pending)"}
+                </span>
+              )}
+            </div>
+
             <div className="flex justify-between items-center text-xs text-foreground">
               <span className="text-muted-foreground">Service:</span>
               <span className="font-semibold text-foreground">Solo Parent ID Application</span>
@@ -2136,11 +2225,13 @@ export default function SoloParentApplicationWizard({
           <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs text-blue-900 max-w-md mx-auto flex items-center justify-center gap-2.5 text-center">
             <Info className="w-4 h-4 text-blue-600 shrink-0" />
             <p>
-              {language === "en"
+              {isLiveApproved
+                ? language === "en"
+                  ? "Your ID claiming schedule is being prepared in Appointments. You may check Notifications or Application History."
+                  : "Nai-forward na ang inyong ID sa Appointments para sa claiming schedule. Maaari ninyong tingnan ang Notifications o Application History."
+                : language === "en"
                 ? "You may check Notifications or Application History for updates on your application."
-                : language === "bis"
-                ? "Mahimo nimong tan-awon ang Mga Notipikasyon o Kasaysayan sa Aplikasyon para sa mga update."
-                : "Maaari ninyong tingnan ang Notifications para sa mga update sa inyong aplikasyon."}
+                : "Maaari ninyong tingnan ang Notifications o Application History para sa live update sa inyong aplikasyon."}
             </p>
           </div>
 
