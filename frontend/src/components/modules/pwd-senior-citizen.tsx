@@ -1638,10 +1638,9 @@ interface ApplicationCardProps {
   app: ApplicationSubmission
   onView: (app: ApplicationSubmission) => void
   onShowCard?: (app: ApplicationSubmission) => void
-  onDelete?: (app: ApplicationSubmission) => void
 }
 
-function ApplicationCard({ app, onView, onShowCard, onDelete }: ApplicationCardProps) {
+function ApplicationCard({ app, onView, onShowCard }: ApplicationCardProps) {
   const subLabel = subLabelForApp(app)
   const isSeniorBooklet = !isPWD(app) && (
     String(app.type || "").toLowerCase().includes("booklet") ||
@@ -1727,11 +1726,10 @@ interface DetailedViewProps {
   onApprove: (app: ApplicationSubmission, idNumber: string) => void
   onReject: (id: string, reason: string) => void
   onShowCard?: (app: ApplicationSubmission) => void
-  onDelete?: (app: ApplicationSubmission) => void
   allApplications?: ApplicationSubmission[]
 }
 
-function DetailedView({ app, onClose, onApprove, onReject, onShowCard, onDelete, allApplications }: DetailedViewProps) {
+function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplications }: DetailedViewProps) {
   const subLabel = subLabelForApp(app)
   const contactNumber = isPWD(app) ? app.contactNo : app.cellphoneNo
 
@@ -2842,35 +2840,6 @@ export default function PWDSeniorCitizen() {
     }
   }
 
-  // Delete an individual application
-  const handleDeleteApplication = async (targetApp: ApplicationSubmission) => {
-    const appId = targetApp.id || targetApp.referenceNumber
-    setApplications((prev) => prev.filter((a) => a.id !== targetApp.id && a.referenceNumber !== targetApp.referenceNumber))
-
-    // Remove from localStorage
-    try {
-      const raw = localStorage.getItem("pwd_senior_applications")
-      if (raw) {
-        const list = JSON.parse(raw)
-        if (Array.isArray(list)) {
-          const filtered = list.filter((a) => a.id !== targetApp.id && a.referenceNumber !== targetApp.referenceNumber)
-          localStorage.setItem("pwd_senior_applications", JSON.stringify(filtered))
-        }
-      }
-    } catch {}
-
-    // Delete in backend database
-    try {
-      await fetch(`${API_BASE}/api/pwd-senior/applications/${encodeURIComponent(appId)}`, {
-        method: "DELETE",
-      })
-    } catch (err) {
-      console.warn("Failed deleting backend application:", err)
-    }
-
-    notifyApplicationChange("APPLICATION_DELETED", "pwd_senior", targetApp.referenceNumber)
-  }
-
 
 
 
@@ -3054,7 +3023,6 @@ export default function PWDSeniorCitizen() {
                   app={app}
                   onView={() => setSelectedApp(app)}
                   onShowCard={() => setCardApp(app)}
-                  onDelete={handleDeleteApplication}
                 />
               ))}
             </div>
@@ -3070,7 +3038,6 @@ export default function PWDSeniorCitizen() {
             onApprove={handleApprove}
             onReject={handleReject}
             onShowCard={(app) => setCardApp(app)}
-            onDelete={handleDeleteApplication}
           />
         )}
 
