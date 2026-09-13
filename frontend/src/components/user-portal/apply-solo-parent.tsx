@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
-import { AlertCircle, FileText, X, RefreshCw, HeartHandshake } from "lucide-react"
+import { AlertCircle, FileText, X, RefreshCw, HeartHandshake, Info, CheckCircle2 } from "lucide-react"
 import SoloParentApplicationWizard from "./solo-parent-wizard"
 import ChildWelfareApplicationWizard, { getLocalizedChildWelfarePrograms } from "./child-welfare-wizard"
 import { useLanguage } from "../ui/language-context"
 import { API_BASE } from "../../config/api"
-import { getCurrentUserProfile } from "../../utils/userProfile"
+import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
 interface RequirementItem {
@@ -238,77 +238,171 @@ export default function ApplySoloParent() {
 
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
+  const [blockedApp, setBlockedApp] = useState<any>(null)
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [cwSubmissionStage, setCwSubmissionStage] = useState<"form" | "matching" | "pending">("form")
   const [spSubmissionStage, setSpSubmissionStage] = useState<"form" | "matching" | "pending">("form")
 
-  useEffect(() => {
-    setSelectedCategoryId(null)
-    setUnderstood(false)
-    setCurrentStep(1)
-
-    if (isChildWelfare) {
-      setIsBlocked(false)
-      setShowRequirementsModal(false)
-      return
+  const [bypassedBlock, setBypassedBlock] = useState(() => {
+    try {
+      const isUrlParam = typeof window !== "undefined" && window.location.search.includes("reapply=true")
+      const isLocal =
+        localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
+        localStorage.getItem("solo_parent_reapplying") === "true"
+      return Boolean(isUrlParam || isLocal)
+    } catch {
+      return false
     }
+  })
+  const bypassedBlockRef = useRef(bypassedBlock)
 
-    let active = true
-    const checkEligibility = async () => {
+  useEffect(() => {
+    let isMounted = true
+
+    const checkActiveApp = async () => {
+      if (bypassedBlockRef.current) return
+      if (isChildWelfare) {
+        if (isMounted) setIsBlocked(false)
+        return
+      }
+
       try {
-        const typeToCheck = typeParam === "renewal" ? "renewal" : typeParam === "loss" ? "loss" : "new"
-        const prof = getCurrentUserProfile()
-        const uid = prof.id || ""
-        const qcid = (prof.qcidNo || prof.qcidNumber || "").trim()
-        const email = (prof.email || "").trim()
-        const fn = (prof.firstName || "").trim()
-        const ln = (prof.lastName || "").trim()
-        const res = await fetch(
-          `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
-          { cache: "no-store" }
-        )
-        if (res.ok) {
-          const data = await res.json()
-          if (active) {
-            if (data.blocked) {
-              setIsBlocked(true)
-              setShowRequirementsModal(false)
-              return
+        let backendApps: any[] = []
+        let backendFetched = false
+
+        try {
+          const res = await fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`)
+          if (res.ok) {
+            const data = await res.json()
+            const raw = Array.isArray(data) ? data : data.applications || []
+            if (Array.isArray(raw)) {
+              backendApps = raw
+              backendFetched = true
             }
+          }
+        } catch (err) {
+          console.warn("Could not fetch solo parent applications from backend:", err)
+        }
+
+        let localApps: any[] = []
+        try {
+          const raw = localStorage.getItem("solo_parent_applications")
+          if (raw) localApps = JSON.parse(raw)
+          if (!Array.isArray(localApps)) localApps = []
+        } catch {}
+
+        let allApps: any[] = []
+        if (backendFetched) {
+          allApps = [...backendApps]
+          try {
+            localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
+          } catch {}
+        } else {
+          allApps = [...localApps]
+        }
+
+        const currentQcid = getLoggedInUserQcid() || "110000572516915"
+        const userProf = getCurrentUserProfile()
+        const currentEmail = (userProf?.email || "").toLowerCase().trim()
+        const currentLastName = (userProf?.lastName || "").toLowerCase().trim()
+        const currentFirstName = (userProf?.firstName || "").toLowerCase().trim()
+
+        const isMatchForSoloParent = (a: any) => {
+          if (!a) return false
+          const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+          if (typeParam === "renewal") {
+            if (aType !== "renewal") return false
+          } else if (typeParam === "loss") {
+            if (aType !== "loss" && aType !== "replacement") return false
+          } else {
+            if (aType === "loss" || aType === "replacement" || aType === "renewal") return false
+          }
+
+          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || "").trim()
+          const appEmail = String(a.email || "").toLowerCase().trim()
+          const appLastName = String(a.last_name || a.lastName || "").toLowerCase().trim()
+          const appFirstName = String(a.first_name || a.firstName || "").toLowerCase().trim()
+
+          const matchUser =
+            (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid)) || appRef.includes(currentQcid.slice(-6)))) ||
+            (currentEmail && appEmail && currentEmail === appEmail) ||
+            (currentLastName && appLastName && currentFirstName && appFirstName && currentLastName === appLastName && currentFirstName === appFirstName)
+
+          return Boolean(matchUser)
+        }
+
+        const userMatchingApps = allApps.filter(isMatchForSoloParent)
+        const matchedApproved = userMatchingApps.find((a) => {
+          const s = String(a.application_status || a.status || "").toLowerCase()
+          return s === "approved" || s === "completed" || s === "for_release" || s === "active"
+        })
+        const matchedPending = userMatchingApps.find((a) => {
+          const s = String(a.application_status || a.status || "pending").toLowerCase()
+          return (s === "pending" || s === "draft" || s === "under_review") && (!matchedApproved || (a.id !== matchedApproved.id && a.reference_number !== matchedApproved.reference_number))
+        })
+
+        if (isMounted && !bypassedBlockRef.current) {
+          if (matchedApproved) {
+            setIsBlocked(true)
+            setBlockedApp(matchedApproved)
+          } else if (matchedPending) {
+            setIsBlocked(true)
+            setBlockedApp(matchedPending)
+          } else {
+            setIsBlocked(false)
+            setBlockedApp(null)
           }
         }
       } catch (err) {
-        console.warn("Eligibility check error:", err)
-      }
-      if (active) {
-        setIsBlocked(false)
-        setShowRequirementsModal(false)
+        console.warn("Solo parent eligibility check skipped/offline:", err)
       }
     }
 
-    checkEligibility()
-    const interval = setInterval(checkEligibility, 1500)
-    const handleUpdate = () => checkEligibility()
+    checkActiveApp()
+    const pollInterval = setInterval(checkActiveApp, 1500)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
-      checkEligibility()
+      checkActiveApp()
     })
 
-    window.addEventListener("solo_parent_applications_updated", handleUpdate)
-    window.addEventListener("applications_updated", handleUpdate)
-    window.addEventListener("storage", handleUpdate)
+    const handleUpdated = () => checkActiveApp()
+    window.addEventListener("solo_parent_applications_updated", handleUpdated)
+    window.addEventListener("applications_updated", handleUpdated)
+    window.addEventListener("storage", handleUpdated)
 
     return () => {
-      active = false
-      clearInterval(interval)
+      isMounted = false
+      clearInterval(pollInterval)
       unsubscribe()
-      window.removeEventListener("solo_parent_applications_updated", handleUpdate)
-      window.removeEventListener("applications_updated", handleUpdate)
-      window.removeEventListener("storage", handleUpdate)
+      window.removeEventListener("solo_parent_applications_updated", handleUpdated)
+      window.removeEventListener("applications_updated", handleUpdated)
+      window.removeEventListener("storage", handleUpdated)
     }
   }, [categoryParam, typeParam, programParam, isChildWelfare])
+
+  useEffect(() => {
+    try {
+      const isReapp =
+        localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
+        localStorage.getItem("solo_parent_reapplying") === "true" ||
+        (typeof window !== "undefined" && window.location.search.includes("reapply=true"))
+      if (isReapp) {
+        bypassedBlockRef.current = true
+        setBypassedBlock(true)
+      } else {
+        bypassedBlockRef.current = false
+        setBypassedBlock(false)
+      }
+    } catch {
+      bypassedBlockRef.current = false
+      setBypassedBlock(false)
+    }
+    setShowRequirementsModal(false)
+    setUnderstood(false)
+    setCurrentStep(1)
+  }, [categoryParam, typeParam])
 
   const isRenewal = typeParam === "renewal"
   const isLoss = typeParam === "loss"
@@ -348,12 +442,192 @@ export default function ApplySoloParent() {
   )
 
   const activeProfile = getCurrentUserProfile()
+
+  // Render blocked active application UI directly (matches ApplyPWDSenior)
+  if (isBlocked && !bypassedBlock && !isChildWelfare) {
+    const isAppApproved =
+      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "approved" ||
+      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "completed" ||
+      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "for_release" ||
+      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "active"
+
+    const displayRef =
+      blockedApp?.reference_number ||
+      blockedApp?.referenceNumber ||
+      blockedApp?.id ||
+      getLoggedInUserQcid() ||
+      "110000572516915"
+
+    const assignedIdNo =
+      blockedApp?.assigned_id_number ||
+      blockedApp?.assignedIdNumber ||
+      blockedApp?.solo_parent_id_number ||
+      blockedApp?.soloParentIdNumber
+
+    const displayDate = blockedApp?.created_at || blockedApp?.submittedAt || blockedApp?.dateSubmitted
+      ? new Date(blockedApp.created_at || blockedApp.submittedAt || blockedApp.dateSubmitted).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+
+    return (
+      <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center gap-4">
+          <div
+            className={`h-16 w-16 rounded-2xl flex items-center justify-center ${
+              isAppApproved ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-500"
+            }`}
+          >
+            {isAppApproved ? (
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            ) : (
+              <Info className="h-8 w-8 text-amber-500" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              {isAppApproved
+                ? language === "en"
+                  ? "Application Approved"
+                  : language === "bis"
+                  ? "Na-aprobahan ang Aplikasyon!"
+                  : "Na-approve ang Application!"
+                : language === "en"
+                ? "You Have an Existing Active Application"
+                : language === "bis"
+                ? "Aduna Ka Nay Aktibo nga Aplikasyon"
+                : "May Kasalukuyan Ka Nang Aktibong Aplikasyon"}
+            </h2>
+            <p className="text-xs text-gray-600 max-w-md mt-1 leading-relaxed">
+              {isAppApproved
+                ? language === "en"
+                  ? "Your application for Solo Parent ID has been officially approved! You already have an active Solo Parent ID. If you need to renew or replace your ID, please choose an option below."
+                  : language === "bis"
+                  ? "Ang imong aplikasyon para sa Solo Parent ID opisyal nga na-aprobahan sa Gov Service. Aduna ka nay aktibo nga ID."
+                  : "Ang inyong aplikasyon para sa Solo Parent ID ay opisyal nang na-apruba ng Gov Service Social Services Development Department."
+                : language === "en"
+                ? "Your application for Solo Parent ID has been successfully submitted and is currently pending review. Please wait for a Social Worker's assessment before submitting a new application."
+                : language === "bis"
+                ? "Ang imong aplikasyon para sa Solo Parent ID nasumite na ug kasamtangang girebyu sa Social Worker."
+                : "Ang inyong aplikasyon para sa Solo Parent ID ay matagumpay na naisumite at kasalukuyang sinusuri ng Social Worker."}
+            </p>
+          </div>
+
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2.5 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">
+                {language === "en" ? "Reference Number:" : language === "bis" ? "Numero sa Reperensya:" : "Application Reference No.:"}
+              </span>
+              <span className="font-mono font-bold text-blue-600">{displayRef}</span>
+            </div>
+            {assignedIdNo && (
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                <span className="text-gray-500 font-medium">
+                  {language === "en" ? "Official ID Number:" : language === "bis" ? "Numero sa ID:" : "Opisyal na Numero ng ID:"}
+                </span>
+                <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {assignedIdNo}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">Status:</span>
+              {isAppApproved ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {language === "en" ? "Approved" : language === "bis" ? "Aprobado" : "Approved"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  {language === "en" ? "Under Review (Pending)" : language === "bis" ? "Gisusi Pa (Pending)" : "Kasalukuyang Sinusuri (Pending)"}
+                </span>
+              )}
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">
+                {language === "en" ? "Date Filed:" : language === "bis" ? "Petsa sa Pag-file:" : "Petsa ng Pag-apply:"}
+              </span>
+              <span className="font-semibold text-gray-700">{displayDate}</span>
+            </div>
+          </div>
+
+          <div className="w-full pt-2 flex flex-col gap-2">
+            {isAppApproved ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem("solo_parent_reapplying", "true")
+                      localStorage.setItem("solo_parent_reapplying_renewal", "true")
+                    } catch {}
+                    window.location.href = `/portal/apply-solo-parent?category=solo-parent&type=renewal&reapply=true`
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+                >
+                  {language === "en"
+                    ? "Apply for Renewal (Renewal Solo Parent ID)"
+                    : language === "bis"
+                    ? "Pag-apply para sa Renewal (Renewal Solo Parent ID)"
+                    : "Mag-apply para sa Renewal (Renewal Solo Parent ID)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem("solo_parent_reapplying", "true")
+                      localStorage.setItem("solo_parent_reapplying_loss", "true")
+                    } catch {}
+                    window.location.href = `/portal/apply-solo-parent?category=solo-parent&type=loss&reapply=true`
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl border border-blue-600 text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {language === "en"
+                    ? "Apply for Replacement / Lost ID"
+                    : language === "bis"
+                    ? "Pag-apply para sa Replacement / Nawala nga ID"
+                    : "Mag-apply para sa Replacement / Nawalang ID"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = "/portal/my-applications"
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+                >
+                  {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/portal/my-applications"
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+              >
+                {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const isFormActive = isChildWelfare ? cwSubmissionStage === "form" : spSubmissionStage === "form"
   const shouldShowRequirements = !isBlocked && currentStep === 1 && isFormActive
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] py-2">
-      {/* Top Requirements Banner with Button to Open Modal (strictly shown only on Step 1 when in form state and not blocked) */}
+      {/* Top Requirements Banner with Button to Open Modal */}
       {shouldShowRequirements && (
         <div className="max-w-5xl mx-auto px-4 md:px-6 mb-4 animate-in fade-in duration-150">
           <div className="bg-white border border-border rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
