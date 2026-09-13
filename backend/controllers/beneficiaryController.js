@@ -11,13 +11,7 @@ let memoryHistory = [];
  */
 async function syncRealUsersAndApplicantsToBeneficiaries() {
   try {
-    // 1. Purge known dummy records if they exist in DB and uppercase existing names
-    await db.query(`
-      DELETE FROM beneficiaries 
-      WHERE full_name IN ('Clarisa Mae Dimal', 'Rosalinda Torres', 'Julius Cabrera', 'Emilyn Salazar', 'Ferdinand Villanueva', 'Bryan Aguilar')
-         OR beneficiary_number IN ('BNF-2026-0001', 'BNF-2026-0002', 'BNF-2026-0003', 'BNF-2026-0004')
-    `).catch(() => {});
-
+    // 1. Ensure existing names are uppercase and civil_status is defaulted
     await db.query(`UPDATE beneficiaries SET full_name = UPPER(full_name)`).catch(() => {});
     await db.query(`UPDATE beneficiaries SET civil_status = 'Single' WHERE civil_status IS NULL OR civil_status = '' OR civil_status = '—'`).catch(() => {});
     

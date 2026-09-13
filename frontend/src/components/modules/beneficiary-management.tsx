@@ -162,11 +162,11 @@ function SectionHeading({ icon, children }: { icon: React.ReactNode; children: R
 // Beneficiary Card
 // =====================================================================================
 
-function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (id: string) => void }) {
+function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (b: Beneficiary) => void }) {
   const vt = getVerificationTheme(b.verificationStatus)
   return (
     <div
-      onClick={() => onOpen(b.id)}
+      onClick={() => onOpen(b)}
       className="border border-border rounded-xl p-4 bg-white transition-all hover:shadow-md hover:border-blue-200 cursor-pointer group"
     >
       <div className="flex items-start gap-4">
@@ -698,7 +698,7 @@ export default function BeneficiaryManagement() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<MainTab>("list")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterProgram, setFilterProgram] = useState<"all" | ProgramKey>("all")
   const [filterVerification, setFilterVerification] = useState<"all" | VerificationStatus>("all")
@@ -773,10 +773,21 @@ export default function BeneficiaryManagement() {
       await res.json()
 
       showToast(`Beneficiary verified successfully!`, "success")
+      setSelectedBeneficiary((prev) =>
+        prev
+          ? {
+              ...prev,
+              verificationStatus: "verified",
+              idType,
+              idNumber,
+              verificationRemarks: remarks || "Identity verified with valid documents.",
+            }
+          : null
+      )
       notifyApplicationChange("STATUS_CHANGED", "all", id)
       await fetchBeneficiaries(true)
     } catch (err: any) {
-      showToast(err.message || "Failed to verify beneficiary.", "danger")
+      showToast(err.message || "Verification failed.", "danger")
     } finally {
       setIsProcessing(false)
     }
@@ -1022,7 +1033,7 @@ export default function BeneficiaryManagement() {
             ) : (
               <div className="space-y-3">
                 {filteredList.map((b) => (
-                  <BeneficiaryCard key={b.id} b={b} onOpen={setSelectedId} />
+                  <BeneficiaryCard key={b.id} b={b} onOpen={setSelectedBeneficiary} />
                 ))}
               </div>
             )}
@@ -1053,7 +1064,7 @@ export default function BeneficiaryManagement() {
           ) : (
             <div className="space-y-3">
               {pendingVerification.map((b) => (
-                <BeneficiaryCard key={b.id} b={b} onOpen={setSelectedId} />
+                <BeneficiaryCard key={b.id} b={b} onOpen={setSelectedBeneficiary} />
               ))}
             </div>
           )}
@@ -1083,7 +1094,12 @@ export default function BeneficiaryManagement() {
               allHistory.map((ev, idx) => (
                 <div
                   key={ev.id || idx}
-                  onClick={() => setSelectedId(ev.beneficiaryId)}
+                  onClick={() => {
+                    const matchB = beneficiaries.find(
+                      (b) => b.id === ev.beneficiaryId || b.beneficiaryNo === ev.beneficiaryNo
+                    )
+                    if (matchB) setSelectedBeneficiary(matchB)
+                  }}
                   className="flex gap-4 px-5 py-4 border-b border-border last:border-0 hover:bg-slate-50/80 cursor-pointer transition-colors"
                 >
                   <div className="flex flex-col items-center shrink-0">
@@ -1119,10 +1135,10 @@ export default function BeneficiaryManagement() {
       )}
 
       {/* Selected Profile Modal */}
-      {selected && (
+      {selectedBeneficiary && (
         <BeneficiaryProfileModal
-          b={selected}
-          onClose={() => setSelectedId(null)}
+          b={selectedBeneficiary}
+          onClose={() => setSelectedBeneficiary(null)}
           onVerify={handleVerify}
           onReject={handleReject}
           onSetPending={handleSetPending}
