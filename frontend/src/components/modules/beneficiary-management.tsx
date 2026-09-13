@@ -288,8 +288,14 @@ function BeneficiaryProfileModal({
   ]
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 flex flex-col max-h-[90vh] overflow-hidden border border-border">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 flex flex-col max-h-[90vh] overflow-hidden border border-border"
+      >
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-border bg-slate-50/50">
           <div className="flex items-start justify-between gap-4">
@@ -743,7 +749,9 @@ export default function BeneficiaryManagement() {
     }
   }, [fetchBeneficiaries])
 
-  const selected = beneficiaries.find((b) => b.id === selectedId) ?? null
+  const selected = beneficiaries.find(
+    (b) => b.id === selectedId || b.beneficiaryNo === selectedId || (b.qcidNumber && b.qcidNumber === selectedId)
+  ) ?? null
 
   // Handle Admin Verification
   const handleVerify = async (id: string, idType: string, idNumber: string, remarks: string) => {
