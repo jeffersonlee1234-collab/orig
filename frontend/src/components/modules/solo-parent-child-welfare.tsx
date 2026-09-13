@@ -326,9 +326,9 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
           docs.push({
             name: docLabel,
             filename: f.filename || docLabel,
-            fileUrl: resolvedUrl || (isPhotoDoc ? "" : getSampleDocumentFallback(docLabel, f.filename)),
+            fileUrl: resolvedUrl || "",
             dataUrl: directData || (isPhotoDoc && applicantPhoto ? applicantPhoto : undefined),
-            previewUrl: directData || undefined,
+            previewUrl: directData || resolvedUrl || undefined,
             fileSize: f.fileSize || f.size || 0,
             uploadedAt: f.uploadedAt || f.date || raw?.created_at || new Date().toISOString(),
             status: "verified",
@@ -350,9 +350,9 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
         docs.push({
           name: docLabel,
           filename: filename,
-          fileUrl: resolvedUrl || (isPhotoDoc ? "" : getSampleDocumentFallback(docLabel, filename)),
+          fileUrl: resolvedUrl || "",
           dataUrl: directData || (isPhotoDoc && applicantPhoto ? applicantPhoto : undefined),
-          previewUrl: directData || undefined,
+          previewUrl: directData || resolvedUrl || undefined,
           fileSize: group.fileSize || group.size || 0,
           uploadedAt: group.uploadedAt || group.date || raw?.created_at || new Date().toISOString(),
           status: "verified",
@@ -371,8 +371,8 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
     }
   }
 
-  // Fallback standard documents for sample/seeded applications
-  if (uniqueDocs.length === 0) {
+  // Fallback standard documents ONLY for legacy seeded demo rows (not real user submissions)
+  if (uniqueDocs.length === 0 && raw?.is_sample) {
     if (isChildWelfare) {
       docs.push(
         {
@@ -388,22 +388,6 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
           filename: "valid_id_guardian.png",
           fileUrl: "/samples/sample_valid_id.png",
           fileSize: 262427,
-          uploadedAt: raw?.created_at || new Date().toISOString(),
-          status: "verified",
-        },
-        {
-          name: "Barangay Certificate / Referral",
-          filename: "barangay_certificate.webp",
-          fileUrl: "/samples/BARANGAY CERTIFICATE.webp",
-          fileSize: 32167,
-          uploadedAt: raw?.created_at || new Date().toISOString(),
-          status: "verified",
-        },
-        {
-          name: "Proof of Indigency / Circumstance",
-          filename: "proof_of_circumstance.webp",
-          fileUrl: "/samples/PROOF OF CIRCUMSTANCE (ANY ONE).webp",
-          fileSize: 46184,
           uploadedAt: raw?.created_at || new Date().toISOString(),
           status: "verified",
         }
@@ -423,22 +407,6 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
           filename: "psa_birth_certificate.jpg",
           fileUrl: "/samples/BIRTH CERTIFICATE OF MINOR.jpg",
           fileSize: 39227,
-          uploadedAt: raw?.created_at || new Date().toISOString(),
-          status: "verified",
-        },
-        {
-          name: "Valid Government ID",
-          filename: "valid_id.png",
-          fileUrl: "/samples/sample_valid_id.png",
-          fileSize: 262427,
-          uploadedAt: raw?.created_at || new Date().toISOString(),
-          status: "verified",
-        },
-        {
-          name: "2x2 ID Picture",
-          filename: "id_picture_2x2.webp",
-          fileUrl: "/samples/ID PICTURE (2X2).webp",
-          fileSize: 291508,
           uploadedAt: raw?.created_at || new Date().toISOString(),
           status: "verified",
         }
@@ -997,15 +965,6 @@ function getDocumentCandidateUrls(doc: ApplicationDocument, app?: WelfareSubmiss
     if (appPhoto && !appPhoto.includes("/samples/")) add(appPhoto)
     if (app.applicantPhoto && !app.applicantPhoto.includes("/samples/")) add(app.applicantPhoto)
     if (app.photoUrl && !app.photoUrl.includes("/samples/")) add(app.photoUrl)
-  }
-
-  // 4. Sample fallback
-  if (!isPhotoDoc) {
-    const sample = getSampleDocumentFallback(doc.name, doc.filename)
-    if (sample) add(sample)
-  } else {
-    const sample = getSampleDocumentFallback(doc.name, doc.filename) || "/samples/ID PICTURE (2X2).webp"
-    if (sample) add(sample)
   }
 
   return urls

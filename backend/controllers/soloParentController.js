@@ -186,7 +186,17 @@ exports.createApplication = async (req, res) => {
       bloodType,
     };
 
-    const initialStatus = appData.status || appData.application_status || 'pending';
+    const applicantPhoto =
+      appData.applicantPhoto ||
+      fd.applicantPhoto ||
+      appData.photoUrl ||
+      fd.photoUrl ||
+      (Array.isArray(initialDocs)
+        ? (initialDocs.find((d) => /photo|picture|2x2|id_pic|avatar/i.test(d.documentLabel || d.documentId || ''))?.files?.[0]?.dataUrl ||
+           initialDocs.find((d) => /photo|picture|2x2|id_pic|avatar/i.test(d.documentLabel || d.documentId || ''))?.files?.[0]?.previewUrl ||
+           initialDocs.find((d) => /photo|picture|2x2|id_pic|avatar/i.test(d.documentLabel || d.documentId || ''))?.files?.[0]?.fileUrl)
+        : null) ||
+      null;
 
     const result = await db.query(
       `INSERT INTO solo_parent_applications (
@@ -199,7 +209,8 @@ exports.createApplication = async (req, res) => {
         qcid_number, email,
         emergency_first_name, emergency_last_name, emergency_name,
         emergency_contact_no, emergency_relationship, emergency_address,
-        blood_type, form_data, family_members, extra_data, uploaded_documents
+        blood_type, form_data, family_members, extra_data, uploaded_documents,
+        applicant_photo, photo_url
       ) VALUES (
         $1, $2, $3, $4,
         $5, $6, $7, $8,
@@ -210,7 +221,8 @@ exports.createApplication = async (req, res) => {
         $26, $27,
         $28, $29, $30,
         $31, $32, $33,
-        $34, $35, $36, $37, $38
+        $34, $35, $36, $37, $38,
+        $39, $40
       ) RETURNING id, reference_number`,
       [
         referenceNumber, String(userId || '0'), initialStatus, idStatus,
@@ -222,8 +234,9 @@ exports.createApplication = async (req, res) => {
         fd.qcidNumber || null, fd.email || null,
         emergencyFirstName, emergencyLastName, emergencyName,
         emergencyPhone, emergencyRel, emergencyAddr,
-        bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers }),
-        JSON.stringify(initialDocs || [])
+        bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers, applicantPhoto }),
+        JSON.stringify(initialDocs || []),
+        applicantPhoto, applicantPhoto
       ]
     );
 
