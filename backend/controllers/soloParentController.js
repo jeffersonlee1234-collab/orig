@@ -66,6 +66,8 @@ async function initSoloParentColumns() {
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100)",
     "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150)",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT",
+    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT",
   ];
 
   try {
@@ -111,6 +113,8 @@ async function initSoloParentColumns() {
         family_members JSONB DEFAULT '[]'::jsonb,
         extra_data JSONB DEFAULT '{}'::jsonb,
         uploaded_documents JSONB DEFAULT '[]'::jsonb,
+        applicant_photo TEXT,
+        photo_url TEXT,
         rejection_reason TEXT,
         admin_notes TEXT,
         approved_by VARCHAR(100),
@@ -198,49 +202,96 @@ exports.createApplication = async (req, res) => {
         : null) ||
       null;
 
-    const result = await db.query(
-      `INSERT INTO solo_parent_applications (
-        reference_number, user_id, application_status, application_type,
-        is_resident, classification_id, classification_title, required_document_ids,
-        solo_parent_id_number, is_id_verified,
-        first_name, middle_name, last_name, suffix, age, sex,
-        dob_month, dob_day, dob_year, civil_status, contact_no,
-        address_house_no, address_street, address_barangay, address_city_municipality,
-        qcid_number, email,
-        emergency_first_name, emergency_last_name, emergency_name,
-        emergency_contact_no, emergency_relationship, emergency_address,
-        blood_type, form_data, family_members, extra_data, uploaded_documents,
-        applicant_photo, photo_url
-      ) VALUES (
-        $1, $2, $3, $4,
-        $5, $6, $7, $8,
-        $9, $10,
-        $11, $12, $13, $14, $15, $16,
-        $17, $18, $19, $20, $21,
-        $22, $23, $24, $25,
-        $26, $27,
-        $28, $29, $30,
-        $31, $32, $33,
-        $34, $35, $36, $37, $38,
-        $39, $40
-      ) RETURNING id, reference_number`,
-      [
-        referenceNumber, String(userId || '0'), initialStatus, idStatus,
-        isResident, selectedCategoryId, selectedCategory?.title || null, JSON.stringify(requiredDocumentIds || []),
-        soloParentIdNum, Boolean(isIdVerified),
-        fd.firstName || null, fd.middleName || null, fd.lastName || null, fd.suffix || null, safeAge, fd.sex || null,
-        fd.dobMonth || null, fd.dobDay || null, fd.dobYear || null, fd.civilStatus || null, fd.contactNo || null,
-        fd.addressHouseNo || null, fd.addressStreet || null, fd.addressBarangay || null, fd.addressCityMunicipality || null,
-        fd.qcidNumber || null, fd.email || null,
-        emergencyFirstName, emergencyLastName, emergencyName,
-        emergencyPhone, emergencyRel, emergencyAddr,
-        bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers, applicantPhoto }),
-        JSON.stringify(initialDocs || []),
-        applicantPhoto, applicantPhoto
-      ]
-    );
-
-    const saved = result.rows[0];
+    let saved;
+    try {
+      const result = await db.query(
+        `INSERT INTO solo_parent_applications (
+          reference_number, user_id, application_status, application_type,
+          is_resident, classification_id, classification_title, required_document_ids,
+          solo_parent_id_number, is_id_verified,
+          first_name, middle_name, last_name, suffix, age, sex,
+          dob_month, dob_day, dob_year, civil_status, contact_no,
+          address_house_no, address_street, address_barangay, address_city_municipality,
+          qcid_number, email,
+          emergency_first_name, emergency_last_name, emergency_name,
+          emergency_contact_no, emergency_relationship, emergency_address,
+          blood_type, form_data, family_members, extra_data, uploaded_documents,
+          applicant_photo, photo_url
+        ) VALUES (
+          $1, $2, $3, $4,
+          $5, $6, $7, $8,
+          $9, $10,
+          $11, $12, $13, $14, $15, $16,
+          $17, $18, $19, $20, $21,
+          $22, $23, $24, $25,
+          $26, $27,
+          $28, $29, $30,
+          $31, $32, $33,
+          $34, $35, $36, $37, $38,
+          $39, $40
+        ) RETURNING id, reference_number`,
+        [
+          referenceNumber, String(userId || '0'), initialStatus, idStatus,
+          isResident, selectedCategoryId, selectedCategory?.title || null, JSON.stringify(requiredDocumentIds || []),
+          soloParentIdNum, Boolean(isIdVerified),
+          fd.firstName || null, fd.middleName || null, fd.lastName || null, fd.suffix || null, safeAge, fd.sex || null,
+          fd.dobMonth || null, fd.dobDay || null, fd.dobYear || null, fd.civilStatus || null, fd.contactNo || null,
+          fd.addressHouseNo || null, fd.addressStreet || null, fd.addressBarangay || null, fd.addressCityMunicipality || null,
+          fd.qcidNumber || null, fd.email || null,
+          emergencyFirstName, emergencyLastName, emergencyName,
+          emergencyPhone, emergencyRel, emergencyAddr,
+          bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers, applicantPhoto }),
+          JSON.stringify(initialDocs || []),
+          applicantPhoto, applicantPhoto
+        ]
+      );
+      saved = result.rows[0];
+    } catch (insertErr) {
+      console.warn('First insert attempt warning, ensuring columns and retrying:', insertErr.message);
+      try {
+        await db.query("ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT");
+        await db.query("ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT");
+      } catch {}
+      const fallbackResult = await db.query(
+        `INSERT INTO solo_parent_applications (
+          reference_number, user_id, application_status, application_type,
+          is_resident, classification_id, classification_title, required_document_ids,
+          solo_parent_id_number, is_id_verified,
+          first_name, middle_name, last_name, suffix, age, sex,
+          dob_month, dob_day, dob_year, civil_status, contact_no,
+          address_house_no, address_street, address_barangay, address_city_municipality,
+          qcid_number, email,
+          emergency_first_name, emergency_last_name, emergency_name,
+          emergency_contact_no, emergency_relationship, emergency_address,
+          blood_type, form_data, family_members, extra_data, uploaded_documents
+        ) VALUES (
+          $1, $2, $3, $4,
+          $5, $6, $7, $8,
+          $9, $10,
+          $11, $12, $13, $14, $15, $16,
+          $17, $18, $19, $20, $21,
+          $22, $23, $24, $25,
+          $26, $27,
+          $28, $29, $30,
+          $31, $32, $33,
+          $34, $35, $36, $37, $38
+        ) RETURNING id, reference_number`,
+        [
+          referenceNumber, String(userId || '0'), initialStatus, idStatus,
+          isResident, selectedCategoryId, selectedCategory?.title || null, JSON.stringify(requiredDocumentIds || []),
+          soloParentIdNum, Boolean(isIdVerified),
+          fd.firstName || null, fd.middleName || null, fd.lastName || null, fd.suffix || null, safeAge, fd.sex || null,
+          fd.dobMonth || null, fd.dobDay || null, fd.dobYear || null, fd.civilStatus || null, fd.contactNo || null,
+          fd.addressHouseNo || null, fd.addressStreet || null, fd.addressBarangay || null, fd.addressCityMunicipality || null,
+          fd.qcidNumber || null, fd.email || null,
+          emergencyFirstName, emergencyLastName, emergencyName,
+          emergencyPhone, emergencyRel, emergencyAddr,
+          bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers, applicantPhoto }),
+          JSON.stringify(initialDocs || [])
+        ]
+      );
+      saved = fallbackResult.rows[0];
+    }
 
     try {
       const { ensureBeneficiaryForUser } = require('./beneficiaryController');
