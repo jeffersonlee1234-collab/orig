@@ -261,23 +261,12 @@ type ProfileTab = "overview" | "programs" | "verification" | "history"
 function BeneficiaryProfileModal({
   b,
   onClose,
-  onVerify,
-  onReject,
-  onSetPending,
-  isProcessing,
 }: {
   b: Beneficiary
   onClose: () => void
-  onVerify: (id: string, idType: string, idNumber: string, remarks: string) => Promise<void>
-  onReject: (id: string, remarks: string) => Promise<void>
-  onSetPending: (id: string, remarks: string) => Promise<void>
-  isProcessing: boolean
 }) {
   const cardPhoto = getBeneficiaryCardPhoto(b)
   const [tab, setTab] = useState<ProfileTab>("overview")
-  const [idType, setIdType] = useState(b.idType || "QCitizen ID")
-  const [idNumber, setIdNumber] = useState(b.idNumber || b.qcidNumber || "")
-  const [remarks, setRemarks] = useState(b.verificationRemarks || "")
 
   const vt = getVerificationTheme(b.verificationStatus)
 
@@ -536,93 +525,67 @@ function BeneficiaryProfileModal({
                   </div>
                 </div>
               ) : b.verificationStatus === "unverified" ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-red-800 font-semibold mb-1">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                    <span>Unverified Beneficiary</span>
-                  </div>
-                  <p className="text-xs text-red-700">
-                    This profile is flagged as unverified due to missing or non-matching records.
-                  </p>
-                  {b.verificationRemarks && (
-                    <p className="text-xs text-red-800 mt-2 bg-red-100/50 p-2 rounded border border-red-200/50">
-                      <strong>Remarks:</strong> {b.verificationRemarks}
+                <div className="space-y-4">
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-red-800 font-semibold mb-1">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <span>Unverified / Application Rejected</span>
+                    </div>
+                    <p className="text-xs text-red-700">
+                      Hindi pa nakakapasa o na-reject ang isinumiteng aplikasyon sa service module batay sa ebalwasyon ng Social Worker.
                     </p>
-                  )}
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                      Application Evaluation Status
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
+                      <Field label="ID Type" value={b.idType || "Government ID"} />
+                      <Field
+                        label="ID / QCID Number"
+                        value={<MaskedText value={b.qcidNumber || b.idNumber || b.beneficiaryNo} type="id" />}
+                      />
+                      <Field label="Enrolled Programs" value={`${b.enrolledPrograms.length} Application(s)`} />
+                      <Field label="Module Status" value={<span className="text-xs font-semibold text-red-600">Unverified / Rejected</span>} />
+                    </div>
+                    {b.verificationRemarks && (
+                      <p className="text-xs text-red-800 bg-red-100/50 p-2.5 rounded-lg border border-red-200/50">
+                        <strong>Evaluation Note:</strong> {b.verificationRemarks}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-amber-800 font-semibold mb-1">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                    <span>Pending Identity Verification</span>
-                  </div>
-                  <p className="text-xs text-amber-700">
-                    Review and confirm client identification documents to grant full verified beneficiary status.
-                  </p>
-                </div>
-              )}
-
-              {/* Admin Verification Controls — Only for Pending / Unverified Beneficiaries */}
-              {b.verificationStatus !== "verified" && (
-                <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4 animate-in fade-in duration-200">
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    Update Verification Status
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">ID Type</label>
-                      <input
-                        value={idType}
-                        onChange={(e) => setIdType(e.target.value)}
-                        placeholder="e.g. QCitizen ID, PhilID, PWD ID"
-                        className="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-amber-800 font-semibold mb-1">
+                      <Clock className="h-5 w-5 text-amber-600" />
+                      <span>Pending Identity & Application Evaluation</span>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">ID Number</label>
-                      <input
-                        value={idNumber}
-                        onChange={(e) => setIdNumber(e.target.value)}
-                        placeholder="e.g. 110000116932100"
-                        className="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="text-xs font-semibold text-muted-foreground">Verification Remarks / Notes</label>
-                      <input
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        placeholder="e.g. Verified against QCitizen Portal and Voter's Record."
-                        className="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                    </div>
+                    <p className="text-xs text-amber-700">
+                      Awtomatikong naka-link ang verification status ng benepisyaryo sa kanyang mga isinumiteng aplikasyon sa mga module (tulad ng AICS, PWD, Solo Parent, Child Welfare, Livelihood). Kapag na-approve ng Social Worker ang aplikasyon sa kaukulang module, awtomatiko itong magiging <strong>Verified</strong>.
+                    </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <button
-                      disabled={isProcessing}
-                      onClick={() => onVerify(b.id, idType, idNumber, remarks)}
-                      className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium text-xs hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                      {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      Confirm Verified
-                    </button>
-                    <button
-                      disabled={isProcessing}
-                      onClick={() => onReject(b.id, remarks)}
-                      className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium text-xs hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                      {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                      Flag Unverified
-                    </button>
-                    <button
-                      disabled={isProcessing}
-                      onClick={() => onSetPending(b.id, remarks)}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-200 text-slate-700 font-medium text-xs hover:bg-slate-300 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                      <Clock className="h-4 w-4" />
-                      Set Pending
-                    </button>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                      Automatic Verification Details
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
+                      <Field label="ID Type" value={b.idType || (b.qcidNumber ? "QCitizen ID" : "Government ID")} />
+                      <Field
+                        label="ID / QCID Number"
+                        value={<MaskedText value={b.qcidNumber || b.idNumber || b.beneficiaryNo} type="id" />}
+                      />
+                      <Field label="Submitted Applications" value={`${b.enrolledPrograms.length} Application(s)`} />
+                      <Field label="Module Status" value={<span className="text-xs font-semibold text-amber-600">Pending Review in Modules</span>} />
+                    </div>
+                    {b.verificationRemarks && (
+                      <p className="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+                        <strong>Evaluation Note:</strong> {b.verificationRemarks}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1141,10 +1104,6 @@ export default function BeneficiaryManagement() {
         <BeneficiaryProfileModal
           b={selectedBeneficiary}
           onClose={() => setSelectedBeneficiary(null)}
-          onVerify={handleVerify}
-          onReject={handleReject}
-          onSetPending={handleSetPending}
-          isProcessing={isProcessing}
         />
       )}
     </div>

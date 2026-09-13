@@ -816,6 +816,40 @@ async function getAllBeneficiaries(req, res) {
         }
       }
 
+      // Automatic Verification Status derived directly from Module Applications
+      let autoVerificationStatus = b.verification_status || 'pending';
+      let autoVerifiedBy = b.verified_by || null;
+      let autoVerifiedDate = b.verification_date ? new Date(b.verification_date).toISOString().split('T')[0] : null;
+      let autoRemarks = b.verification_remarks || null;
+
+      const hasApproved = enrolledPrograms.some((p) => {
+        const s = String(p.status || '').toLowerCase();
+        return s.includes('approv') || s.includes('release') || s.includes('enroll') || s.includes('claim') || s.includes('active') || s.includes('verif');
+      });
+
+      const hasPending = enrolledPrograms.some((p) => {
+        const s = String(p.status || '').toLowerCase();
+        return s.includes('pend') || s.includes('review') || s.includes('evaluat') || s.includes('submit');
+      });
+
+      const hasRejectedOnly = enrolledPrograms.length > 0 && enrolledPrograms.every((p) => {
+        const s = String(p.status || '').toLowerCase();
+        return s.includes('reject') || s.includes('decline') || s.includes('cancel');
+      });
+
+      if (hasApproved || b.verification_status === 'verified') {
+        autoVerificationStatus = 'verified';
+        autoVerifiedBy = autoVerifiedBy || 'Social Worker Module Approval';
+        autoVerifiedDate = autoVerifiedDate || new Date().toISOString().split('T')[0];
+        autoRemarks = autoRemarks || 'Verified automatically upon service module application approval.';
+      } else if (hasRejectedOnly) {
+        autoVerificationStatus = 'unverified';
+        autoRemarks = autoRemarks || 'Application did not meet qualification requirements.';
+      } else {
+        autoVerificationStatus = 'pending';
+        autoRemarks = autoRemarks || 'Pending review in program applications.';
+      }
+
       return {
         id: String(b.id),
         beneficiaryNo: bNum,
@@ -832,10 +866,10 @@ async function getAllBeneficiaries(req, res) {
         qcidNumber: b.qcid_number || "—",
         householdMembers: String(b.household_members || "1"),
         dateRegistered: new Date(b.created_at || Date.now()).toISOString().split('T')[0],
-        verificationStatus: b.verification_status || "pending",
-        verifiedBy: b.verified_by || undefined,
-        verifiedDate: b.verification_date ? new Date(b.verification_date).toISOString().split('T')[0] : undefined,
-        verificationRemarks: b.verification_remarks || undefined,
+        verificationStatus: autoVerificationStatus,
+        verifiedBy: autoVerifiedBy || undefined,
+        verifiedDate: autoVerifiedDate || undefined,
+        verificationRemarks: autoRemarks || undefined,
         idType: b.id_type || (b.qcid_number ? "QCitizen ID" : "Government ID"),
         idNumber: b.id_number || b.qcid_number || undefined,
         enrolledPrograms,
