@@ -1249,7 +1249,6 @@ function OfficialIdCardBack({
 function OfficialIdCardModal({
   app,
   onClose,
-  allSubmissions,
 }: {
   app: ApplicationSubmission | null
   onClose: () => void
