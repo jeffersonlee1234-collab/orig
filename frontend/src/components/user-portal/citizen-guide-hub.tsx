@@ -90,11 +90,20 @@ export default function CitizenGuideHub() {
           }
         } catch {}
 
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token") || ""
+        const sessionToken = sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken") || ""
+        const authHeaders: Record<string, string> = {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(sessionToken ? { "x-session-token": sessionToken } : {}),
+          ...(userEmail ? { "x-user-email": userEmail } : {}),
+        }
+
         try {
           const delRes = await fetch(
             `${API_BASE}/api/user-applications/deleted?email=${encodeURIComponent(userEmail)}&qcid=${encodeURIComponent(
               qcid
-            )}&name=${encodeURIComponent(userFirstName + " " + userLastName)}`
+            )}&name=${encodeURIComponent(userFirstName + " " + userLastName)}`,
+            { headers: authHeaders }
           )
           if (delRes.ok) {
             const delData = await delRes.json()
@@ -129,7 +138,7 @@ export default function CitizenGuideHub() {
 
         // 1. AICS Apps
         try {
-          const res = await fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcid)}`)
+          const res = await fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcid)}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             const list = Array.isArray(data) ? data : data.applications || []
@@ -152,7 +161,7 @@ export default function CitizenGuideHub() {
 
         // 2. PWD / Senior Apps
         try {
-          const res2 = await fetch(`${API_BASE}/api/pwd-senior/applications`)
+          const res2 = await fetch(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders })
           if (res2.ok) {
             const list2 = await res2.json()
             if (Array.isArray(list2)) {
@@ -174,7 +183,7 @@ export default function CitizenGuideHub() {
 
         // 3. Solo Parent Apps
         try {
-          const res3 = await fetch(`${API_BASE}/api/solo-parent/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`)
+          const res3 = await fetch(`${API_BASE}/api/solo-parent/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
           if (res3.ok) {
             const data3 = await res3.json()
             const list3 = data3.applications || (Array.isArray(data3) ? data3 : [])
@@ -195,7 +204,7 @@ export default function CitizenGuideHub() {
 
         // 4. Child Welfare Apps
         try {
-          const res4 = await fetch(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`)
+          const res4 = await fetch(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
           if (res4.ok) {
             const data4 = await res4.json()
             const list4 = data4.applications || (Array.isArray(data4) ? data4 : [])

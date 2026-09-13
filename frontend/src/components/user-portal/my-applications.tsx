@@ -358,11 +358,19 @@ export default function MyApplications() {
       setDeletedApplications(initialDeleted)
       const deletedKeySet = new Set(initialDeleted.map((d) => (d.applicationNo + "::" + d.assistance).toLowerCase()))
 
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token") || ""
+      const sessionToken = sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken") || ""
+      const authHeaders: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(sessionToken ? { "x-session-token": sessionToken } : {}),
+        ...(userEmail ? { "x-user-email": userEmail } : {}),
+      }
+
       let allFoundApps: ApplicationRecord[] = []
 
       // 1. AICS Applications
       try {
-        const res = await fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId)}`)
+        const res = await fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId)}`, { headers: authHeaders })
         if (res.ok) {
           const data = await res.json()
           if (data.applications && Array.isArray(data.applications)) {
@@ -420,7 +428,7 @@ export default function MyApplications() {
       try {
         let apiPwdApps: any[] = []
         try {
-          const pwdRes = await fetch(`${API_BASE}/api/pwd-senior/applications`)
+          const pwdRes = await fetch(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders })
           if (pwdRes.ok) {
             apiPwdApps = await pwdRes.json()
           }
@@ -534,7 +542,7 @@ export default function MyApplications() {
       try {
         let spApps: any[] = []
         try {
-          const spRes = await fetch(`${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`)
+          const spRes = await fetch(`${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
           if (spRes.ok) {
             const spData = await spRes.json()
             spApps = spData.applications || spData || []
@@ -607,7 +615,7 @@ export default function MyApplications() {
 
       // 4. Child Welfare Applications
       try {
-        const cwRes = await fetch(`${API_BASE}/api/child-welfare/user/${userId}`)
+        const cwRes = await fetch(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
         if (cwRes.ok) {
           const cwData = await cwRes.json()
           if (cwData.applications && Array.isArray(cwData.applications)) {
@@ -667,7 +675,7 @@ export default function MyApplications() {
       try {
         let livApps: any[] = []
         try {
-          const livRes = await fetch(`${API_BASE}/api/livelihood/applications`)
+          const livRes = await fetch(`${API_BASE}/api/livelihood/applications`, { headers: authHeaders })
           if (livRes.ok) {
             const lData = await livRes.json()
             livApps = lData.applications || (Array.isArray(lData) ? lData : [])
@@ -676,7 +684,7 @@ export default function MyApplications() {
 
         if (livApps.length === 0 && (qcId || userId)) {
           try {
-            const livRes2 = await fetch(`${API_BASE}/api/livelihood/applications?qcid=${encodeURIComponent(qcId || userId)}`)
+            const livRes2 = await fetch(`${API_BASE}/api/livelihood/applications?qcid=${encodeURIComponent(qcId || userId)}`, { headers: authHeaders })
             if (livRes2.ok) {
               const lData2 = await livRes2.json()
               livApps = lData2.applications || (Array.isArray(lData2) ? lData2 : [])
@@ -811,7 +819,7 @@ export default function MyApplications() {
       try {
         let trnApps: any[] = []
         try {
-          const trnRes = await fetch(`${API_BASE}/api/training/applications`)
+          const trnRes = await fetch(`${API_BASE}/api/training/applications`, { headers: authHeaders })
           if (trnRes.ok) {
             const tData = await trnRes.json()
             trnApps = Array.isArray(tData) ? tData : tData.applications || []
@@ -820,7 +828,7 @@ export default function MyApplications() {
 
         if (trnApps.length === 0 && (qcId || userId)) {
           try {
-            const trnRes2 = await fetch(`${API_BASE}/api/training/applications?qcid=${encodeURIComponent(qcId || userId)}`)
+            const trnRes2 = await fetch(`${API_BASE}/api/training/applications?qcid=${encodeURIComponent(qcId || userId)}`, { headers: authHeaders })
             if (trnRes2.ok) {
               const tData2 = await trnRes2.json()
               trnApps = Array.isArray(tData2) ? tData2 : tData2.applications || []
