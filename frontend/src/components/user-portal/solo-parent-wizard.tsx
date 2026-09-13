@@ -1035,10 +1035,6 @@ export default function SoloParentApplicationWizard({
     try {
       const apps = await fetchAllSoloParentApps()
       const prof = getCurrentUserProfile()
-      const userQcidDigits = (prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").replace(/\D/g, "")
-      const userEmail = (prof.email || userProfile?.email || "").trim().toLowerCase()
-      const userFirstName = (prof.firstName || userProfile?.firstName || "").trim().toLowerCase()
-      const userLastName = (prof.lastName || userProfile?.lastName || "").trim().toLowerCase()
 
       // Find approved Solo Parent applications
       const approvedApps = apps.filter((a) => {
