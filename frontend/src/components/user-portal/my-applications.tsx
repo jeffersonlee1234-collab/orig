@@ -20,6 +20,11 @@ import {
   Wrench,
   ExternalLink,
   Award,
+  Download,
+  Printer,
+  IdCard,
+  User,
+  X,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { getCurrentUserProfile } from "../../utils/userProfile"
@@ -33,6 +38,7 @@ import {
   isTrainingService,
 } from "../../utils/financialAidSync"
 import { useLanguage } from "../ui/language-context"
+import { getApplicantPhotoUrl } from "../modules/pwd-senior-citizen"
 
 export type ApplicationStatus =
   | "Pending"
@@ -76,6 +82,444 @@ export function isIdOrDocumentApplication(app?: { assistance?: string; assistanc
   return isIdOrDocumentService(`${app.assistanceCategory || ""} ${app.assistance || ""}`)
 }
 
+/**
+ * Generate and download a high-resolution authentic Quezon City Digital ID Card PNG
+ */
+export function downloadIdCardAsImage(app: ApplicationRecord, photoUrl?: string) {
+  const canvas = document.createElement("canvas")
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+
+  // Standard CR80 Card Resolution (1000 x 630 px)
+  canvas.width = 1000
+  canvas.height = 630
+
+  const isSenior =
+    app.assistanceCategory === "Senior Citizen" ||
+    app.assistance.toLowerCase().includes("senior")
+  const isPwd =
+    app.assistanceCategory === "PWD" ||
+    app.assistance.toLowerCase().includes("pwd") ||
+    app.assistance.toLowerCase().includes("disability")
+  const isSolo =
+    app.assistanceCategory === "Solo Parent" ||
+    app.assistance.toLowerCase().includes("solo")
+
+  let themeHeaderStart = "#1e3a8a"
+  let themeHeaderEnd = "#1e40af"
+  let themeSubheaderBg = "#f59e0b"
+  let themeSubheaderText = "#0f172a"
+  let idTitle = "QUEZON CITY RESIDENT ID"
+  let idSubTitle = "QUEZON CITY RESIDENT IDENTIFICATION CARD"
+  let badgeText = "QC CITIZEN"
+
+  if (isSenior) {
+    themeHeaderStart = "#78350f"
+    themeHeaderEnd = "#b45309"
+    themeSubheaderBg = "#fcd34d"
+    themeSubheaderText = "#78350f"
+    idTitle = "SENIOR CITIZEN ID CARD"
+    idSubTitle = "QUEZON CITY SENIOR CITIZEN IDENTIFICATION CARD (RA 9994)"
+    badgeText = "SENIOR CITIZEN"
+  } else if (isPwd) {
+    themeHeaderStart = "#581c87"
+    themeHeaderEnd = "#7e22ce"
+    themeSubheaderBg = "#d8b4fe"
+    themeSubheaderText = "#581c87"
+    idTitle = "PERSON WITH DISABILITY ID"
+    idSubTitle = "QUEZON CITY PERSON WITH DISABILITY IDENTIFICATION CARD (RA 10754)"
+    badgeText = "PWD CITIZEN"
+  } else if (isSolo) {
+    themeHeaderStart = "#4c1d95"
+    themeHeaderEnd = "#6d28d9"
+    themeSubheaderBg = "#c4b5fd"
+    themeSubheaderText = "#4c1d95"
+    idTitle = "SOLO PARENT ID CARD"
+    idSubTitle = "QUEZON CITY SOLO PARENT IDENTIFICATION CARD (RA 11861)"
+    badgeText = "SOLO PARENT"
+  }
+
+  // Draw background
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const bgGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
+  bgGrad.addColorStop(0, "#f8fafc")
+  bgGrad.addColorStop(0.5, "#ffffff")
+  bgGrad.addColorStop(1, "#f1f5f9")
+  ctx.fillStyle = bgGrad
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  // Top Header Gradient
+  const headGrad = ctx.createLinearGradient(0, 0, canvas.width, 0)
+  headGrad.addColorStop(0, themeHeaderStart)
+  headGrad.addColorStop(1, themeHeaderEnd)
+  ctx.fillStyle = headGrad
+  ctx.fillRect(0, 0, canvas.width, 100)
+
+  // Header Text
+  ctx.fillStyle = "#ffffff"
+  ctx.font = "bold 18px sans-serif"
+  ctx.fillText("REPUBLIC OF THE PHILIPPINES", 120, 36)
+  ctx.font = "900 28px sans-serif"
+  ctx.fillText("CITY GOVERNMENT OF QUEZON CITY", 120, 68)
+
+  // Right ID Badge
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)"
+  ctx.beginPath()
+  if (typeof (ctx as any).roundRect === "function") {
+    (ctx as any).roundRect(canvas.width - 250, 25, 220, 45, 10)
+  } else {
+    ctx.rect(canvas.width - 250, 25, 220, 45)
+  }
+  ctx.fill()
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"
+  ctx.stroke()
+  ctx.fillStyle = "#ffffff"
+  ctx.font = "bold 15px sans-serif"
+  ctx.textAlign = "center"
+  ctx.fillText(idTitle, canvas.width - 140, 53)
+  ctx.textAlign = "left"
+
+  // Subheader Bar
+  ctx.fillStyle = themeSubheaderBg
+  ctx.fillRect(0, 100, canvas.width, 35)
+  ctx.fillStyle = themeSubheaderText
+  ctx.font = "900 14px sans-serif"
+  ctx.textAlign = "center"
+  ctx.fillText(idSubTitle, canvas.width / 2, 123)
+  ctx.textAlign = "left"
+
+  // Photo Box
+  const photoX = 40
+  const photoY = 160
+  const photoW = 200
+  const photoH = 250
+
+  ctx.fillStyle = "#e2e8f0"
+  ctx.fillRect(photoX, photoY, photoW, photoH)
+  ctx.strokeStyle = "#94a3b8"
+  ctx.lineWidth = 3
+  ctx.strokeRect(photoX, photoY, photoW, photoH)
+
+  // Photo Badge
+  ctx.fillStyle = "#0f172a"
+  ctx.fillRect(photoX, photoY + photoH - 30, photoW, 30)
+  ctx.fillStyle = "#ffffff"
+  ctx.font = "bold 14px sans-serif"
+  ctx.textAlign = "center"
+  ctx.fillText(badgeText, photoX + photoW / 2, photoY + photoH - 10)
+  ctx.textAlign = "left"
+
+  // Helper to draw text info fields
+  const infoX = 270
+  let currY = 180
+
+  // ID Number
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("ASSIGNED ID NUMBER:", infoX, currY)
+  ctx.fillStyle = "#0284c7"
+  ctx.font = "bold 24px monospace"
+  ctx.fillText(app.applicationNo, infoX, currY + 28)
+
+  // Cardholder Name
+  currY += 75
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("CARDHOLDER FULL NAME:", infoX, currY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "900 23px sans-serif"
+  ctx.fillText((app.applicantName || "RESIDENT").toUpperCase(), infoX, currY + 28)
+
+  // Birthdate & Sex
+  currY += 70
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("DATE OF APPLICATION:", infoX, currY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "bold 16px sans-serif"
+  ctx.fillText(app.dateApplied || "September 2026", infoX, currY + 22)
+
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("STATUS / VALIDITY:", infoX + 260, currY)
+  ctx.fillStyle = "#16a34a"
+  ctx.font = "900 16px sans-serif"
+  ctx.fillText("OFFICIALLY ACTIVE", infoX + 260, currY + 22)
+
+  // Contact / Address
+  currY += 65
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("CONTACT NO / JURISDICTION:", infoX, currY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "bold 15px sans-serif"
+  ctx.fillText(`${app.contactNumber || "0915 000 0000"} • Quezon City, Metro Manila`, infoX, currY + 22)
+
+  // Bottom Card Bar
+  const botY = canvas.height - 80
+  ctx.fillStyle = "#f8fafc"
+  ctx.fillRect(0, botY, canvas.width, 80)
+  ctx.strokeStyle = "#cbd5e1"
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(0, botY)
+  ctx.lineTo(canvas.width, botY)
+  ctx.stroke()
+
+  // Barcode simulation
+  ctx.fillStyle = "#334155"
+  ctx.font = "20px monospace"
+  ctx.fillText("||| |||| || ||||| | |||| ||| ||||", 40, botY + 45)
+
+  // Mayor Signature
+  ctx.strokeStyle = "#475569"
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(canvas.width - 320, botY + 45)
+  ctx.lineTo(canvas.width - 60, botY + 45)
+  ctx.stroke()
+
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "900 14px sans-serif"
+  ctx.textAlign = "center"
+  ctx.fillText("HON. MA. JOSEFINA G. BELMONTE", canvas.width - 190, botY + 38)
+  ctx.font = "bold 11px sans-serif"
+  ctx.fillStyle = "#64748b"
+  ctx.fillText("City Mayor, Quezon City", canvas.width - 190, botY + 60)
+  ctx.textAlign = "left"
+
+  // If photoUrl exists, draw photo then download
+  const triggerDownload = () => {
+    const link = document.createElement("a")
+    link.download = `QC_ID_${app.applicationNo}.png`
+    link.href = canvas.toDataURL("image/png")
+    link.click()
+  }
+
+  if (photoUrl && (photoUrl.startsWith("data:") || photoUrl.startsWith("http") || photoUrl.startsWith("/"))) {
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => {
+      ctx.drawImage(img, photoX, photoY, photoW, photoH - 30)
+      triggerDownload()
+    }
+    img.onerror = () => {
+      triggerDownload()
+    }
+    img.src = photoUrl
+  } else {
+    // Draw default silhouette
+    ctx.fillStyle = "#94a3b8"
+    ctx.font = "bold 24px sans-serif"
+    ctx.textAlign = "center"
+    ctx.fillText("2x2 PHOTO", photoX + photoW / 2, photoY + 110)
+    ctx.textAlign = "left"
+    triggerDownload()
+  }
+}
+
+/**
+ * Dedicated Digital ID Card Modal with Print and Download Capabilities
+ */
+function DigitalIdCardModal({
+  app,
+  onClose,
+}: {
+  app: ApplicationRecord
+  onClose: () => void
+}) {
+  const photoUrl = getApplicantPhotoUrl(app)
+  const isSenior =
+    app.assistanceCategory === "Senior Citizen" ||
+    app.assistance.toLowerCase().includes("senior")
+  const isPwd =
+    app.assistanceCategory === "PWD" ||
+    app.assistance.toLowerCase().includes("pwd") ||
+    app.assistance.toLowerCase().includes("disability")
+  const isSolo =
+    app.assistanceCategory === "Solo Parent" ||
+    app.assistance.toLowerCase().includes("solo")
+
+  let headerGradient = "from-red-700 via-red-600 to-red-800"
+  let subheaderBg = "bg-amber-400 text-slate-950"
+  let idLabel = "QCitizen ID"
+  let bottomBadge = "QC CITIZEN"
+  let subheaderText = "Quezon City Resident Identification Card"
+
+  if (isSenior) {
+    headerGradient = "from-amber-800 via-amber-700 to-yellow-900"
+    subheaderBg = "bg-amber-300 text-amber-950"
+    idLabel = "Senior Citizen ID"
+    bottomBadge = "SENIOR CITIZEN"
+    subheaderText = "Quezon City Senior Citizen Identification Card (RA 9994)"
+  } else if (isPwd) {
+    headerGradient = "from-purple-800 via-purple-700 to-indigo-900"
+    subheaderBg = "bg-purple-300 text-purple-950"
+    idLabel = "PWD ID Card"
+    bottomBadge = "PWD CITIZEN"
+    subheaderText = "Quezon City Person with Disability ID (RA 10754)"
+  } else if (isSolo) {
+    headerGradient = "from-violet-800 via-violet-700 to-purple-900"
+    subheaderBg = "bg-violet-300 text-violet-950"
+    idLabel = "Solo Parent ID"
+    bottomBadge = "SOLO PARENT"
+    subheaderText = "Quezon City Solo Parent Identification Card (RA 11861)"
+  }
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleDownload = () => {
+    downloadIdCardAsImage(app, photoUrl)
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <IdCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Digital ID Card</h3>
+              <p className="text-xs text-slate-500 font-mono">Assigned ID Number: {app.applicationNo}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── CARD CANVAS PREVIEW (CR80 RATIO) ── */}
+        <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-lg bg-white select-none">
+          {/* Header */}
+          <div className={`px-4 py-2.5 flex items-center justify-between text-white bg-gradient-to-r ${headerGradient} shadow-xs`}>
+            <div className="flex items-center gap-2.5">
+              <img src="/gov-serves-seal.png" alt="QC Seal" className="w-8 h-8 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+              <div>
+                <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
+                <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES • QUEZON CITY</p>
+              </div>
+            </div>
+            <span className="text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
+              {idLabel}
+            </span>
+          </div>
+
+          {/* Subheader */}
+          <div className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${subheaderBg}`}>
+            {subheaderText}
+          </div>
+
+          {/* Details & Photo */}
+          <div className="p-3.5 flex gap-3 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+            <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+              {photoUrl ? (
+                <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                  <User className="w-8 h-8 text-slate-300 mb-1" />
+                  <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+                </div>
+              )}
+              <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[7px] text-center py-0.5 font-bold uppercase">
+                {bottomBadge}
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0 space-y-1 relative z-10 text-slate-900">
+              <div>
+                <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Assigned ID Number</span>
+                <p className="text-sm font-black text-blue-600 font-mono tracking-wide leading-none">{app.applicationNo}</p>
+              </div>
+
+              <div className="pt-0.5">
+                <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
+                <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
+                <div>
+                  <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
+                </div>
+                <div>
+                  <span className="text-[7px] font-semibold text-slate-400 uppercase">Contact:</span> {app.contactNumber || "—"}
+                </div>
+              </div>
+
+              <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
+                <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "Quezon City"}
+              </div>
+            </div>
+
+            {/* QC Official Seal on right */}
+            <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
+              <img
+                src="/gov-serves-seal.png"
+                alt="QC Official Seal"
+                className="w-13 h-13 object-contain drop-shadow-md"
+              />
+              <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">AUTHENTIC</span>
+            </div>
+          </div>
+
+          {/* Bottom Barcode & Signature */}
+          <div className="px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+            <div>
+              <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
+              <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Officially Approved &amp; Active</span>
+            </div>
+            <div className="text-center">
+              <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
+              <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">HON. MA. JOSEFINA G. BELMONTE</p>
+              <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor, Quezon City</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── ACTION BUTTONS: DOWNLOAD & PRINT ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download ID Card (PNG)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Official ID Card</span>
+          </button>
+        </div>
+
+        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+          Maaari mong ipakita ang Digital ID na ito o i-print upang magsilbing opisyal na ID at diskwento alinsunod sa mga ordinansa ng Lungsod Quezon.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function MyApplications() {
   const { t } = useLanguage()
   const navigate = useNavigate()
@@ -84,6 +528,7 @@ export default function MyApplications() {
   const [deletedApplications, setDeletedApplications] = useState<ApplicationRecord[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedApp, setSelectedApp] = useState<ApplicationRecord | null>(null)
+  const [idCardApp, setIdCardApp] = useState<ApplicationRecord | null>(null)
 
   // Dialog modal states
   const [appToDelete, setAppToDelete] = useState<ApplicationRecord | null>(null)
@@ -1278,62 +1723,7 @@ export default function MyApplications() {
             )
           }
 
-          if (isIdApp) {
-            const isPwd =
-              selectedApp.assistanceCategory === "PWD" ||
-              selectedApp.assistance.toLowerCase().includes("pwd") ||
-              selectedApp.assistance.toLowerCase().includes("disability")
-            const isSenior =
-              selectedApp.assistanceCategory === "Senior Citizen" ||
-              selectedApp.assistance.toLowerCase().includes("senior")
-            const officeName = isPwd
-              ? "Persons with Disability Affairs Division (PDAO)"
-              : isSenior
-              ? "Office of Senior Citizens Affairs (OSCA)"
-              : "Solo Parent Welfare Division"
 
-            return (
-              <div className="bg-slate-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-blue-200/80 dark:border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-blue-950 dark:text-white flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    OFFICIAL ID RECORD &amp; ISSUANCE DETAILS
-                  </h3>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
-                    ✓ ID Active &amp; Valid
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="bg-white dark:bg-slate-800/80 rounded-xl p-3.5 border border-blue-100 dark:border-slate-700 space-y-1">
-                    <span className="text-gray-500 dark:text-slate-400 block uppercase font-bold text-[10px]">Official ID / QCID Number</span>
-                    <span className="text-lg font-mono font-black text-blue-600 dark:text-blue-400 block">{selectedApp.applicationNo}</span>
-                    <p className="text-[10px] text-gray-500 dark:text-slate-400">Official identification record number</p>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-800/80 rounded-xl p-3.5 border border-blue-100 dark:border-slate-700 space-y-1">
-                    <span className="text-gray-500 dark:text-slate-400 block uppercase font-bold text-[10px]">Issuance Status</span>
-                    <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 block">ACTIVE / VALID</span>
-                    <span className="text-xs font-medium text-gray-600 dark:text-slate-300 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Ready for Digital Use
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-800/80 rounded-xl p-3.5 border border-blue-100 dark:border-slate-700 space-y-1">
-                    <span className="text-gray-500 dark:text-slate-400 block uppercase font-bold text-[10px]">Issuing Office</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white block">{officeName}</span>
-                    <span className="text-[10px] text-gray-500 dark:text-slate-400 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" /> SSDD Division Office
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50/80 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-700 rounded-xl p-3 text-xs text-blue-900 dark:text-slate-200 leading-relaxed">
-                  <strong className="text-gray-900 dark:text-white">Paunawa:</strong> Maaari nang ipakita ang inyong <strong className="text-gray-900 dark:text-white">Digital ID</strong> sa User Portal o kunin ang opisyal na physical ID card sa kinauukulang tanggapan para sa inyong mga statutory privileges at discounts.
-                </div>
-              </div>
-            )
-          }
 
           const isLivelihoodApp =
             !isTrainingApp &&
@@ -1409,6 +1799,153 @@ export default function MyApplications() {
                     <span>Buksan ang Livelihood Module</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
+                </div>
+              </div>
+            )
+          }
+
+          if (isIdApp) {
+            const photoUrl = getApplicantPhotoUrl(selectedApp)
+            const isSenior =
+              selectedApp.assistanceCategory === "Senior Citizen" ||
+              selectedApp.assistance.toLowerCase().includes("senior")
+            const isPwd =
+              selectedApp.assistanceCategory === "PWD" ||
+              selectedApp.assistance.toLowerCase().includes("pwd") ||
+              selectedApp.assistance.toLowerCase().includes("disability")
+            const isSolo =
+              selectedApp.assistanceCategory === "Solo Parent" ||
+              selectedApp.assistance.toLowerCase().includes("solo")
+
+            let headerGradient = "from-red-700 via-red-600 to-red-800"
+            let subheaderBg = "bg-amber-400 text-slate-950"
+            let idLabel = "QCitizen ID"
+            let bottomBadge = "QC CITIZEN"
+            let subheaderText = "Quezon City Resident Identification Card"
+
+            if (isSenior) {
+              headerGradient = "from-amber-800 via-amber-700 to-yellow-900"
+              subheaderBg = "bg-amber-300 text-amber-950"
+              idLabel = "Senior Citizen ID"
+              bottomBadge = "SENIOR CITIZEN"
+              subheaderText = "Quezon City Senior Citizen Identification Card (RA 9994)"
+            } else if (isPwd) {
+              headerGradient = "from-purple-800 via-purple-700 to-indigo-900"
+              subheaderBg = "bg-purple-300 text-purple-950"
+              idLabel = "PWD ID Card"
+              bottomBadge = "PWD CITIZEN"
+              subheaderText = "Quezon City Person with Disability ID (RA 10754)"
+            } else if (isSolo) {
+              headerGradient = "from-violet-800 via-violet-700 to-purple-900"
+              subheaderBg = "bg-violet-300 text-violet-950"
+              idLabel = "Solo Parent ID"
+              bottomBadge = "SOLO PARENT"
+              subheaderText = "Quezon City Solo Parent Identification Card (RA 11861)"
+            }
+
+            return (
+              <div className="bg-slate-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-blue-200/80 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                  <h3 className="text-sm font-bold text-blue-950 dark:text-white flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    OFFICIAL DIGITAL ID CARD
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => downloadIdCardAsImage(selectedApp, photoUrl)}
+                      className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download ID (PNG)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print ID Card</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* ID Card Graphic */}
+                <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none max-w-md mx-auto">
+                  <div className={`px-4 py-2.5 flex items-center justify-between text-white bg-gradient-to-r ${headerGradient} shadow-xs`}>
+                    <div className="flex items-center gap-2">
+                      <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+                      <div>
+                        <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
+                        <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES • QUEZON CITY</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
+                      {idLabel}
+                    </span>
+                  </div>
+
+                  <div className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${subheaderBg}`}>
+                    {subheaderText}
+                  </div>
+
+                  <div className="p-3 flex gap-2.5 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+                    <div className="w-20 h-24 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                          <User className="w-8 h-8 text-slate-300 mb-1" />
+                          <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[6.5px] text-center py-0.5 font-bold uppercase">
+                        {bottomBadge}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1 relative z-10 text-slate-900">
+                      <div>
+                        <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Assigned ID Number</span>
+                        <p className="text-sm font-black text-blue-600 font-mono tracking-wide leading-none">{selectedApp.applicationNo}</p>
+                      </div>
+
+                      <div className="pt-0.5">
+                        <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
+                        <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{selectedApp.applicantName}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
+                        <div>
+                          <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {selectedApp.dateOfBirth || "—"}
+                        </div>
+                        <div>
+                          <span className="text-[7px] font-semibold text-slate-400 uppercase">Contact:</span> {selectedApp.contactNumber || "—"}
+                        </div>
+                      </div>
+
+                      <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
+                        <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {selectedApp.address || "Quezon City"}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
+                      <img src="/gov-serves-seal.png" alt="QC Official Seal" className="w-13 h-13 object-contain drop-shadow-md" />
+                      <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
+                    </div>
+                  </div>
+
+                  <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+                    <div>
+                      <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
+                      <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Officially Approved &amp; Active</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-16 border-b border-slate-400 mx-auto mb-0.5" />
+                      <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">HON. MA. JOSEFINA G. BELMONTE</p>
+                      <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor, Quezon City</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )
@@ -1740,7 +2277,7 @@ export default function MyApplications() {
                       : "Solo Parent Welfare Division"
 
                     return (
-                      <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                      <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
                         <div className="flex items-start gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                             <CreditCard className="w-5 h-5" />
@@ -1764,11 +2301,31 @@ export default function MyApplications() {
                           </div>
                         </div>
 
-                        <div className="sm:text-right shrink-0">
-                          <span className="text-[10px] text-gray-400 dark:text-slate-400 font-bold uppercase block">ID Status</span>
-                          <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-700/80 inline-block mt-0.5">
-                            ✓ ACTIVE &amp; READY
-                          </span>
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:justify-end shrink-0 pt-1 md:pt-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              downloadIdCardAsImage(app, getApplicantPhotoUrl(app))
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:hover:bg-blue-900/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                            title="Download ID as PNG image"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download PNG</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setIdCardApp(app)
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                            title="View & Print Official ID Card"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>View &amp; Print ID</span>
+                          </button>
                         </div>
                       </div>
                     )
@@ -2044,6 +2601,14 @@ export default function MyApplications() {
           {toastMessage.type === "danger" ? <Trash2 className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{toastMessage.text}</span>
         </div>
+      )}
+
+      {/* ── DIGITAL ID CARD PREVIEW & PRINT MODAL ── */}
+      {idCardApp && (
+        <DigitalIdCardModal
+          app={idCardApp}
+          onClose={() => setIdCardApp(null)}
+        />
       )}
     </div>
   )
