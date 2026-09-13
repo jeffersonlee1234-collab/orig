@@ -136,8 +136,8 @@ async function autoReleaseScheduledLivelihood() {
   } catch (err) {}
 }
 
-// Interval timer for real-time automatic release (every 2 seconds)
-setInterval(autoReleaseScheduledLivelihood, 2000);
+// Interval timer for scheduled release worker (every 30 seconds)
+setInterval(autoReleaseScheduledLivelihood, 30000);
 
 
 // 1. Create Livelihood Application

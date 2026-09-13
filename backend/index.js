@@ -279,8 +279,17 @@ app.listen(PORT, '0.0.0.0', async () => {
   // Run schema migration / table check on startup
   await initDb();
 
-  // Run auto-release worker every 10 seconds in backend
+  // Run auto-release worker every 30 seconds with re-entrancy protection
+  let isReleasing = false;
   setInterval(async () => {
-    await autoReleaseScheduledDisbursements();
-  }, 10000);
+    if (isReleasing) return;
+    try {
+      isReleasing = true;
+      await autoReleaseScheduledDisbursements();
+    } catch (err) {
+      console.warn('Disbursement worker warning:', err.message);
+    } finally {
+      isReleasing = false;
+    }
+  }, 30000);
 });

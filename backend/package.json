@@ -4,8 +4,8 @@
   "description": "Backend API for Social Service Management System",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
+    "start": "node --max-old-space-size=384 index.js",
+    "dev": "node --max-old-space-size=384 index.js",
     "migrate": "node config/runMigration.js"
   },
   "dependencies": {
