@@ -1110,9 +1110,6 @@ function DigitalIdCardModal({
     day: "numeric",
   })
 
-  const handlePrint = () => {
-    window.print()
-  }
 
   const handleDownloadSide = async (mode: "front" | "back") => {
     setIsDownloading(true)
@@ -1288,14 +1285,7 @@ function DigitalIdCardModal({
               <Download className="w-3.5 h-3.5" />
               <span>Download Back (PNG)</span>
             </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print Card</span>
-            </button>
+
             <button
               type="button"
               onClick={onClose}
