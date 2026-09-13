@@ -9,18 +9,26 @@ export default function SocialServicesLayout() {
   const [dark, setDark] = useState(() => {
     try {
       const saved = localStorage.getItem("theme")
-      if (saved) return saved === "dark"
-      return document.documentElement.classList.contains("dark")
+      if (saved === "dark") return true
+      document.documentElement.classList.remove("dark")
+      return false
     } catch {
       return false
     }
   })
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark)
-    try {
-      localStorage.setItem("theme", dark ? "dark" : "light")
-    } catch {}
+    if (dark) {
+      document.documentElement.classList.add("dark")
+      try {
+        localStorage.setItem("theme", "dark")
+      } catch {}
+    } else {
+      document.documentElement.classList.remove("dark")
+      try {
+        localStorage.setItem("theme", "light")
+      } catch {}
+    }
   }, [dark])
 
   return (
