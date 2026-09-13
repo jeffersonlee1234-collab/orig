@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
+import { toPng } from "html-to-image"
 import {
   FileText,
   Search,
@@ -804,6 +805,274 @@ export async function downloadIdCardAsImage(
 /**
  * Dedicated Official Digital ID Card Modal matching official QC OSCA & PDAO standards
  */
+function OfficialFrontCardView({
+  app,
+  theme,
+  photoUrl,
+  appDate,
+  expiryDateStr,
+}: {
+  app: ApplicationRecord
+  theme: CardTheme
+  photoUrl: string
+  appDate: string
+  expiryDateStr: string
+}) {
+  return (
+    <div
+      className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none text-slate-900"
+      style={{
+        aspectRatio: "1.586 / 1",
+        background: theme.isPwd
+          ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
+          : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className={`px-3.5 py-2 flex items-center justify-between shadow-xs ${
+          theme.isPwd
+            ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
+            : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <img
+            src="/gov-serves-seal.png"
+            alt="QC Seal"
+            crossOrigin="anonymous"
+            className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5"
+          />
+          <div>
+            <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${theme.isPwd ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
+              Republic of the Philippines
+            </p>
+            <p className={`text-xs font-black tracking-wide leading-tight uppercase ${theme.isPwd ? "text-slate-950" : "text-white"}`}>
+              GOV SERVICES
+            </p>
+          </div>
+        </div>
+        <span
+          className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+            theme.isPwd
+              ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
+              : "bg-white/20 text-white border-white/30"
+          }`}
+        >
+          {theme.pillText}
+        </span>
+      </div>
+
+      {/* Sub-header */}
+      <div
+        className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
+          theme.isPwd
+            ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
+            : "bg-amber-400 text-slate-950"
+        }`}
+      >
+        {theme.officeName}
+      </div>
+
+      {/* Details with QC Logo on right side */}
+      <div className="p-3 flex gap-2.5 items-start relative">
+        {/* 2x2 Photo */}
+        <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+          {photoUrl ? (
+            <img src={photoUrl} alt="Cardholder" crossOrigin="anonymous" className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+              <User className="w-8 h-8 text-slate-300 mb-1" />
+              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+            </div>
+          )}
+          <div
+            className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${theme.isPwd ? "bg-amber-600" : "bg-blue-900"}`}
+          >
+            {theme.photoTag}
+          </div>
+        </div>
+
+        {/* Details text */}
+        <div className="flex-1 min-w-0 space-y-1 relative z-10">
+          <div>
+            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">QC ID NUMBER</span>
+            <p className={`text-sm font-black font-mono tracking-wide leading-none ${theme.isPwd ? "text-amber-700" : "text-blue-900"}`}>
+              {app.applicationNo}
+            </p>
+          </div>
+
+          <div className="pt-0.5">
+            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">CARDHOLDER FULL NAME</span>
+            <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
+          </div>
+
+          <div className="pt-0.5">
+            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">
+              {theme.isPwd ? "TYPE OF DISABILITY" : "CLASSIFICATION"}
+            </span>
+            <p className={`text-[9.5px] font-bold leading-tight truncate ${theme.isPwd ? "text-red-700" : "text-emerald-800"}`}>
+              {theme.classification}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
+            <div>
+              <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
+            </div>
+            <div>
+              <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {app.sex || "Male"} / O+
+            </div>
+          </div>
+
+          <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
+            <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "11 ACACIA ST., SAUYO, QUEZON CITY"}
+          </div>
+        </div>
+
+        {/* QC Official Logo on the right side */}
+        <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
+          <img
+            src="/gov-serves-seal.png"
+            alt="QC Official Seal"
+            crossOrigin="anonymous"
+            className="w-14 h-14 object-contain drop-shadow-md hover:scale-105 transition-transform"
+          />
+          <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
+        </div>
+      </div>
+
+      {/* Bottom Signatures & Barcode */}
+      <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+        <div>
+          <p className="font-mono font-bold text-slate-700 tracking-widest text-[8.5px]">|||| | || |||| | | ||| ||||</p>
+          <div className="flex items-center gap-1.5 text-[6.5px] uppercase tracking-wider font-semibold">
+            <span className="text-slate-400">Issued: {appDate}</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-amber-800 font-bold">Expires: {expiryDateStr}</span>
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
+          <p className="font-bold text-slate-800 text-[7.5px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
+          <p className="text-[6.5px] text-slate-500 uppercase leading-none">City Mayor</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OfficialBackCardView({
+  theme,
+  emergencyInfo,
+  appDate,
+  expiryDateStr,
+}: {
+  theme: CardTheme
+  emergencyInfo: ReturnType<typeof getEmergencyInfo>
+  appDate: string
+  expiryDateStr: string
+}) {
+  return (
+    <div
+      className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
+      style={{
+        aspectRatio: "1.586 / 1",
+        background: theme.isPwd
+          ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
+          : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
+      }}
+    >
+      {/* Background Watermark Seal */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
+        <img src="/gov-serves-seal.png" alt="" crossOrigin="anonymous" className="w-48 h-48 object-contain" />
+      </div>
+
+      {/* Back Header Strip */}
+      <div
+        className={`px-3.5 py-1.5 flex items-center justify-between shadow-xs relative z-10 ${
+          theme.isPwd
+            ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
+            : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
+        }`}
+      >
+        <div className="flex items-center gap-1.5">
+          <img
+            src="/gov-serves-seal.png"
+            alt="QC Seal"
+            crossOrigin="anonymous"
+            className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5"
+          />
+          <p className="text-[8.5px] font-black uppercase tracking-wide leading-tight">
+            {theme.legalAct}
+          </p>
+        </div>
+        <span
+          className={`text-[7.5px] font-black px-2 py-0.5 rounded-full border shadow-xs ${
+            theme.isPwd
+              ? "bg-slate-950 text-amber-300 border-slate-800"
+              : "bg-amber-400 text-slate-950 border-amber-500"
+          }`}
+        >
+          {theme.photoTag}
+        </span>
+      </div>
+
+      <div className="p-3 pt-2 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
+        {/* Benefits / Rights List */}
+        <div
+          className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
+            theme.isPwd ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
+          }`}
+        >
+          <p className="flex items-start gap-1">
+            <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+            <span><strong>20% Discount &amp; VAT Exemption</strong> on medicines, medical supplies, and dental services.</span>
+          </p>
+          <p className="flex items-start gap-1">
+            <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+            <span><strong>20% Discount</strong> on public domestic transportation (air, sea, land, MRT/LRT), hotels, and restaurants.</span>
+          </p>
+          <p className="flex items-start gap-1">
+            <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+            <span>Valid from <strong className="text-slate-900">{appDate}</strong> to <strong className="text-slate-900">{expiryDateStr}</strong> across all cities in the Philippines.</span>
+          </p>
+        </div>
+
+        {/* Emergency Contact */}
+        <div className={`border-t pt-1.5 ${theme.isPwd ? "border-amber-200/70" : "border-blue-200/70"}`}>
+          <p className="text-[7.5px] font-black text-slate-800 uppercase tracking-wider mb-1">In case of emergency, please notify:</p>
+          <div
+            className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${
+              theme.isPwd ? "border-amber-200/60" : "border-blue-200/60"
+            }`}
+          >
+            <div>
+              <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Contact Person: </span>
+              <span className="font-bold text-slate-900 truncate">{emergencyInfo.emergencyPerson}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Phone: </span>
+              <span className={`font-mono font-bold ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>{emergencyInfo.emergencyPhone}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Relation: </span>
+              <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyRel}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Address: </span>
+              <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyAddr}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Dedicated Official Digital ID Card Modal matching official QC OSCA & PDAO standards
+ */
 function DigitalIdCardModal({
   app,
   onClose,
@@ -816,6 +1085,9 @@ function DigitalIdCardModal({
   const emergencyInfo = getEmergencyInfo(app)
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
   const [isDownloading, setIsDownloading] = useState(false)
+
+  const frontCardRef = useRef<HTMLDivElement>(null)
+  const backCardRef = useRef<HTMLDivElement>(null)
 
   const issueDateObj = new Date(app.submittedAt || Date.now())
   const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
@@ -839,6 +1111,23 @@ function DigitalIdCardModal({
   const handleDownloadSide = async (mode: "front" | "back") => {
     setIsDownloading(true)
     try {
+      const targetElement = mode === "front" ? frontCardRef.current : backCardRef.current
+      if (targetElement) {
+        // Generate high resolution image identical to rendered component
+        const dataUrl = await toPng(targetElement, {
+          pixelRatio: 3,
+          cacheBust: true,
+          quality: 1,
+        })
+        const link = document.createElement("a")
+        link.download = `QC_ID_${mode.toUpperCase()}_${app.applicationNo}.png`
+        link.href = dataUrl
+        link.click()
+      } else {
+        await downloadIdCardAsImage(app, photoUrl, mode)
+      }
+    } catch (err) {
+      console.warn("DOM to PNG failed, falling back to canvas:", err)
       await downloadIdCardAsImage(app, photoUrl, mode)
     } finally {
       setIsDownloading(false)
@@ -906,232 +1195,53 @@ function DigitalIdCardModal({
 
         {/* ── CARD LIVE PREVIEWS ── */}
         <div className="p-6 bg-slate-100/70 flex items-center justify-center min-h-[380px]">
-          {/* 1. FRONT CARD PREVIEW */}
           {activeSide === "front" ? (
-            <div
-              className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none"
-              style={{
-                aspectRatio: "1.586 / 1",
-                background: theme.isPwd
-                  ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
-                  : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
-              }}
-            >
-              {/* Header */}
-              <div
-                className={`px-3.5 py-2 flex items-center justify-between shadow-xs ${
-                  theme.isPwd
-                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
-                    : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-                  <div>
-                    <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${theme.isPwd ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
-                      Republic of the Philippines
-                    </p>
-                    <p className={`text-xs font-black tracking-wide leading-tight uppercase ${theme.isPwd ? "text-slate-950" : "text-white"}`}>
-                      GOV SERVICES
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                    theme.isPwd
-                      ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
-                      : "bg-white/20 text-white border-white/30"
-                  }`}
-                >
-                  {theme.pillText}
-                </span>
-              </div>
-
-              {/* Sub-header */}
-              <div
-                className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
-                  theme.isPwd
-                    ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
-                    : "bg-amber-400 text-slate-950"
-                }`}
-              >
-                {theme.officeName}
-              </div>
-
-              {/* Details with QC Logo on right side */}
-              <div className="p-3 flex gap-2.5 items-start relative">
-                {/* 2x2 Photo */}
-                <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-                  {photoUrl ? (
-                    <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-                      <User className="w-8 h-8 text-slate-300 mb-1" />
-                      <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-                    </div>
-                  )}
-                  <div
-                    className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${theme.isPwd ? "bg-amber-600" : "bg-blue-900"}`}
-                  >
-                    {theme.photoTag}
-                  </div>
-                </div>
-
-                {/* Details text */}
-                <div className="flex-1 min-w-0 space-y-1 relative z-10">
-                  <div>
-                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">QC ID Number</span>
-                    <p className={`text-sm font-black font-mono tracking-wide leading-none ${theme.isPwd ? "text-amber-700" : "text-blue-900"}`}>
-                      {app.applicationNo}
-                    </p>
-                  </div>
-
-                  <div className="pt-0.5">
-                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
-                    <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
-                  </div>
-
-                  <div className="pt-0.5">
-                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">
-                      {theme.isPwd ? "Type of Disability" : "Classification"}
-                    </span>
-                    <p className={`text-[9.5px] font-bold leading-tight truncate ${theme.isPwd ? "text-red-700" : "text-emerald-800"}`}>
-                      {theme.classification}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
-                    <div>
-                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
-                    </div>
-                    <div>
-                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {app.sex || "Male"} / O+
-                    </div>
-                  </div>
-
-                  <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
-                    <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "11 ACACIA ST., SAUYO, QUEZON CITY"}
-                  </div>
-                </div>
-
-                {/* QC Official Logo on the right side */}
-                <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
-                  <img
-                    src="/gov-serves-seal.png"
-                    alt="QC Official Seal"
-                    className="w-14 h-14 object-contain drop-shadow-md hover:scale-105 transition-transform"
-                  />
-                  <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
-                </div>
-              </div>
-
-              {/* Bottom Signatures & Barcode */}
-              <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
-                <div>
-                  <p className="font-mono font-bold text-slate-700 tracking-widest text-[8.5px]">|||| | || |||| | | ||| ||||</p>
-                  <div className="flex items-center gap-1.5 text-[6.5px] uppercase tracking-wider font-semibold">
-                    <span className="text-slate-400">Issued: {appDate}</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-amber-800 font-bold">Expires: {expiryDateStr}</span>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
-                  <p className="font-bold text-slate-800 text-[7.5px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
-                  <p className="text-[6.5px] text-slate-500 uppercase leading-none">City Mayor</p>
-                </div>
-              </div>
-            </div>
+            <OfficialFrontCardView
+              app={app}
+              theme={theme}
+              photoUrl={photoUrl}
+              appDate={appDate}
+              expiryDateStr={expiryDateStr}
+            />
           ) : (
-            <div
-              className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
-              style={{
-                aspectRatio: "1.586 / 1",
-                background: theme.isPwd
-                  ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
-                  : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
-              }}
-            >
-              {/* Background Watermark Seal */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
-                <img src="/gov-serves-seal.png" alt="" className="w-48 h-48 object-contain" />
-              </div>
-
-              {/* Back Header Strip */}
-              <div
-                className={`px-3.5 py-1.5 flex items-center justify-between shadow-xs relative z-10 ${
-                  theme.isPwd
-                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
-                    : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
-                  <p className="text-[8.5px] font-black uppercase tracking-wide leading-tight">
-                    {theme.legalAct}
-                  </p>
-                </div>
-                <span
-                  className={`text-[7.5px] font-black px-2 py-0.5 rounded-full border shadow-xs ${
-                    theme.isPwd
-                      ? "bg-slate-950 text-amber-300 border-slate-800"
-                      : "bg-amber-400 text-slate-950 border-amber-500"
-                  }`}
-                >
-                  {theme.photoTag}
-                </span>
-              </div>
-
-              <div className="p-3 pt-2 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
-                {/* Benefits / Rights List */}
-                <div
-                  className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
-                    theme.isPwd ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
-                  }`}
-                >
-                  <p className="flex items-start gap-1">
-                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
-                    <span><strong>20% Discount &amp; VAT Exemption</strong> on medicines, medical supplies, and dental services.</span>
-                  </p>
-                  <p className="flex items-start gap-1">
-                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
-                    <span><strong>20% Discount</strong> on public domestic transportation (air, sea, land, MRT/LRT), hotels, and restaurants.</span>
-                  </p>
-                  <p className="flex items-start gap-1">
-                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
-                    <span>Valid from <strong className="text-slate-900">{appDate}</strong> to <strong className="text-slate-900">{expiryDateStr}</strong> across all cities in the Philippines.</span>
-                  </p>
-                </div>
-
-                {/* Emergency Contact */}
-                <div className={`border-t pt-1.5 ${theme.isPwd ? "border-amber-200/70" : "border-blue-200/70"}`}>
-                  <p className="text-[7.5px] font-black text-slate-800 uppercase tracking-wider mb-1">In case of emergency, please notify:</p>
-                  <div
-                    className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${
-                      theme.isPwd ? "border-amber-200/60" : "border-blue-200/60"
-                    }`}
-                  >
-                    <div>
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Contact Person: </span>
-                      <span className="font-bold text-slate-900 truncate">{emergencyInfo.emergencyPerson}</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Phone: </span>
-                      <span className={`font-mono font-bold ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>{emergencyInfo.emergencyPhone}</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Relation: </span>
-                      <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyRel}</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Address: </span>
-                      <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyAddr}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <OfficialBackCardView
+              theme={theme}
+              emergencyInfo={emergencyInfo}
+              appDate={appDate}
+              expiryDateStr={expiryDateStr}
+            />
           )}
+        </div>
+
+        {/* ── OFF-SCREEN HIGH-RESOLUTION CAPTURE CONTAINERS (Exact 1:1 with Pic 2 & Pic 1) ── */}
+        <div
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: 0,
+            width: "500px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <div ref={frontCardRef} className="w-[500px]">
+            <OfficialFrontCardView
+              app={app}
+              theme={theme}
+              photoUrl={photoUrl}
+              appDate={appDate}
+              expiryDateStr={expiryDateStr}
+            />
+          </div>
+          <div ref={backCardRef} className="w-[500px] mt-4">
+            <OfficialBackCardView
+              theme={theme}
+              emergencyInfo={emergencyInfo}
+              appDate={appDate}
+              expiryDateStr={expiryDateStr}
+            />
+          </div>
         </div>
 
         {/* ── MODAL FOOTER ACTION BAR ── */}
