@@ -749,10 +749,6 @@ export default function BeneficiaryManagement() {
     }
   }, [fetchBeneficiaries])
 
-  const selected = beneficiaries.find(
-    (b) => b.id === selectedId || b.beneficiaryNo === selectedId || (b.qcidNumber && b.qcidNumber === selectedId)
-  ) ?? null
-
   // Handle Admin Verification
   const handleVerify = async (id: string, idType: string, idNumber: string, remarks: string) => {
     setIsProcessing(true)
