@@ -36,6 +36,8 @@ interface ApplicationDocument {
   name: string
   filename: string
   fileUrl: string
+  dataUrl?: string
+  previewUrl?: string
   fileSize: number
   uploadedAt: string
   status: "verified" | "pending" | "rejected"
@@ -106,6 +108,8 @@ interface SoloParentSubmission {
   status: "pending" | "approved" | "rejected" | "needs_revision"
   soloParentIdNumber?: string
   assignedIdNumber?: string
+  applicantPhoto?: string
+  photoUrl?: string
   rejectionReason?: string
   approvedBy?: string
   approvedDate?: string
@@ -233,7 +237,6 @@ function parseJsonSafe(val: any, fallback: any = {}) {
 function getSampleDocumentFallback(docName?: string, filename?: string): string {
   const name = `${docName || ""} ${filename || ""}`.toLowerCase()
   if (name.includes("loss") || name.includes("affidavit")) return "/samples/AFFIDAVIT OF LOSS.webp"
-  if (name.includes("2x2") || name.includes("picture") || name.includes("id photo") || name.includes("1x1")) return "/samples/ID PICTURE (2X2).webp"
   if (name.includes("whole body") || name.includes("body")) return "/samples/WHOLE BODY.jpg"
   if (name.includes("signature") || name.includes("pirma")) return "/samples/SIGNATURE.avif"
   if (name.includes("disability") || name.includes("medical") || name.includes("certificate of disability")) return "/samples/CERTIFICATE OF DISABILITY.jpg"
@@ -250,7 +253,7 @@ function getSampleDocumentFallback(docName?: string, filename?: string): string 
   if (name.includes("qc id") || name.includes("pwd id")) return "/samples/QC ID NG PERSON WITH DISABILITY.jpg"
   if (name.includes("gov") || name.includes("valid id") || name.includes("government") || name.includes("id") || name.includes("parent") || name.includes("guardian")) return "/samples/sample_valid_id.png"
 
-  return "/samples/BARANGAY CERTIFICATE.webp"
+  return ""
 }
 
 function resolveFileUrl(fileUrl?: string, filename?: string, isChildWelfare: boolean = false): string {
@@ -276,6 +279,19 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
   }
   uploaded = parseJsonSafe(uploaded, [])
 
+  const applicantPhoto =
+    raw?.applicantPhoto ||
+    raw?.applicant_photo ||
+    raw?.photoUrl ||
+    raw?.photo_url ||
+    raw?.idPhoto ||
+    raw?.id_photo ||
+    raw?.form_data?.applicantPhoto ||
+    raw?.form_data?.photoUrl ||
+    raw?.extra_data?.applicantPhoto ||
+    raw?.extra_data?.photoUrl ||
+    (raw ? getApplicantPhotoUrl(raw) : "")
+
   const docs: ApplicationDocument[] = []
   if (Array.isArray(uploaded) && uploaded.length > 0) {
     for (const group of uploaded) {
@@ -283,11 +299,15 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
       if (Array.isArray(group.files) && group.files.length > 0) {
         for (const f of group.files) {
           const docLabel = group.documentLabel || group.documentId || f.filename || "Uploaded Document"
-          const resolvedUrl = resolveFileUrl(f.fileUrl || f.url || f.path, f.filename, isChildWelfare)
+          const isPhotoDoc = /2x2|photo|picture|1x1|id_pic|avatar/i.test(`${docLabel} ${f.filename || ""}`)
+          const directData = f.dataUrl || f.previewUrl || f.base64 || (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
+          const resolvedUrl = directData || resolveFileUrl(f.fileUrl || f.url || f.path, f.filename, isChildWelfare)
           docs.push({
             name: docLabel,
             filename: f.filename || docLabel,
             fileUrl: resolvedUrl || getSampleDocumentFallback(docLabel, f.filename),
+            dataUrl: f.dataUrl || (isPhotoDoc ? applicantPhoto : undefined),
+            previewUrl: f.previewUrl || directData || undefined,
             fileSize: f.fileSize || f.size || 0,
             uploadedAt: f.uploadedAt || f.date || raw?.created_at || new Date().toISOString(),
             status: "verified",
@@ -296,11 +316,15 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
       } else {
         const docLabel = group.documentLabel || group.label || group.name || group.documentId || group.title || "Uploaded Document"
         const filename = group.filename || group.name || docLabel
-        const resolvedUrl = resolveFileUrl(group.fileUrl || group.url || group.path, filename, isChildWelfare)
+        const isPhotoDoc = /2x2|photo|picture|1x1|id_pic|avatar/i.test(`${docLabel} ${filename}`)
+        const directData = group.dataUrl || group.previewUrl || group.base64 || (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
+        const resolvedUrl = directData || resolveFileUrl(group.fileUrl || group.url || group.path, filename, isChildWelfare)
         docs.push({
           name: docLabel,
           filename: filename,
           fileUrl: resolvedUrl || getSampleDocumentFallback(docLabel, filename),
+          dataUrl: group.dataUrl || (isPhotoDoc ? applicantPhoto : undefined),
+          previewUrl: group.previewUrl || directData || undefined,
           fileSize: group.fileSize || group.size || 0,
           uploadedAt: group.uploadedAt || group.date || raw?.created_at || new Date().toISOString(),
           status: "verified",
@@ -511,6 +535,32 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     status: row.application_status,
     soloParentIdNumber: row.solo_parent_id_number || row.assigned_id_number || undefined,
     assignedIdNumber: row.assigned_id_number || row.solo_parent_id_number || undefined,
+    applicantPhoto:
+      row.applicant_photo ||
+      row.applicantPhoto ||
+      row.photo_url ||
+      row.photoUrl ||
+      row.id_photo ||
+      row.idPhoto ||
+      formData.applicantPhoto ||
+      formData.idPhoto ||
+      formData.photoUrl ||
+      extraData.applicantPhoto ||
+      extraData.photoUrl ||
+      undefined,
+    photoUrl:
+      row.applicant_photo ||
+      row.applicantPhoto ||
+      row.photo_url ||
+      row.photoUrl ||
+      row.id_photo ||
+      row.idPhoto ||
+      formData.applicantPhoto ||
+      formData.idPhoto ||
+      formData.photoUrl ||
+      extraData.applicantPhoto ||
+      extraData.photoUrl ||
+      undefined,
     rejectionReason: row.rejection_reason || undefined,
     approvedBy: row.approved_by ? String(row.approved_by) : undefined,
     approvedDate: row.updated_at,
@@ -886,23 +936,36 @@ function isImageFile(filename?: string, fileUrl?: string) {
 
 function DocumentPreviewModal({
   doc,
+  app,
   onClose,
 }: {
   doc: ApplicationDocument | null
+  app?: WelfareSubmission | null
   onClose: () => void
 }) {
   if (!doc) return null
 
-  const fallback = getSampleDocumentFallback(doc.name, doc.filename)
-  const [currentSrc, setCurrentSrc] = useState<string>(doc.fileUrl || fallback)
+  const isPhotoDoc = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
+  const realUserPhoto = isPhotoDoc
+    ? (doc.dataUrl || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (app ? getApplicantPhotoUrl(app) : ""))
+    : ""
+  const fallback = !isPhotoDoc ? getSampleDocumentFallback(doc.name, doc.filename) : ""
+  const initialSrc = (isPhotoDoc && realUserPhoto) ? realUserPhoto : (doc.fileUrl || fallback)
+
+  const [currentSrc, setCurrentSrc] = useState<string>(initialSrc)
   const [hasError, setHasError] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
 
   useEffect(() => {
-    setCurrentSrc(doc.fileUrl || fallback)
-    setHasError(false)
+    const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
+    const realPhoto = isPhoto
+      ? (doc.dataUrl || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (app ? getApplicantPhotoUrl(app) : ""))
+      : ""
+    const targetSrc = (isPhoto && realPhoto) ? realPhoto : (doc.fileUrl || (!isPhoto ? getSampleDocumentFallback(doc.name, doc.filename) : ""))
+    setCurrentSrc(targetSrc)
+    setHasError(!targetSrc)
     setIsZoomed(false)
-  }, [doc, fallback])
+  }, [doc, app])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -916,7 +979,11 @@ function DocumentPreviewModal({
   const isImg = isImageFile(doc.filename, currentSrc)
 
   const handleImageError = () => {
-    if (currentSrc !== fallback && fallback) {
+    const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
+    const realPhoto = isPhoto && app ? getApplicantPhotoUrl(app) : ""
+    if (realPhoto && currentSrc !== realPhoto) {
+      setCurrentSrc(realPhoto)
+    } else if (currentSrc !== fallback && fallback && !isPhoto) {
       setCurrentSrc(fallback)
     } else {
       setHasError(true)
@@ -2236,7 +2303,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allSubmis
           </div>
 
           {/* Actions */}
-           <DocumentPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+           <DocumentPreviewModal doc={previewDoc} app={app} onClose={() => setPreviewDoc(null)} />
           {app.status === "pending" && (
             <div className="pt-6" style={{ borderTop: "1px solid var(--line)" }}>
               {actionMode === "view" && (

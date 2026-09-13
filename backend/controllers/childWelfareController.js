@@ -634,14 +634,33 @@ exports.updateApplicationStatus = async (req, res) => {
       } catch (syncErr) {
         console.warn('[Child Welfare Approval Sync Warning]:', syncErr.message);
       }
-    } else if (status === 'rejected') {
+    } else if (status === 'rejected' && app) {
       try {
         await db.query('DELETE FROM financial_aid_disbursements WHERE application_ref = $1', [app.reference_number]).catch(() => {});
         await db.query('DELETE FROM appointments WHERE reference_no = $1', [app.reference_number]).catch(() => {});
       } catch (_) {}
     }
 
-    res.status(200).json({ success: true, message: 'Application status updated', application: result.rows[0] });
+    if (app) {
+      try {
+        const notifUserId = app.user_id || app.reference_number;
+        const isApproved = status === 'approved';
+        const notifTitle = isApproved ? 'Child Welfare Application: Approved' : 'Child Welfare Application: Not Approved';
+        const notifDesc = isApproved
+          ? `Congratulations! Your application for ${app.category_title || 'Child Welfare Assistance'} (Ref: ${app.reference_number}) has been approved for ₱${finalAmount || 5000} financial grant.`
+          : `Child Welfare Assistance: ${rejectionReason || 'Not approved'} (Ref: ${app.reference_number})`;
+
+        await db.query(
+          `INSERT INTO user_notifications (user_id, title, description, application_ref, is_read, is_dismissed, created_at)
+           VALUES ($1, $2, $3, $4, false, false, NOW())`,
+          [notifUserId, notifTitle, notifDesc, app.reference_number]
+        );
+      } catch (notifErr) {
+        console.warn('[Notification Error]:', notifErr.message);
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'Application status updated', application: app });
   } catch (error) {
     console.error('Error updating application:', error);
     res.status(500).json({ success: false, message: error.message });

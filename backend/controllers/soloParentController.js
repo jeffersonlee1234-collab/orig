@@ -585,6 +585,28 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
+    if (updatedRow) {
+      try {
+        const notifUserId = updatedRow.user_id || updatedRow.qcid_number || updatedRow.reference_number;
+        const isRenewal = String(updatedRow.application_type || '').toLowerCase() === 'renewal';
+        const isLoss = String(updatedRow.application_type || '').toLowerCase() === 'replacement' || String(updatedRow.application_type || '').toLowerCase() === 'loss';
+        const notifTitle = isApproved
+          ? (isRenewal ? 'Solo Parent ID (Renewal): Approved' : isLoss ? 'Solo Parent ID (Replacement): Approved' : 'Solo Parent Application: Approved')
+          : (isRenewal ? 'Solo Parent ID (Renewal): Not Approved' : isLoss ? 'Solo Parent ID (Replacement): Not Approved' : 'Solo Parent Application: Not Approved');
+        const notifDesc = isApproved
+          ? `Congratulations! Your Solo Parent ID application (ID No. ${assignedId || updatedRow.solo_parent_id_number || updatedRow.assigned_id_number || updatedRow.reference_number}) has been approved and forwarded to Appointments for claiming schedule.`
+          : `Solo Parent Application: ${rejectionReason || 'Not approved'} (Ref: ${updatedRow.reference_number})`;
+
+        await db.query(
+          `INSERT INTO user_notifications (user_id, title, description, application_ref, is_read, is_dismissed, created_at)
+           VALUES ($1, $2, $3, $4, false, false, NOW())`,
+          [notifUserId, notifTitle, notifDesc, updatedRow.reference_number]
+        );
+      } catch (notifErr) {
+        console.warn('[Notification Error]:', notifErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Application status updated',

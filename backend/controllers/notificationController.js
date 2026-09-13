@@ -240,11 +240,12 @@ exports.getNotifications = async (req, res) => {
           [identifiers, userEmail, userFn, userLn]
         );
         aicsRes.rows.forEach((app) => {
-          if (app.status === 'approved' || app.status === 'rejected' || app.status === 'completed') {
-            const notifId = `aics-${app.id}-${app.status}`;
+          const st = String(app.status || "").toLowerCase()
+          if (st === 'approved' || st === 'rejected' || st === 'completed') {
+            const notifId = `aics-${app.id}-${st}`;
             const appDate = app.updated_at || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = app.status === 'approved' || app.status === 'completed';
+              const isApproved = st === 'approved' || st === 'completed';
               items.push({
                 id: notifId,
                 title: isApproved ? 'AICS Assistance Application: Approved' : 'AICS Assistance Application: Not Approved',
@@ -273,15 +274,16 @@ exports.getNotifications = async (req, res) => {
           [identifiers, userEmail, userFn, userLn]
         );
         pwdRes.rows.forEach((app) => {
-          if (app.status === 'approved' || app.status === 'rejected' || app.status === 'completed' || app.status === 'for_release') {
-            const notifId = `pwd-${app.id || app.reference_number}-${app.status}`;
+          const st = String(app.status || "").toLowerCase()
+          if (st === 'approved' || st === 'rejected' || st === 'completed' || st === 'for_release') {
+            const notifId = `pwd-${app.id || app.reference_number}-${st}`;
             const appDate = app.approved_date || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = app.status === 'approved' || app.status === 'completed' || app.status === 'for_release';
+              const isApproved = st === 'approved' || st === 'completed' || st === 'for_release';
               const isSenior = (app.category || '').toLowerCase().includes('senior');
               const isAssistance = String(app.service || app.category || '').toLowerCase().includes('assistance');
-              const isRenewal = app.application_type === 'renewal';
-              const isLoss = app.application_type === 'replacement' || app.application_type === 'loss';
+              const isRenewal = String(app.application_type || '').toLowerCase() === 'renewal';
+              const isLoss = String(app.application_type || '').toLowerCase() === 'replacement' || String(app.application_type || '').toLowerCase() === 'loss';
 
               let title = '';
               let serviceLabel = '';
@@ -320,23 +322,34 @@ exports.getNotifications = async (req, res) => {
     if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
       try {
         const spRes = await db.query(
-          `SELECT id, reference_number, user_id, qcid_number, application_status, rejection_reason, created_at, updated_at, email, assigned_id_number, solo_parent_id_number
+          `SELECT id, reference_number, user_id, qcid_number, application_status, rejection_reason, created_at, updated_at, email, assigned_id_number, solo_parent_id_number, application_type
            FROM solo_parent_applications 
-           WHERE user_id = ANY($1::text[]) OR qcid_number = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR assigned_id_number = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
+           WHERE user_id = ANY($1::text[]) OR qcid_number = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR assigned_id_number = ANY($1::text[]) OR solo_parent_id_number = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (LOWER(first_name) = $3 AND LOWER(last_name) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
         spRes.rows.forEach((app) => {
-          if (app.application_status === 'approved' || app.application_status === 'rejected' || app.application_status === 'completed' || app.application_status === 'for_release') {
-            const notifId = `sp-${app.id}-${app.application_status}`;
+          const st = String(app.application_status || '').toLowerCase();
+          if (st === 'approved' || st === 'rejected' || st === 'completed' || st === 'for_release') {
+            const notifId = `sp-${app.id || app.reference_number}-${st}`;
             const appDate = app.updated_at || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = app.application_status === 'approved' || app.application_status === 'completed' || app.application_status === 'for_release';
+              const isApproved = st === 'approved' || st === 'completed' || st === 'for_release';
               const idNum = app.assigned_id_number || app.solo_parent_id_number || app.reference_number;
+              const isRenewal = String(app.application_type || '').toLowerCase() === 'renewal';
+              const isLoss = String(app.application_type || '').toLowerCase() === 'replacement' || String(app.application_type || '').toLowerCase() === 'loss';
+
+              let title = '';
+              if (isApproved) {
+                title = isRenewal ? 'Solo Parent ID (Renewal): Approved' : isLoss ? 'Solo Parent ID (Replacement): Approved' : 'Solo Parent Application: Approved';
+              } else {
+                title = isRenewal ? 'Solo Parent ID (Renewal): Not Approved' : isLoss ? 'Solo Parent ID (Replacement): Not Approved' : 'Solo Parent Application: Not Approved';
+              }
+
               items.push({
                 id: notifId,
-                title: isApproved ? 'Solo Parent Application: Approved' : 'Solo Parent Application: Not Approved',
+                title,
                 desc: isApproved
                   ? `Congratulations! Your Solo Parent ID application (ID No. ${idNum}) has been approved and forwarded to Appointments for claiming schedule.`
                   : `Solo Parent Application: ${app.rejection_reason || 'Not approved'} (Ref: ${app.reference_number})`,
@@ -364,11 +377,12 @@ exports.getNotifications = async (req, res) => {
           [identifiers, userEmail, userFn, userLn]
         );
         cwRes.rows.forEach((app) => {
-          if (app.application_status === 'approved' || app.application_status === 'rejected' || app.application_status === 'completed') {
-            const notifId = `cw-${app.id}-${app.application_status}`;
+          const st = String(app.application_status || '').toLowerCase();
+          if (st === 'approved' || st === 'rejected' || st === 'completed') {
+            const notifId = `cw-${app.id || app.reference_number}-${st}`;
             const appDate = app.updated_at || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = app.application_status === 'approved' || app.application_status === 'completed';
+              const isApproved = st === 'approved' || st === 'completed';
               items.push({
                 id: notifId,
                 title: isApproved ? 'Child Welfare Application: Approved' : 'Child Welfare Application: Not Approved',
@@ -399,14 +413,15 @@ exports.getNotifications = async (req, res) => {
           [identifiers, userEmail, userFn, userLn]
         );
         livRes.rows.forEach((app) => {
-          if (app.application_status === 'approved' || app.application_status === 'rejected' || app.application_status === 'needs_revision' || app.application_status === 'for_release' || app.application_status === 'released') {
-            const notifId = `liv-${app.id}-${app.application_status}`;
+          const st = String(app.application_status || '').toLowerCase();
+          if (st === 'approved' || st === 'rejected' || st === 'needs_revision' || st === 'for_release' || st === 'released') {
+            const notifId = `liv-${app.id || app.reference_number}-${st}`;
             const appDate = app.updated_at || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = app.application_status === 'approved' || app.application_status === 'for_release' || app.application_status === 'released';
+              const isApproved = st === 'approved' || st === 'for_release' || st === 'released';
               items.push({
                 id: notifId,
-                title: isApproved ? 'Livelihood & Training Application: Approved' : app.application_status === 'needs_revision' ? 'Livelihood Application: Needs Revision' : 'Livelihood & Training Application: Not Approved',
+                title: isApproved ? 'Livelihood & Training Application: Approved' : st === 'needs_revision' ? 'Livelihood Application: Needs Revision' : 'Livelihood & Training Application: Not Approved',
                 desc: `${app.livelihood_type || 'Livelihood Program'} — Ref: ${app.reference_number}`,
                 time: new Date(appDate).toLocaleString('en-US'),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
