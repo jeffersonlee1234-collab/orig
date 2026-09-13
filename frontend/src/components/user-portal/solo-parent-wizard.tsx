@@ -962,10 +962,10 @@ export default function SoloParentApplicationWizard({
     const ln = (formData?.lastName || prof.lastName || userProfile?.lastName || "").trim()
     const activeRef = reference || blockedReference || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : "")
 
-    // 2. Fetch in parallel with short timeout so it never blocks or takes long
+    // 2. Fetch in parallel with reliable timeout so it never blocks or takes long
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 1800)
+      const timeoutId = setTimeout(() => controller.abort(), 6000)
 
       const promises: Promise<Response>[] = [
         fetch(
@@ -1713,14 +1713,14 @@ export default function SoloParentApplicationWizard({
       bloodType: formData.bloodType || "O+",
     }
 
-    // Pre-build document records with Base64 previews
+    // Lightweight document records without huge duplicate Base64 blobs
     const newDocItems = requiredDocs.map((d) => ({
       documentId: d.id,
       documentLabel: d.label,
       files: (uploadedDocs[d.id] || []).map((f) => ({
         filename: f.name,
-        fileUrl: uploadedDocsBase64[d.id] || `/uploads/solo-parent/${f.name}`,
-        dataUrl: uploadedDocsBase64[d.id],
+        fileUrl: `/uploads/solo-parent/${f.name}`,
+        fileSize: f.size,
         uploadedAt: new Date().toISOString(),
       })),
     }))
@@ -1733,26 +1733,30 @@ export default function SoloParentApplicationWizard({
         reference_number: fallbackRef,
         referenceNumber: fallbackRef,
         category: "Solo Parent",
-        applicantPhoto: applicantPhoto,
-        photoUrl: applicantPhoto,
-        idPhoto: applicantPhoto,
+        classification_title: selectedCategory?.title || "Solo Parent ID Application",
+        application_type: idStatus || "new",
+        applicantPhoto: applicantPhoto || undefined,
+        photoUrl: applicantPhoto || undefined,
+        idPhoto: applicantPhoto || undefined,
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,
+        qcid_number: formData.qcidNumber,
+        email: formData.email,
         documents: newDocItems,
         form_data: finalFormData,
-        extra_data: { formData: finalFormData, applicantPhoto },
+        extra_data: { formData: finalFormData, applicantPhoto: applicantPhoto || undefined },
         application_status: "pending",
         status: "pending",
         created_at: new Date().toISOString(),
       }
-      localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
+      localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
       window.dispatchEvent(new Event("storage"))
       notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
     } catch {}
 
     try {
-      // 1. Create application record sa backend
+      // 1. Create application record sa backend (Super lightweight JSON body)
       const res = await fetch(`${API_BASE}/api/solo-parent/create`, {
         method: "POST",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
@@ -1766,7 +1770,6 @@ export default function SoloParentApplicationWizard({
             selectedCategory,
             existingIdNumber,
             isIdVerified,
-            applicantPhoto: applicantPhoto || undefined,
             formData: finalFormData,
             familyMembers,
             emergencyFirstName: emFirst,
@@ -1794,7 +1797,10 @@ export default function SoloParentApplicationWizard({
           setReference(data.referenceNumber)
         }
 
-        // 2. Upload documents in parallel
+        // 2. Broadcast immediately so Admin receives and shows the pending record without delay
+        notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", data.referenceNumber || fallbackRef)
+
+        // 3. Upload physical documents in parallel in background
         const token = getAuthToken()
         const uploadPromises = requiredDocs.map(async (doc) => {
           const files = uploadedDocs[doc.id] || []
@@ -1813,7 +1819,7 @@ export default function SoloParentApplicationWizard({
 
         await Promise.all(uploadPromises)
 
-        // 3. Submit
+        // 4. Submit confirmation
         if (appId) {
           await fetch(`${API_BASE}/api/solo-parent/${appId}/submit`, {
             method: "POST",

@@ -719,8 +719,8 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
 
   try {
     const [soloRes, childRes] = await Promise.all([
-      fetch(`${API_BASE}/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
-      fetch(`${API_BASE}/child-welfare/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+      fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+      fetch(`${API_BASE}/api/child-welfare/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
     ])
 
     if (soloRes && soloRes.ok) {
@@ -773,8 +773,8 @@ async function approveSubmission(app: WelfareSubmission, value: string) {
   const rawId = app.id.replace(/^(SP|CW)-/, "")
   const idOrRef = app.referenceNumber || rawId
   const url = isSolo
-    ? `${API_BASE}/solo-parent/${encodeURIComponent(idOrRef)}/admin/update-status`
-    : `${API_BASE}/child-welfare/${encodeURIComponent(idOrRef)}/admin/update-status`
+    ? `${API_BASE}/api/solo-parent/${encodeURIComponent(idOrRef)}/admin/update-status`
+    : `${API_BASE}/api/child-welfare/${encodeURIComponent(idOrRef)}/admin/update-status`
 
   const body = isSolo
     ? { status: "approved", assignedIdNumber: value, soloParentIdNumber: value, referenceNumber: app.referenceNumber }
@@ -792,8 +792,8 @@ async function rejectSubmission(app: WelfareSubmission, reason: string) {
   const rawId = app.id.replace(/^(SP|CW)-/, "")
   const idOrRef = app.referenceNumber || rawId
   const url = isSolo
-    ? `${API_BASE}/solo-parent/${encodeURIComponent(idOrRef)}/admin/update-status`
-    : `${API_BASE}/child-welfare/${encodeURIComponent(idOrRef)}/admin/update-status`
+    ? `${API_BASE}/api/solo-parent/${encodeURIComponent(idOrRef)}/admin/update-status`
+    : `${API_BASE}/api/child-welfare/${encodeURIComponent(idOrRef)}/admin/update-status`
 
   const res = await fetch(url, {
     method: "PATCH",
@@ -2795,8 +2795,8 @@ export default function SoloParentChildWelfareAdmin() {
     const isSolo = isSoloParent(targetApp)
     const rawId = targetApp.id.replace(/^(SP|CW)-/, "")
     const url = isSolo
-      ? `${API_BASE}/solo-parent/admin/${rawId}`
-      : `${API_BASE}/child-welfare/admin/${rawId}`
+      ? `${API_BASE}/api/solo-parent/admin/${rawId}`
+      : `${API_BASE}/api/child-welfare/admin/${rawId}`
 
     setApplications((prev) => prev.filter((a) => a.id !== targetApp.id))
 
@@ -2813,7 +2813,7 @@ export default function SoloParentChildWelfareAdmin() {
     if (!window.confirm("Are you sure you want to clear all Solo Parent records for fresh testing?")) return
     setApplications((prev) => prev.filter((a) => a.category !== "Solo Parent"))
     try {
-      await fetch(`${API_BASE}/solo-parent/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
+      await fetch(`${API_BASE}/api/solo-parent/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
       await loadApplications(true)
       notifyApplicationChange("APPLICATION_DELETED", "solo_parent")
     } catch (err) {
@@ -2825,7 +2825,7 @@ export default function SoloParentChildWelfareAdmin() {
     if (!window.confirm("Are you sure you want to clear all Child Welfare records for fresh testing?")) return
     setApplications((prev) => prev.filter((a) => a.category !== "Child Welfare"))
     try {
-      await fetch(`${API_BASE}/child-welfare/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
+      await fetch(`${API_BASE}/api/child-welfare/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
       await loadApplications(true)
       notifyApplicationChange("APPLICATION_DELETED", "child_welfare")
     } catch (err) {

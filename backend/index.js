@@ -119,7 +119,9 @@ app.use('/api', (req, res, next) => {
 app.use('/api/aics', aicsRoutes);
 app.use('/api/activity-log', activityLogRoutes);
 app.use('/api/solo-parent', soloParentRoutes);
+app.use('/solo-parent', soloParentRoutes);
 app.use('/api/child-welfare', childWelfareRoutes);
+app.use('/child-welfare', childWelfareRoutes);
 app.use('/api/financial-aid', financialAidRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
