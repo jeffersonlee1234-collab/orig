@@ -131,6 +131,21 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
     // Remove synthetic auto-verification history events
     await db.query(`DELETE FROM beneficiary_history WHERE performed_by = 'System Auto-Verification'`).catch(() => {});
 
+    // 1.5 Deduplicate & merge any duplicate beneficiary profiles with matching full_name or (first_name + last_name)
+    const allBnf = await db.query(`SELECT id, full_name, first_name, last_name, user_id, qcid_number, email FROM beneficiaries ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    const seenNames = new Map();
+    for (const row of allBnf.rows || []) {
+      const normName = (row.full_name || `${row.first_name || ''} ${row.last_name || ''}`).trim().toUpperCase().replace(/\s+/g, ' ');
+      if (!normName) continue;
+      if (seenNames.has(normName)) {
+        const keepId = seenNames.get(normName);
+        await db.query(`UPDATE beneficiary_history SET beneficiary_id = $1 WHERE beneficiary_id = $2`, [keepId, row.id]).catch(() => {});
+        await db.query(`DELETE FROM beneficiaries WHERE id = $1`, [row.id]).catch(() => {});
+      } else {
+        seenNames.set(normName, row.id);
+      }
+    }
+
     // 2. Fetch all real users from users table
     const usersRes = await db.query(`SELECT * FROM users ORDER BY id ASC`).catch(() => ({ rows: [] }));
     const users = usersRes.rows || [];
