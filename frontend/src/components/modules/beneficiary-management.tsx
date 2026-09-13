@@ -664,7 +664,6 @@ type MainTab = "list" | "verification" | "history"
 export default function BeneficiaryManagement() {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<MainTab>("list")
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null)
@@ -717,96 +716,6 @@ export default function BeneficiaryManagement() {
       clearInterval(interval)
     }
   }, [fetchBeneficiaries])
-
-  // Handle Admin Verification
-  const handleVerify = async (id: string, idType: string, idNumber: string, remarks: string) => {
-    setIsProcessing(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/beneficiaries/${encodeURIComponent(id)}/verify`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "verified",
-          id_type: idType,
-          id_number: idNumber,
-          verified_by: "Admin User",
-          remarks: remarks || "Identity verified with valid documents.",
-        }),
-      })
-
-      if (!res.ok) throw new Error("Failed to verify beneficiary on server.")
-      await res.json()
-
-      showToast(`Beneficiary verified successfully!`, "success")
-      setSelectedBeneficiary((prev) =>
-        prev
-          ? {
-              ...prev,
-              verificationStatus: "verified",
-              idType,
-              idNumber,
-              verificationRemarks: remarks || "Identity verified with valid documents.",
-            }
-          : null
-      )
-      notifyApplicationChange("STATUS_CHANGED", "all", id)
-      await fetchBeneficiaries(true)
-    } catch (err: any) {
-      showToast(err.message || "Verification failed.", "danger")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  // Handle Admin Rejection / Unverified Flag
-  const handleReject = async (id: string, remarks: string) => {
-    setIsProcessing(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/beneficiaries/${encodeURIComponent(id)}/verify`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "unverified",
-          verified_by: "Admin User",
-          remarks: remarks || "Marked unverified due to incomplete/unmatched credentials.",
-        }),
-      })
-
-      if (!res.ok) throw new Error("Failed to flag beneficiary on server.")
-      showToast(`Beneficiary marked as unverified.`, "danger")
-      notifyApplicationChange("STATUS_CHANGED", "all", id)
-      await fetchBeneficiaries(true)
-    } catch (err: any) {
-      showToast(err.message || "Failed to update beneficiary status.", "danger")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  // Handle Admin Setting Pending
-  const handleSetPending = async (id: string, remarks: string) => {
-    setIsProcessing(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/beneficiaries/${encodeURIComponent(id)}/verify`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "pending",
-          verified_by: "Admin User",
-          remarks: remarks || "Status reset to pending verification.",
-        }),
-      })
-
-      if (!res.ok) throw new Error("Failed to update status on server.")
-      showToast(`Beneficiary status reset to pending.`, "success")
-      notifyApplicationChange("STATUS_CHANGED", "all", id)
-      await fetchBeneficiaries(true)
-    } catch (err: any) {
-      showToast(err.message || "Failed to reset status.", "danger")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
 
   const filteredList = beneficiaries.filter((b) => {
     const matchProgram = filterProgram === "all" || b.enrolledPrograms.some((p) => p.program === filterProgram)
