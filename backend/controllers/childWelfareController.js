@@ -527,12 +527,13 @@ exports.updateApplicationStatus = async (req, res) => {
 
     const finalAmount = status === 'approved' ? (approvedAmount || '5000') : null;
     const targetRef = referenceNumber || reference_number || applicationId;
+    const cleanId = String(applicationId).replace(/^CW-/, '').trim();
 
     const result = await db.query(
       `UPDATE child_welfare_applications
        SET application_status = $1, admin_notes = $2, rejection_reason = $3,
            approved_by = $4, approved_amount = $5, updated_at = NOW()
-       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 RETURNING *`,
+       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 OR id::text = $8 RETURNING *`,
       [
         status,
         adminNotes || null,
@@ -541,6 +542,7 @@ exports.updateApplicationStatus = async (req, res) => {
         finalAmount,
         applicationId,
         targetRef,
+        cleanId,
       ]
     );
 

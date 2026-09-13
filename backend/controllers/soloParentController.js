@@ -487,6 +487,7 @@ exports.updateApplicationStatus = async (req, res) => {
 
     const assignedId = assignedIdNumber || soloParentIdNumber || null;
     const targetRef = referenceNumber || reference_number || applicationId;
+    const cleanId = String(applicationId).replace(/^SP-/, '').trim();
 
     const result = await db.query(
       `UPDATE solo_parent_applications
@@ -497,7 +498,7 @@ exports.updateApplicationStatus = async (req, res) => {
            solo_parent_id_number = COALESCE($5, solo_parent_id_number),
            assigned_id_number = COALESCE($5, assigned_id_number),
            updated_at = NOW()
-       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 RETURNING *`,
+       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 OR id::text = $8 RETURNING *`,
       [
         status,
         adminNotes || null,
@@ -506,6 +507,7 @@ exports.updateApplicationStatus = async (req, res) => {
         status === 'approved' ? assignedId : null,
         applicationId,
         targetRef,
+        cleanId,
       ]
     );
 

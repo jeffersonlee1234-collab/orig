@@ -648,8 +648,8 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
 
   try {
     const [soloRes, childRes] = await Promise.all([
-      fetch(`${API_BASE}/solo-parent/admin/all?limit=100`, { headers: authHeaders() }).catch(() => null),
-      fetch(`${API_BASE}/child-welfare/admin/all?limit=100`, { headers: authHeaders() }).catch(() => null),
+      fetch(`${API_BASE}/solo-parent/admin/all?limit=100&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+      fetch(`${API_BASE}/child-welfare/admin/all?limit=100&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
     ])
 
     if (soloRes && soloRes.ok) {
@@ -668,9 +668,11 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
   try {
     const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
     if (Array.isArray(localSolo) && localSolo.length > 0) {
+      let changed = false
       for (const item of localSolo) {
         const ref = item.reference_number || item.referenceNumber || item.ref
-        if (ref && !soloApps.some((a) => a.referenceNumber === ref || a.id === `SP-${item.id}` || a.id === item.id)) {
+        const existing = soloApps.find((a) => (ref && a.referenceNumber === ref) || a.id === `SP-${item.id}` || a.id === item.id)
+        if (!existing && ref) {
           soloApps.unshift(mapSoloParentRow({
             ...item,
             id: item.id || Date.now(),
@@ -678,15 +680,29 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
             created_at: item.created_at || item.submittedAt || new Date().toISOString(),
             application_status: item.application_status || item.status || "pending",
           }))
+        } else if (existing) {
+          // If backend has approved/rejected it, sync local storage copy
+          if (existing.status !== item.status || existing.status !== item.application_status) {
+            item.status = existing.status
+            item.application_status = existing.status
+            item.assigned_id_number = existing.assignedIdNumber || item.assigned_id_number
+            item.solo_parent_id_number = existing.soloParentIdNumber || item.solo_parent_id_number
+            changed = true
+          }
         }
+      }
+      if (changed) {
+        localStorage.setItem("solo_parent_applications", JSON.stringify(localSolo))
       }
     }
 
     const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
     if (Array.isArray(localChild) && localChild.length > 0) {
+      let changed = false
       for (const item of localChild) {
         const ref = item.reference_number || item.referenceNumber || item.ref
-        if (ref && !childApps.some((a) => a.referenceNumber === ref || a.id === `CW-${item.id}` || a.id === item.id)) {
+        const existing = childApps.find((a) => (ref && a.referenceNumber === ref) || a.id === `CW-${item.id}` || a.id === item.id)
+        if (!existing && ref) {
           childApps.unshift(mapChildWelfareRow({
             ...item,
             id: item.id || Date.now(),
@@ -694,7 +710,17 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
             created_at: item.created_at || item.submittedAt || new Date().toISOString(),
             application_status: item.application_status || item.status || "pending",
           }))
+        } else if (existing) {
+          if (existing.status !== item.status || existing.status !== item.application_status) {
+            item.status = existing.status
+            item.application_status = existing.status
+            item.approved_amount = existing.approvedAmount || item.approved_amount
+            changed = true
+          }
         }
+      }
+      if (changed) {
+        localStorage.setItem("child_welfare_applications", JSON.stringify(localChild))
       }
     }
   } catch {}
@@ -717,7 +743,10 @@ async function approveSubmission(app: WelfareSubmission, value: string) {
     : { status: "approved", approvedAmount: value, referenceNumber: app.referenceNumber }
 
   const res = await fetch(url, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(body) })
-  if (!res.ok) throw new Error("Failed to approve application")
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.message || "Failed to approve application")
+  }
 }
 
 async function rejectSubmission(app: WelfareSubmission, reason: string) {
@@ -733,7 +762,10 @@ async function rejectSubmission(app: WelfareSubmission, reason: string) {
     headers: authHeaders(),
     body: JSON.stringify({ status: "rejected", rejectionReason: reason, referenceNumber: app.referenceNumber }),
   })
-  if (!res.ok) throw new Error("Failed to reject application")
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.message || "Failed to reject application")
+  }
 }
 
 const Tokens = React.memo(function Tokens() {

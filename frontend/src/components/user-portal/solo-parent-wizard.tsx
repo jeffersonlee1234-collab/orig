@@ -1312,11 +1312,11 @@ export default function SoloParentApplicationWizard({
           return (st === "pending" || st === "draft" || st === "under_review") && isMatchPendingType
         })
 
-        if (!isReapply && approvedApp) {
+        if (!isReapply && (reasonFound === "approved" || approvedApp)) {
           isBlockedFound = true
           reasonFound = "approved"
-          refFound = approvedApp.reference_number || approvedApp.referenceNumber || refFound
-          appFound = approvedApp
+          refFound = approvedApp?.reference_number || approvedApp?.referenceNumber || refFound
+          appFound = approvedApp || appFound
         } else if (!isBlockedFound) {
           if (pendingApp) {
             isBlockedFound = true
