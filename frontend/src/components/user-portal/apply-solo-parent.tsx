@@ -237,8 +237,65 @@ export default function ApplySoloParent() {
   const matchedCwProgram = currentCwPrograms.find((p) => p.key === programParam) || currentCwPrograms[0]
 
   const [showRequirementsModal, setShowRequirementsModal] = useState(false)
-  const [isBlocked, setIsBlocked] = useState(false)
-  const [blockedApp, setBlockedApp] = useState<any>(null)
+  const [blockedApp, setBlockedApp] = useState<any>(() => {
+    try {
+      if (typeof window === "undefined") return null
+      const isReapp =
+        window.location.search.includes("reapply=true") ||
+        localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
+        localStorage.getItem("solo_parent_reapplying") === "true"
+      if (isReapp) return null
+
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof?.qcidNo || prof?.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof?.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) return match
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  })
+
+  const [isBlocked, setIsBlocked] = useState<boolean>(() => {
+    try {
+      if (typeof window === "undefined") return false
+      const isReapp =
+        window.location.search.includes("reapply=true") ||
+        localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
+        localStorage.getItem("solo_parent_reapplying") === "true"
+      if (isReapp) return false
+
+      const prof = getCurrentUserProfile()
+      const userQcidClean = (prof?.qcidNo || prof?.qcidNumber || "").replace(/\D/g, "")
+      const userEmailClean = (prof?.email || "").toLowerCase().trim()
+      const raw = localStorage.getItem("solo_parent_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const match = parsed.find((a: any) => {
+            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+            const aEmail = String(a.email || "").toLowerCase().trim()
+            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
+          })
+          if (match) return true
+        }
+      }
+      return false
+    } catch {
+      return false
+    }
+  })
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
@@ -623,7 +680,8 @@ export default function ApplySoloParent() {
   }
 
   const isFormActive = isChildWelfare ? cwSubmissionStage === "form" : spSubmissionStage === "form"
-  const shouldShowRequirements = !isBlocked && currentStep === 1 && isFormActive
+  const hasExistingApp = Boolean(isBlocked || blockedApp)
+  const shouldShowRequirements = !hasExistingApp && !bypassedBlock && currentStep === 1 && isFormActive
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] py-2">
@@ -693,8 +751,9 @@ export default function ApplySoloParent() {
           isModalOpen={showRequirementsModal}
           onStepChange={setCurrentStep}
           onSubmissionStageChange={(stage) => setSpSubmissionStage(stage)}
-          onBlockedStatusChange={(blocked) => {
+          onBlockedStatusChange={(blocked, app) => {
             setIsBlocked(Boolean(blocked))
+            if (app) setBlockedApp(app)
             if (blocked) {
               setShowRequirementsModal(false)
             }
