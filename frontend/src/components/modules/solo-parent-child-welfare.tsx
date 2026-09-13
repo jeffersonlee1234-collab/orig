@@ -16,7 +16,6 @@ import {
   Baby,
   ClipboardList,
   IdCard,
-  Printer,
   Trash2,
   ShieldAlert,
   Download,

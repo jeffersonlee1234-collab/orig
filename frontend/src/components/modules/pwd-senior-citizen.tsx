@@ -13,7 +13,6 @@ import {
   Image as ImageIcon,
   HeartHandshake,
   IdCard,
-  Printer,
   Trash2,
   Download,
 } from "lucide-react"
@@ -893,7 +892,7 @@ function DocumentViewerModal({
   onClose: () => void
 }) {
   if (!doc) return null
-  const src = doc.fileUrl || (doc.filename ? `${API_BASE}/uploads/${doc.filename}` : "")
+  const src = getDocImageUrl(doc)
   const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src)
 
   return (
@@ -967,7 +966,6 @@ function DocumentViewerModal({
     </div>
   )
 }
-
 
 function OfficialIdCardFront({
   app,
@@ -1259,11 +1257,15 @@ function OfficialIdCardModal({
 }) {
   if (!app) return null
   const isPwdApp = isPWD(app)
+  const yr = new Date(app.submittedAt || Date.now()).getFullYear()
+  const rawNum = String(app.referenceNumber || app.id || "000000").replace(/\D/g, "") || "100001"
+  const suffix = rawNum.slice(-6).padStart(6, "0")
   const idNumber =
-    app.assignedIdNumber ||
-    app.idNumber ||
-    (isPwdApp ? generateOfficialPwdId(app, allSubmissions) : generateOfficialOscaId(app, allSubmissions))
-  const issueDateObj = new Date(app.dateApproved || app.submittedAt || Date.now())
+    (app as any).assignedIdNumber ||
+    (app as any).idNumber ||
+    (app as any).applicationNo ||
+    (isPwdApp ? `PWD-137404-${yr}-${suffix}` : `SENIOR-137404-${yr}-${suffix}`)
+  const issueDateObj = new Date((app as any).dateApproved || app.submittedAt || Date.now())
   const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
   const appDate = validIssueDate.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -1309,9 +1311,9 @@ function OfficialIdCardModal({
   }
 
   const contactNumber =
-    app.phone ||
+    (app as any).phone ||
     app.contactNo ||
-    app.contact_number ||
+    (app as any).contact_number ||
     (app as any).mobileNo ||
     (app as any).mobile_number ||
     (app as any).formData?.contactNo ||
