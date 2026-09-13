@@ -645,7 +645,7 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
       if (alt && typeof alt === "string" && (alt.startsWith("data:") || alt.startsWith("http"))) {
         return alt
       }
-      return candidate
+      return ""
     }
     if (candidate.startsWith("/")) {
       return candidate
@@ -659,7 +659,7 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
     return `${API_BASE}/uploads/${doc.filename}`
   }
 
-  return getSampleFallbackDoc(doc.name || doc.filename || "")
+  return ""
 }
 
 export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): string {
@@ -976,7 +976,7 @@ function DocumentViewerModal({
 }) {
   if (!doc) return null
   const src = getDocImageUrl(doc)
-  const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src)
+  const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src) || (src && src.startsWith("data:image"))
 
   return (
     <div
@@ -994,7 +994,7 @@ function DocumentViewerModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1012,19 +1012,13 @@ function DocumentViewerModal({
                   target.style.display = "none"
                   const parent = target.parentElement
                   if (parent) {
-                    const fallbackSrc = getSampleFallbackDoc(doc.name || doc.filename || "")
-                    if (fallbackSrc) {
-                      parent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center p-4">
-                          <img src="${fallbackSrc}" alt="${doc.name}" class="max-h-[55vh] max-w-full object-contain rounded-lg shadow-sm border border-slate-200" />
-                          <div class="mt-3 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center font-medium">
-                            Uploaded session image unavailable. Displaying standard official requirement template.
-                          </div>
-                        </div>
-                      `
-                    } else {
-                      parent.innerHTML = `<div class="text-center p-8 text-gray-400"><p class="font-semibold">Unable to load image</p><p class="text-xs mt-1">The file may not exist on the server</p></div>`
-                    }
+                    parent.innerHTML = `
+                      <div class="text-center p-8 text-gray-400 flex flex-col items-center">
+                        <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <p class="font-semibold text-sm text-gray-700">Hindi ma-load ang litrato ng aplikante</p>
+                        <p class="text-xs text-gray-500 mt-1">Ang in-upload na file ay wala sa server o sira ang link.</p>
+                      </div>
+                    `
                   }
                 }}
               />
@@ -1043,9 +1037,10 @@ function DocumentViewerModal({
               </div>
             )
           ) : (
-            <div className="text-center p-8 text-gray-400">
+            <div className="text-center p-8 text-gray-400 flex flex-col items-center">
               <Paperclip className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No preview available for this document</p>
+              <p className="text-sm font-semibold text-gray-700">Walang na-upload na litrato</p>
+              <p className="text-xs text-gray-400 mt-1">Walang file na na-attach para sa dokumentong ito.</p>
             </div>
           )}
         </div>
@@ -1053,7 +1048,7 @@ function DocumentViewerModal({
         <div className="flex justify-end pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
           >
             Close Preview
           </button>

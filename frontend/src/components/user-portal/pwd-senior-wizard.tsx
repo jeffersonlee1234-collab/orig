@@ -1449,11 +1449,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
 
       // Send to real backend API so it syncs across all windows, devices, and Incognito mode
-      fetch(`${API_BASE}/api/pwd-senior/applications`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newApp),
-      }).catch((err) => console.warn("Backend sync failed, saved locally:", err))
+      try {
+        await fetch(`${API_BASE}/api/pwd-senior/applications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newApp),
+        })
+      } catch (err) {
+        console.warn("Backend sync failed, saved locally:", err)
+      }
 
       // Dispatch real-time event to Admin dashboard
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
