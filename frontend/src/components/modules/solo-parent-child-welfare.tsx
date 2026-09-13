@@ -2591,21 +2591,6 @@ export default function SoloParentChildWelfareAdmin() {
     }
   }, [])
 
-  // Persist applications to state & localStorage & broadcast realtime
-  const updateApplications = (updater: (prev: WelfareSubmission[]) => WelfareSubmission[]) => {
-    setApplications((prev) => {
-      const next = updater(prev)
-      try {
-        const solo = next.filter(isSoloParent)
-        const child = next.filter((a) => !isSoloParent(a))
-        localStorage.setItem("solo_parent_applications", JSON.stringify(solo))
-        localStorage.setItem("child_welfare_applications", JSON.stringify(child))
-        notifyApplicationChange("STATUS_CHANGED", "solo_parent")
-        notifyApplicationChange("STATUS_CHANGED", "child_welfare")
-      } catch {}
-      return next
-    })
-  }
 
   const [selectedApp, setSelectedApp] = useState<WelfareSubmission | null>(null)
   const [cardApp, setCardApp] = useState<WelfareSubmission | null>(null)
