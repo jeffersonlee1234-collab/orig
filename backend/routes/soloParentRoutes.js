@@ -32,6 +32,11 @@ router.get(
 );
 
 router.get(
+  '/applications',
+  soloParentController.getAllApplications
+);
+
+router.get(
   '/eligibility/:userId',
   soloParentController.checkEligibility
 );

@@ -358,13 +358,31 @@ export default function ApplySoloParent() {
           if (res.ok) {
             const data = await res.json()
             const raw = Array.isArray(data) ? data : data.applications || []
-            if (Array.isArray(raw)) {
+            if (Array.isArray(raw) && raw.length > 0) {
               backendApps = raw
               backendFetched = true
             }
           }
         } catch {
           // silent fallback
+        }
+
+        // Secondary fallback to /api/solo-parent/applications if user-specific query returned 0
+        if (backendApps.length === 0) {
+          try {
+            const allRes = await fetch(`${API_BASE}/api/solo-parent/applications?_t=${Date.now()}`, {
+              headers: getAuthHeaders(),
+              cache: "no-store",
+            })
+            if (allRes.ok) {
+              const allData = await allRes.json()
+              const rawAll = Array.isArray(allData) ? allData : allData.applications || []
+              if (Array.isArray(rawAll) && rawAll.length > 0) {
+                backendApps = rawAll
+                backendFetched = true
+              }
+            }
+          } catch {}
         }
 
         let localApps: any[] = []
@@ -375,7 +393,7 @@ export default function ApplySoloParent() {
         } catch {}
 
         let allApps: any[] = []
-        if (backendFetched) {
+        if (backendFetched && backendApps.length > 0) {
           allApps = [...backendApps]
           try {
             localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
@@ -395,15 +413,19 @@ export default function ApplySoloParent() {
             if (aType === "loss" || aType === "replacement" || aType === "renewal") return false
           }
 
-          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || "").trim()
-          const appEmail = String(a.email || "").toLowerCase().trim()
-          const appLastName = String(a.last_name || a.lastName || "").toLowerCase().trim()
-          const appFirstName = String(a.first_name || a.firstName || "").toLowerCase().trim()
+          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || a.form_data?.qcidNumber || "").trim()
+          const appEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
+          const appLastName = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
+          const appFirstName = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
+          const appFullName = String(a.applicant_name || a.applicantName || `${appFirstName} ${appLastName}`).toLowerCase().trim()
+          const appUid = String(a.user_id || a.userId || "").trim()
 
           const matchUser =
-            (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid)) || appRef.includes(currentQcid.slice(-6)))) ||
+            (uid && appUid && String(uid) === appUid && String(uid) !== "0") ||
+            (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid)) || (currentQcid.length >= 8 && currentQcid.includes(appRef)))) ||
             (currentEmail && appEmail && currentEmail === appEmail) ||
-            (currentLastName && appLastName && currentFirstName && appFirstName && currentLastName === appLastName && currentFirstName === appFirstName)
+            (currentLastName && appLastName && (currentLastName === appLastName || appLastName.includes(currentLastName) || currentLastName.includes(appLastName))) ||
+            (currentFirstName && appFirstName && (currentFirstName === appFirstName || appFullName.includes(currentFirstName) || currentFirstName.includes(appFirstName)))
 
           return Boolean(matchUser)
         }

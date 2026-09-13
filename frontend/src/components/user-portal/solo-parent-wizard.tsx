@@ -845,6 +845,9 @@ export default function SoloParentApplicationWizard({
     if (initialType && lastInitialTypeRef.current !== initialType) {
       lastInitialTypeRef.current = initialType
       setIdStatus(initialType)
+      setStep(1)
+      setReturnToReview(false)
+      setAttemptedNext(false)
       setIsIdVerified(false)
       setExistingIdNumber("")
       setVerifyError("")
@@ -951,6 +954,10 @@ export default function SoloParentApplicationWizard({
           `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
           { headers: getAuthHeaders(), cache: "no-store", signal: controller.signal }
         ).catch(() => new Response(JSON.stringify([]))),
+        fetch(
+          `${API_BASE}/api/solo-parent/applications?_t=${Date.now()}`,
+          { headers: getAuthHeaders(), cache: "no-store", signal: controller.signal }
+        ).catch(() => new Response(JSON.stringify([]))),
       ]
 
       if (activeRef) {
@@ -993,12 +1000,6 @@ export default function SoloParentApplicationWizard({
           localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
         } catch {}
         return backendApps
-      } else {
-        // Backend has 0 active applications — purge stale cache
-        try {
-          localStorage.removeItem("solo_parent_applications")
-        } catch {}
-        return []
       }
     } catch {}
 
@@ -1320,6 +1321,7 @@ export default function SoloParentApplicationWizard({
     setIsBlocked(false)
     setBlockReason(null)
     setStep(1)
+    setReturnToReview(false)
     setAttemptedNext(false)
     setIsIdVerified(false)
     setExistingIdNumber("")
@@ -1336,8 +1338,8 @@ export default function SoloParentApplicationWizard({
     let isMounted = true
 
     const checkEligibility = async (isInitial = false) => {
-      // If user is actively filling out the form (step > 1 or is in active form submission), do not interrupt with blocking screen
-      if (step > 1 || (window as any).__isFormDirty || submissionStage !== "form") {
+      // If user is actively in submission stage matching, do not interrupt
+      if (submissionStage === "matching") {
         return
       }
       if (isInitial && !isBlocked) setCheckingEligibility(true)
@@ -1383,11 +1385,12 @@ export default function SoloParentApplicationWizard({
 
         const matchedUserApps = allApps.filter((a) => {
           if (!a) return false
-          const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+          const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || a.form_data?.qcidNumber || "").replace(/\D/g, "")
           const aRef = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
-          const aEmail = String(a.email || "").toLowerCase().trim()
+          const aEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
           const aFn = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
           const aLn = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
+          const aFullName = String(a.applicant_name || a.applicantName || `${aFn} ${aLn}`).toLowerCase().trim()
           const aAssigned = String(a.assigned_id_number || a.assignedIdNumber || a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
           const aUid = String(a.user_id || a.userId || "").trim()
 
@@ -1398,10 +1401,11 @@ export default function SoloParentApplicationWizard({
             Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
 
           const isUserMatch =
-            (uid && aUid && aUid === String(uid)) ||
+            (uid && aUid && aUid === String(uid) && String(uid) !== "0") ||
             (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid) || aRef.includes(userQcidClean) || userQcidClean.includes(aRef) || (aAssigned && aAssigned.includes(userQcidClean)))) ||
             (userEmailClean && aEmail && userEmailClean === aEmail) ||
-            (userLnClean && aLn && (userLnClean === aLn || aLn.includes(userLnClean) || userLnClean.includes(aLn) || (userFnClean && aFn && (userFnClean.includes(aFn) || aFn.includes(userFnClean)))))
+            (userLnClean && aLn && (userLnClean === aLn || aLn.includes(userLnClean) || userLnClean.includes(aLn))) ||
+            (userFnClean && aFn && (userFnClean === aFn || aFn.includes(userFnClean) || aFullName.includes(userFnClean)))
 
           return isSoloCategory && isUserMatch
         })
@@ -1902,11 +1906,12 @@ export default function SoloParentApplicationWizard({
     }
 
     setAttemptedNext(false)
-    if (returnToReview) {
+    if (returnToReview && step2Valid && step3Valid) {
       setStep(4)
       setReturnToReview(false)
       return
     }
+    setReturnToReview(false)
     setStep((s) => Math.min(s + 1, 4))
   }
 
@@ -1928,7 +1933,7 @@ export default function SoloParentApplicationWizard({
 
 
 
-  if (isBlocked && step === 1 && !isReapplying && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
+  if (isBlocked && !isReapplying && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
     const isAppApproved = blockReason === "approved" || blockedApp?.application_status === "approved" || blockedApp?.status === "approved"
     const displayRef = blockedReference || blockedApp?.reference_number || blockedApp?.referenceNumber || "REF-SP-2026-001"
     const assignedIdNo = blockedApp?.assigned_id_number || blockedApp?.assignedIdNumber || blockedApp?.solo_parent_id_number || blockedApp?.soloParentIdNumber

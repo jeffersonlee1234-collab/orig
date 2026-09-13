@@ -521,18 +521,15 @@ exports.getApplicationByReference = async (req, res) => {
 // Get all applications by user
 exports.getUserApplications = async (req, res) => {
   try {
+    await initSoloParentColumns();
     const { userId } = req.params;
     const { qcid, email, firstName, lastName } = req.query;
 
-    const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' && userId !== '1' ? String(userId).trim() : null;
-    const cleanQcid = qcid && String(qcid).trim() ? String(qcid).trim() : null;
-    const cleanEmail = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
-    const cleanFirstName = firstName && String(firstName).trim() ? String(firstName).trim().toLowerCase() : null;
-    const cleanLastName = lastName && String(lastName).trim() ? String(lastName).trim().toLowerCase() : null;
-
-    if (!cleanUserId && !cleanQcid && !cleanEmail && !(cleanFirstName && cleanLastName)) {
-      return res.status(200).json({ success: true, applications: [] });
-    }
+    const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' ? String(userId).trim() : null;
+    const cleanQcid = qcid && String(qcid).trim() && qcid !== 'undefined' ? String(qcid).trim() : null;
+    const cleanEmail = email && String(email).trim() && email !== 'undefined' ? String(email).trim().toLowerCase() : null;
+    const cleanFirstName = firstName && String(firstName).trim() && firstName !== 'undefined' ? String(firstName).trim().toLowerCase() : null;
+    const cleanLastName = lastName && String(lastName).trim() && lastName !== 'undefined' ? String(lastName).trim().toLowerCase() : null;
 
     const params = [];
     const orClauses = [];
@@ -554,21 +551,41 @@ exports.getUserApplications = async (req, res) => {
       const fnIdx = params.length;
       params.push(cleanLastName);
       const lnIdx = params.length;
-      orClauses.push(`((LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx}) AND (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx}))`);
+      orClauses.push(`(
+        (LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx})
+        AND
+        (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx})
+      )`);
+    } else if (cleanLastName) {
+      params.push(cleanLastName);
+      orClauses.push(`(LOWER(last_name) = $${params.length} OR last_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'lastName') = $${params.length})`);
+    } else if (cleanFirstName) {
+      params.push(cleanFirstName);
+      orClauses.push(`(LOWER(first_name) = $${params.length} OR first_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'firstName') = $${params.length})`);
+    }
+
+    if (orClauses.length === 0) {
+      const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
+      return res.status(200).json({ success: true, applications: fallback.rows || [] });
     }
 
     const result = await db.query(
       `SELECT *
        FROM solo_parent_applications
        WHERE ${orClauses.join(' OR ')}
-       ORDER BY created_at DESC`,
+       ORDER BY id DESC`,
       params
     );
 
     res.status(200).json({ success: true, applications: result.rows });
   } catch (error) {
     console.warn('Error fetching user applications:', error.message);
-    res.status(200).json({ success: true, applications: [] });
+    try {
+      const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
+      return res.status(200).json({ success: true, applications: fallback.rows || [] });
+    } catch {
+      res.status(200).json({ success: true, applications: [] });
+    }
   }
 };
 
@@ -805,6 +822,7 @@ exports.cancelApplication = async (req, res) => {
 // Check eligibility bago pumasok sa wizard
 exports.checkEligibility = async (req, res) => {
   try {
+    await initSoloParentColumns();
     const { userId } = req.params;
     const { applicationType, qcid, email, firstName, lastName } = req.query;
 
@@ -813,12 +831,12 @@ exports.checkEligibility = async (req, res) => {
     }
 
     const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' ? String(userId).trim() : null;
-    const cleanQcid = qcid && String(qcid).trim() ? String(qcid).trim() : null;
-    const cleanEmail = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
-    const cleanFirstName = firstName && String(firstName).trim() ? String(firstName).trim().toLowerCase() : null;
-    const cleanLastName = lastName && String(lastName).trim() ? String(lastName).trim().toLowerCase() : null;
+    const cleanQcid = qcid && String(qcid).trim() && qcid !== 'undefined' ? String(qcid).trim() : null;
+    const cleanEmail = email && String(email).trim() && email !== 'undefined' ? String(email).trim().toLowerCase() : null;
+    const cleanFirstName = firstName && String(firstName).trim() && firstName !== 'undefined' ? String(firstName).trim().toLowerCase() : null;
+    const cleanLastName = lastName && String(lastName).trim() && lastName !== 'undefined' ? String(lastName).trim().toLowerCase() : null;
 
-    if (!cleanUserId && !cleanQcid && !cleanEmail && !(cleanFirstName && cleanLastName)) {
+    if (!cleanUserId && !cleanQcid && !cleanEmail && !cleanFirstName && !cleanLastName) {
       return res.status(200).json({ success: true, blocked: false, reason: null });
     }
 
@@ -842,7 +860,17 @@ exports.checkEligibility = async (req, res) => {
       const fnIdx = params.length;
       params.push(cleanLastName);
       const lnIdx = params.length;
-      orClauses.push(`((LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx}) AND (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx}))`);
+      orClauses.push(`(
+        (LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx})
+        AND
+        (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx})
+      )`);
+    } else if (cleanLastName) {
+      params.push(cleanLastName);
+      orClauses.push(`(LOWER(last_name) = $${params.length} OR last_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'lastName') = $${params.length})`);
+    } else if (cleanFirstName) {
+      params.push(cleanFirstName);
+      orClauses.push(`(LOWER(first_name) = $${params.length} OR first_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'firstName') = $${params.length})`);
     }
 
     // 1. Check if user has a pending application for this specific type
