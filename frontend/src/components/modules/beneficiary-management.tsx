@@ -17,7 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
-import { subscribeToRealtimeChanges, notifyApplicationChange } from "../../utils/realtimeSync"
+import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { getApplicantPhotoUrl } from "./pwd-senior-citizen"
 import MaskedText from "../ui/masked-text"
 
@@ -258,6 +258,143 @@ function getBeneficiaryCardPhoto(b: Beneficiary): string {
 
 type ProfileTab = "overview" | "programs" | "verification" | "history"
 
+function renderProgramIdCard(b: Beneficiary, currentProg: EnrolledProgram | null, cardPhoto: string) {
+  const prog = currentProg ? currentProg.program : "General";
+  const refNo = currentProg?.referenceNo || b.qcidNumber || b.idNumber || b.beneficiaryNo;
+
+  let headerGradient = "from-red-700 via-red-600 to-red-800";
+  let subheaderBg = "bg-amber-400 text-slate-950";
+  let idLabel = "QCitizen ID";
+  let bottomBadge = "QC CITIZEN";
+  let subheaderText = "Quezon City Resident Identification Card";
+
+  if (prog === "PWD") {
+    headerGradient = "from-purple-800 via-purple-700 to-indigo-900";
+    subheaderBg = "bg-purple-300 text-purple-950";
+    idLabel = "PWD ID";
+    bottomBadge = "PWD CITIZEN";
+    subheaderText = "Quezon City Person with Disability ID";
+  } else if (prog === "Senior Citizen") {
+    headerGradient = "from-amber-800 via-amber-700 to-yellow-900";
+    subheaderBg = "bg-amber-300 text-amber-950";
+    idLabel = "Senior Citizen ID";
+    bottomBadge = "SENIOR CITIZEN";
+    subheaderText = "Quezon City Senior Citizen Identification Card";
+  } else if (prog === "Solo Parent") {
+    headerGradient = "from-violet-800 via-violet-700 to-purple-900";
+    subheaderBg = "bg-violet-300 text-violet-950";
+    idLabel = "Solo Parent ID";
+    bottomBadge = "SOLO PARENT";
+    subheaderText = "Quezon City Solo Parent Identification Card";
+  } else if (prog === "AICS") {
+    headerGradient = "from-blue-800 via-blue-700 to-indigo-900";
+    subheaderBg = "bg-blue-300 text-blue-950";
+    idLabel = "AICS Grantee ID";
+    bottomBadge = "AICS GRANTEE";
+    subheaderText = currentProg?.assistanceType ? `AICS – ${currentProg.assistanceType}` : "Assistance to Individuals in Crisis Situations";
+  } else if (prog === "Livelihood") {
+    headerGradient = "from-emerald-800 via-emerald-700 to-teal-900";
+    subheaderBg = "bg-emerald-300 text-emerald-950";
+    idLabel = "Livelihood ID";
+    bottomBadge = "GRANTEE";
+    subheaderText = "Quezon City Livelihood Program Beneficiary";
+  } else if (prog === "Child Welfare") {
+    headerGradient = "from-rose-800 via-rose-700 to-pink-900";
+    subheaderBg = "bg-rose-300 text-rose-950";
+    idLabel = "Child Welfare";
+    bottomBadge = "BENEFICIARY";
+    subheaderText = "Quezon City Child & Youth Welfare Beneficiary";
+  }
+
+  return (
+    <div className="border border-slate-300 rounded-2xl overflow-hidden shadow-md bg-white select-none max-w-md mx-auto">
+      {/* Header */}
+      <div className={`px-3.5 py-2.5 flex items-center justify-between text-white bg-gradient-to-r ${headerGradient} shadow-xs`}>
+        <div className="flex items-center gap-2">
+          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+          <div>
+            <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
+            <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES</p>
+          </div>
+        </div>
+        <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
+          {idLabel}
+        </span>
+      </div>
+
+      {/* Sub-header */}
+      <div className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${subheaderBg}`}>
+        {subheaderText}
+      </div>
+
+      {/* Details with QC Logo on right side */}
+      <div className="p-3 flex gap-2.5 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+        <div className="w-20 h-24 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+          {cardPhoto ? (
+            <img src={cardPhoto} alt="Cardholder" className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+              <User className="w-8 h-8 text-slate-300 mb-1" />
+              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+            </div>
+          )}
+          <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[6.5px] text-center py-0.5 font-bold uppercase">
+            {bottomBadge}
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-1 relative z-10">
+          <div>
+            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">{idLabel} Number</span>
+            <p className="text-sm font-black text-slate-900 font-mono tracking-wide leading-none">{refNo}</p>
+          </div>
+
+          <div className="pt-0.5">
+            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
+            <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{b.fullName}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
+            <div>
+              <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {b.birthDate || "—"}
+            </div>
+            <div>
+              <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {b.sex || b.gender || "—"} / O+
+            </div>
+          </div>
+
+          <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
+            <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {b.address || b.barangay ? `${b.address || ""} Brgy. ${b.barangay || ""}`.trim() : "Quezon City"}
+          </div>
+        </div>
+
+        {/* QC Official Seal on right side */}
+        <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
+          <img
+            src="/gov-serves-seal.png"
+            alt="QC Official Seal"
+            className="w-13 h-13 object-contain drop-shadow-md hover:scale-105 transition-transform"
+          />
+          <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
+        </div>
+      </div>
+
+      {/* Bottom Signature & Barcode */}
+      <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+        <div>
+          <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
+          <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Verified Resident</span>
+        </div>
+        <div className="text-center">
+          <div className="w-16 border-b border-slate-400 mx-auto mb-0.5" />
+          <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
+          <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BeneficiaryProfileModal({
   b,
   onClose,
@@ -267,6 +404,7 @@ function BeneficiaryProfileModal({
 }) {
   const cardPhoto = getBeneficiaryCardPhoto(b)
   const [tab, setTab] = useState<ProfileTab>("overview")
+  const [selectedProgramIndex, setSelectedProgramIndex] = useState<number>(b.enrolledPrograms.length > 0 ? 0 : -1)
 
   const vt = getVerificationTheme(b.verificationStatus)
 
@@ -382,14 +520,21 @@ function BeneficiaryProfileModal({
               ) : (
                 <div className="space-y-2.5">
                   {b.enrolledPrograms.map((p, i) => (
-                    <div key={i} className="border border-border rounded-xl p-3.5 bg-white flex items-center justify-between gap-3 shadow-xs">
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setSelectedProgramIndex(i);
+                        setTab("verification");
+                      }}
+                      className="border border-border rounded-xl p-3.5 bg-white flex items-center justify-between gap-3 shadow-xs hover:border-blue-400 hover:bg-slate-50/70 cursor-pointer transition-all group"
+                    >
                       <div>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getProgramColor(p.program)}`}>
                             {p.program}
                           </span>
                           {p.assistanceType && (
-                            <span className="text-xs font-semibold text-foreground">
+                            <span className="text-xs font-semibold text-foreground group-hover:text-blue-600 transition-colors">
                               {p.assistanceType}
                             </span>
                           )}
@@ -397,9 +542,20 @@ function BeneficiaryProfileModal({
                         </div>
                         <p className="text-xs text-muted-foreground">Enrolled on {formatDate(p.dateEnrolled)}</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        {p.status}
-                      </span>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                          String(p.status).toLowerCase().includes('approv') || String(p.status).toLowerCase().includes('release') || String(p.status).toLowerCase().includes('verif')
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : String(p.status).toLowerCase().includes('reject')
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {p.status}
+                        </span>
+                        <span className="text-xs font-medium text-blue-600 group-hover:translate-x-0.5 transition-transform items-center gap-0.5 hidden sm:inline-flex">
+                          View Verification <ChevronRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -409,186 +565,172 @@ function BeneficiaryProfileModal({
 
           {tab === "verification" && (
             <div className="space-y-4">
-              <SectionHeading icon={<ShieldCheck className="h-4 w-4" />}>Identity Verification</SectionHeading>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <SectionHeading icon={<ShieldCheck className="h-4 w-4" />}>
+                  Identity & Program Verification
+                </SectionHeading>
+              </div>
 
-              {b.verificationStatus === "verified" ? (
-                <div className="space-y-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-emerald-800 font-semibold mb-1">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                        <span>Verified Beneficiary</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 rounded-full">
-                        ACTIVE ID
-                      </span>
-                    </div>
-                    <p className="text-xs text-emerald-700">
-                      Verified on <strong>{b.verifiedDate ? formatDate(b.verifiedDate) : "—"}</strong> by <strong>{b.verifiedBy || "Social Worker"}</strong>
-                    </p>
-                    {b.verificationRemarks && (
-                      <p className="text-xs text-emerald-800 mt-2 bg-emerald-100/50 p-2 rounded border border-emerald-200/50">
-                        <strong>Remarks:</strong> {b.verificationRemarks}
-                      </p>
-                    )}
-                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm pt-2 border-t border-emerald-200/60">
-                      <Field label="ID Type" value={b.idType || "QCitizen ID"} />
-                      <Field label="ID Number" value={b.idNumber || b.qcidNumber || "—"} />
-                    </div>
-                  </div>
+              {/* Multi-Program Application Selector */}
+              {b.enrolledPrograms.length > 0 && (
+                <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                    Select Program Credential to View:
+                  </p>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProgramIndex(-1)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all border ${
+                        selectedProgramIndex === -1
+                          ? "bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-400"
+                          : "bg-white text-slate-700 border-border hover:bg-slate-100"
+                      }`}
+                    >
+                      General QCitizen Profile
+                    </button>
+                    {b.enrolledPrograms.map((p, idx) => {
+                      const isApproved = String(p.status).toLowerCase().includes("approv") || String(p.status).toLowerCase().includes("release") || String(p.status).toLowerCase().includes("verif");
+                      const isRejected = String(p.status).toLowerCase().includes("reject") || String(p.status).toLowerCase().includes("decline");
+                      const isSelected = selectedProgramIndex === idx;
 
-                  {/* Official QCitizen ID Card (RED Header with QC Logo on right) */}
-                  <div className="border border-slate-300 rounded-2xl overflow-hidden shadow-md bg-white select-none max-w-md mx-auto">
-                    {/* Header - RED */}
-                    <div className="px-3.5 py-2.5 flex items-center justify-between text-white bg-gradient-to-r from-red-700 via-red-600 to-red-800 shadow-xs">
-                      <div className="flex items-center gap-2">
-                        <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-                        <div>
-                          <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
-                          <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES</p>
-                        </div>
-                      </div>
-                      <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
-                        QCITIZEN ID
-                      </span>
-                    </div>
-
-                    {/* Sub-header */}
-                    <div className="py-1 text-center text-[9.5px] font-black uppercase tracking-widest bg-amber-400 text-slate-950">
-                      Quezon City Resident Identification Card
-                    </div>
-
-                    {/* Details with QC Logo on right side */}
-                    <div className="p-3 flex gap-2.5 items-start relative bg-gradient-to-br from-slate-50 via-white to-red-50/20">
-                      <div className="w-20 h-24 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-                        {cardPhoto ? (
-                          <img src={cardPhoto} alt="Cardholder" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-                            <User className="w-8 h-8 text-slate-300 mb-1" />
-                            <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-                          </div>
-                        )}
-                        <div className="absolute bottom-0 inset-x-0 bg-red-900/90 text-white text-[6.5px] text-center py-0.5 font-bold uppercase">
-                          QC CITIZEN
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-w-0 space-y-1 relative z-10">
-                        <div>
-                          <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">QCitizen ID Number</span>
-                          <p className="text-sm font-black text-red-700 font-mono tracking-wide leading-none">{b.qcidNumber || b.idNumber || b.beneficiaryNo}</p>
-                        </div>
-
-                        <div className="pt-0.5">
-                          <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
-                          <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{b.fullName}</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
-                          <div>
-                            <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {b.birthDate || "—"}
-                          </div>
-                          <div>
-                            <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {b.sex || b.gender || "—"} / O+
-                          </div>
-                        </div>
-
-                        <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
-                          <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {b.address || b.barangay ? `${b.address || ""} Brgy. ${b.barangay || ""}`.trim() : "Quezon City"}
-                        </div>
-                      </div>
-
-                      {/* QC Official Seal on right side */}
-                      <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
-                        <img
-                          src="/gov-serves-seal.png"
-                          alt="QC Official Seal"
-                          className="w-13 h-13 object-contain drop-shadow-md hover:scale-105 transition-transform"
-                        />
-                        <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Signature & Barcode */}
-                    <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
-                      <div>
-                        <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
-                        <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Verified Resident</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-16 border-b border-slate-400 mx-auto mb-0.5" />
-                        <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
-                        <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : b.verificationStatus === "unverified" ? (
-                <div className="space-y-4">
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-red-800 font-semibold mb-1">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span>Unverified / Application Rejected</span>
-                    </div>
-                    <p className="text-xs text-red-700">
-                      Hindi pa nakakapasa o na-reject ang isinumiteng aplikasyon sa service module batay sa ebalwasyon ng Social Worker.
-                    </p>
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      Application Evaluation Status
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
-                      <Field label="ID Type" value={b.idType || "Government ID"} />
-                      <Field
-                        label="ID / QCID Number"
-                        value={<MaskedText value={b.qcidNumber || b.idNumber || b.beneficiaryNo} type="id" />}
-                      />
-                      <Field label="Enrolled Programs" value={`${b.enrolledPrograms.length} Application(s)`} />
-                      <Field label="Module Status" value={<span className="text-xs font-semibold text-red-600">Unverified / Rejected</span>} />
-                    </div>
-                    {b.verificationRemarks && (
-                      <p className="text-xs text-red-800 bg-red-100/50 p-2.5 rounded-lg border border-red-200/50">
-                        <strong>Evaluation Note:</strong> {b.verificationRemarks}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-amber-800 font-semibold mb-1">
-                      <Clock className="h-5 w-5 text-amber-600" />
-                      <span>Pending Identity & Application Evaluation</span>
-                    </div>
-                    <p className="text-xs text-amber-700">
-                      Awtomatikong naka-link ang verification status ng benepisyaryo sa kanyang mga isinumiteng aplikasyon sa mga module (tulad ng AICS, PWD, Solo Parent, Child Welfare, Livelihood). Kapag na-approve ng Social Worker ang aplikasyon sa kaukulang module, awtomatiko itong magiging <strong>Verified</strong>.
-                    </p>
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      Automatic Verification Details
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
-                      <Field label="ID Type" value={b.idType || (b.qcidNumber ? "QCitizen ID" : "Government ID")} />
-                      <Field
-                        label="ID / QCID Number"
-                        value={<MaskedText value={b.qcidNumber || b.idNumber || b.beneficiaryNo} type="id" />}
-                      />
-                      <Field label="Submitted Applications" value={`${b.enrolledPrograms.length} Application(s)`} />
-                      <Field label="Module Status" value={<span className="text-xs font-semibold text-amber-600">Pending Review in Modules</span>} />
-                    </div>
-                    {b.verificationRemarks && (
-                      <p className="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
-                        <strong>Evaluation Note:</strong> {b.verificationRemarks}
-                      </p>
-                    )}
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSelectedProgramIndex(idx)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all border ${
+                            isSelected
+                              ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300"
+                              : "bg-white text-slate-700 border-border hover:bg-slate-100"
+                          }`}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              isApproved ? (isSelected ? "bg-emerald-300" : "bg-emerald-500") : isRejected ? (isSelected ? "bg-red-300" : "bg-red-500") : (isSelected ? "bg-amber-300" : "bg-amber-500")
+                            }`}
+                          />
+                          <span>{p.program}</span>
+                          {p.assistanceType && <span className="opacity-80 text-[11px]">({p.assistanceType})</span>}
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                            isSelected ? "bg-white/20 text-white" : isApproved ? "bg-emerald-50 text-emerald-700" : isRejected ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                          }`}>
+                            {p.status}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
+
+              {/* View according to the selected program or General profile */}
+              {(() => {
+                const currentProg = selectedProgramIndex >= 0 && selectedProgramIndex < b.enrolledPrograms.length ? b.enrolledPrograms[selectedProgramIndex] : null;
+
+                const isProgApproved = currentProg
+                  ? String(currentProg.status).toLowerCase().includes("approv") || String(currentProg.status).toLowerCase().includes("release") || String(currentProg.status).toLowerCase().includes("verif")
+                  : b.verificationStatus === "verified";
+
+                const isProgRejected = currentProg
+                  ? String(currentProg.status).toLowerCase().includes("reject") || String(currentProg.status).toLowerCase().includes("decline")
+                  : b.verificationStatus === "unverified";
+
+                const isProgPending = currentProg ? (!isProgApproved && !isProgRejected) : (b.verificationStatus === "pending");
+
+                if (isProgApproved) {
+                  return (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-emerald-800 font-semibold mb-1">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            <span>
+                              {currentProg ? `${currentProg.program} – Approved & Verified` : "Verified Beneficiary"}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            ACTIVE ID
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-700">
+                          Verified on <strong>{b.verifiedDate ? formatDate(b.verifiedDate) : formatDate(currentProg?.dateEnrolled || b.dateRegistered)}</strong> by <strong>{b.verifiedBy || "Social Worker Approval"}</strong>
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm pt-2 border-t border-emerald-200/60">
+                          <Field label="Program / ID Type" value={currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Beneficiary'})` : (b.idType || "QCitizen ID")} />
+                          <Field label="Reference / ID Number" value={currentProg?.referenceNo || b.idNumber || b.qcidNumber || "—"} />
+                        </div>
+                      </div>
+
+                      {/* Official Program ID Card */}
+                      {renderProgramIdCard(b, currentProg, cardPhoto)}
+                    </div>
+                  );
+                }
+
+                if (isProgPending) {
+                  return (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-amber-800 font-semibold mb-1">
+                          <Clock className="h-5 w-5 text-amber-600" />
+                          <span>
+                            {currentProg ? `${currentProg.program} – Pending Social Worker Review` : "Pending Identity Verification"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-700">
+                          Ang aplikasyon para sa <strong>{currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Social Assistance'})` : "Social Services"}</strong> ay kasalukuyang sinusuri pa ng Social Worker. Awtomatikong magiging Verified at lilitaw ang opisyal na ID Card kapag ito ay na-aprubahan na sa service module.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                          Application Evaluation Details
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
+                          <Field label="Program Name" value={currentProg?.program || "General"} />
+                          <Field label="Assistance Type" value={currentProg?.assistanceType || "Standard Evaluation"} />
+                          <Field
+                            label="Reference Number"
+                            value={currentProg?.referenceNo || <MaskedText value={b.qcidNumber || b.idNumber || b.beneficiaryNo} type="id" />}
+                          />
+                          <Field label="Date Filed / Enrolled" value={formatDate(currentProg?.dateEnrolled || b.dateRegistered)} />
+                          <Field label="Evaluation Status" value={<span className="text-xs font-semibold text-amber-600">Pending Review</span>} />
+                          <Field label="ID Card Generation" value={<span className="text-xs text-slate-500">Unlocks upon module approval</span>} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-red-800 font-semibold mb-1">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span>
+                          {currentProg ? `${currentProg.program} – Application Rejected` : "Unverified Beneficiary"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-red-700">
+                        Hindi na-approve ang isinumiteng aplikasyon para sa {currentProg?.program || "Social Services"} batay sa ebalwasyon ng Social Worker.
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Application Details
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm bg-white border border-slate-200 rounded-lg p-3">
+                        <Field label="Program" value={currentProg?.program || "General"} />
+                        <Field label="Reference No." value={currentProg?.referenceNo || b.idNumber || "—"} />
+                        <Field label="Date Filed" value={formatDate(currentProg?.dateEnrolled || b.dateRegistered)} />
+                        <Field label="Status" value={<span className="text-xs font-semibold text-red-600">Rejected / Unverified</span>} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -670,12 +812,6 @@ export default function BeneficiaryManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterProgram, setFilterProgram] = useState<"all" | ProgramKey>("all")
   const [filterVerification, setFilterVerification] = useState<"all" | VerificationStatus>("all")
-  const [toastMessage, setToastMessage] = useState<{ text: string; type?: "success" | "danger" } | null>(null)
-
-  const showToast = (text: string, type: "success" | "danger" = "success") => {
-    setToastMessage({ text, type })
-    setTimeout(() => setToastMessage(null), 4000)
-  }
 
   // Fetch beneficiaries from backend database
   const fetchBeneficiaries = useCallback(async (isSilent = false) => {
@@ -756,20 +892,6 @@ export default function BeneficiaryManagement() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-white shadow-xl text-sm font-medium ${
-              toastMessage.type === "danger" ? "bg-red-600" : "bg-emerald-600"
-            }`}
-          >
-            {toastMessage.type === "danger" ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-            <span>{toastMessage.text}</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
