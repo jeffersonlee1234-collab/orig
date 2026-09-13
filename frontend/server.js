@@ -72,17 +72,54 @@ app.use(['/api', '/uploads'], async (req, res) => {
 });
 
 if (fs.existsSync(distPath)) {
+  // 1. Static assets with proper cache headers
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     }
   }));
+
+  // 2. Handle missing / stale JS/CSS chunk requests from old browser sessions without throwing MIME error
+  app.use('/assets', (req, res) => {
+    if (req.path.endsWith('.js') || req.path.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.status(200).send(`
+        console.warn("[App Update] New version deployed. Reloading page...");
+        if (!sessionStorage.getItem("__auto_reloaded_for_build")) {
+          sessionStorage.setItem("__auto_reloaded_for_build", "true");
+          window.location.reload();
+        }
+      `);
+    }
+    if (req.path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).send('/* Asset updated */');
+    }
+    res.status(404).send('Asset not found');
+  });
+
+  // 3. SPA Route Fallback (HTML only)
   app.get('*', (req, res) => {
+    // If request was looking for a static asset (.js, .css, .png, etc.), return 404, not index.html
+    if (/\.(js|mjs|css|map|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$/i.test(req.path)) {
+      if (req.path.endsWith('.js') || req.path.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        return res.status(200).send('window.location.reload();');
+      }
+      return res.status(404).send('Not found');
+    }
+
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(indexPath);
     } else {
       res.status(200).send('<h1>App is building, please refresh in a moment...</h1>');
