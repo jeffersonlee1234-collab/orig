@@ -5,7 +5,7 @@ import { useLanguage } from "./language-context"
 interface DocumentCameraModalProps {
   isOpen: boolean
   onClose: () => void
-  onCapture: (file: File) => void
+  onCapture: (file: File, dataUrl?: string) => void
   docTitle?: string
 }
 
@@ -58,14 +58,15 @@ export default function DocumentCameraModal({
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        await videoRef.current.play()
+        videoRef.current.play().catch(() => {})
       }
-    } catch (err) {
-      console.error(err)
+      setIsLoadingCamera(false)
+    } catch (err: any) {
+      console.error("Camera access error:", err)
       setCameraError(
-        "Hindi ma-access ang camera. Siguraduhing pinahintulutan ang camera permission sa browser o mag-upload na lang ng larawan mula sa inyong device."
+        t("cameraAccessError") ||
+          "Hindi ma-access ang camera. Pakitiyak na pinapayagan ang camera permission sa inyong browser."
       )
-    } finally {
       setIsLoadingCamera(false)
     }
   }
@@ -75,16 +76,16 @@ export default function DocumentCameraModal({
       startCamera(facingMode)
     } else {
       stopStream()
+      if (capturedPhotoUrl) {
+        URL.revokeObjectURL(capturedPhotoUrl)
+      }
       setCapturedPhotoUrl(null)
       setCapturedBlob(null)
-      setCameraError("")
     }
-    return () => {
-      stopStream()
-    }
+    return () => stopStream()
   }, [isOpen])
 
-  const toggleFacingMode = () => {
+  const handleSwitchCamera = () => {
     const nextMode = facingMode === "environment" ? "user" : "environment"
     setFacingMode(nextMode)
     startCamera(nextMode)
@@ -129,8 +130,14 @@ export default function DocumentCameraModal({
     const file = new File([capturedBlob], `${sanitizedTitle}_${Date.now()}.jpg`, {
       type: "image/jpeg",
     })
-    onCapture(file)
-    onClose()
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64Url = (reader.result as string) || ""
+      onCapture(file, base64Url)
+      onClose()
+    }
+    reader.readAsDataURL(capturedBlob)
   }
 
   if (!isOpen) return null

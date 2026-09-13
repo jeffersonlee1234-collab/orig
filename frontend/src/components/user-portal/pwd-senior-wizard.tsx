@@ -1365,7 +1365,12 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           let fileUrl = up?.previewUrl || ""
           if (!fileUrl || fileUrl.startsWith("blob:")) {
             if (up?.file) {
-              fileUrl = await readFileAsDataUrl(up.file)
+              fileUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve((reader.result as string) || "")
+                reader.onerror = () => resolve("")
+                reader.readAsDataURL(up.file)
+              })
             }
           }
           return {
@@ -3225,13 +3230,12 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         isOpen={Boolean(cameraDoc)}
         onClose={() => setCameraDoc(null)}
         docTitle={cameraDoc || undefined}
-        onCapture={async (file) => {
+        onCapture={(file, dataUrl) => {
           if (cameraDoc) {
-            const dataUrl = await readFileAsDataUrl(file)
             setUploaded((prev) => {
               const existing = prev[cameraDoc]
-              if (existing && existing.previewUrl.startsWith("blob:")) URL.revokeObjectURL(existing.previewUrl)
-              return { ...prev, [cameraDoc]: { file, previewUrl: dataUrl || URL.createObjectURL(file) } }
+              if (existing && existing.previewUrl && existing.previewUrl.startsWith("blob:")) URL.revokeObjectURL(existing.previewUrl)
+              return { ...prev, [cameraDoc]: { file, previewUrl: dataUrl || "" } }
             })
           }
         }}
