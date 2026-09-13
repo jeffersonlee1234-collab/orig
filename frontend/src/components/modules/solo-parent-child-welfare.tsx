@@ -185,6 +185,10 @@ interface ChildWelfareSubmission {
   documents: ApplicationDocument[]
 
   status: "pending" | "approved" | "rejected" | "needs_revision"
+  applicantPhoto?: string
+  photoUrl?: string
+  formData?: any
+  extraData?: any
   approvedAmount?: string
   rejectionReason?: string
   approvedBy?: string
