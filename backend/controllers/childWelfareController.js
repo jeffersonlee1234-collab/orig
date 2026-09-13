@@ -289,23 +289,12 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const syncFs = require('fs');
     const uploadedFiles = req.files.map((file) => {
-      let dataUrl = '';
-      try {
-        if (file.path && syncFs.existsSync(file.path)) {
-          const fileBuffer = syncFs.readFileSync(file.path);
-          const mime = file.mimetype || 'image/jpeg';
-          dataUrl = `data:${mime};base64,${fileBuffer.toString('base64')}`;
-        }
-      } catch (e) {
-        console.warn('Could not generate base64 dataUrl for uploaded file:', e);
-      }
+      const fileUrl = `/uploads/child-welfare/${file.filename}`;
       return {
         filename: file.filename,
-        fileUrl: `/uploads/child-welfare/${file.filename}`,
-        dataUrl: dataUrl || undefined,
-        previewUrl: dataUrl || undefined,
+        fileUrl,
+        previewUrl: fileUrl,
         fileSize: file.size,
         uploadedAt: new Date(),
       };
@@ -330,14 +319,14 @@ exports.uploadDocuments = async (req, res) => {
     );
 
     const isPhotoDoc = /photo|picture|2x2|id_pic|avatar/i.test(documentId || documentLabel || '');
-    const photoFile = uploadedFiles.find((f) => f.dataUrl);
-    if (isPhotoDoc && photoFile && photoFile.dataUrl) {
+    const photoFile = uploadedFiles[0];
+    if (isPhotoDoc && photoFile && photoFile.fileUrl) {
       try {
         await db.query(
           `UPDATE child_welfare_applications 
            SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
            WHERE id = $2`,
-          [photoFile.dataUrl, applicationId]
+          [photoFile.fileUrl, applicationId]
         );
       } catch (e) {}
     }

@@ -288,23 +288,12 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const syncFs = require('fs');
     const uploadedFiles = req.files.map((file) => {
-      let dataUrl = '';
-      try {
-        if (file.path && syncFs.existsSync(file.path)) {
-          const fileBuffer = syncFs.readFileSync(file.path);
-          const mime = file.mimetype || 'image/jpeg';
-          dataUrl = `data:${mime};base64,${fileBuffer.toString('base64')}`;
-        }
-      } catch (e) {
-        console.warn('Could not generate base64 dataUrl for uploaded file:', e);
-      }
+      const fileUrl = `/uploads/solo-parent/${file.filename}`;
       return {
         filename: file.filename,
-        fileUrl: `/uploads/solo-parent/${file.filename}`,
-        dataUrl: dataUrl || undefined,
-        previewUrl: dataUrl || undefined,
+        fileUrl,
+        previewUrl: fileUrl,
         fileSize: file.size,
         uploadedAt: new Date(),
       };
@@ -334,8 +323,8 @@ exports.uploadDocuments = async (req, res) => {
 
     // If this is a 2x2 photo or picture, also update applicantPhoto in form_data and extra_data
     const isPhotoDoc = /photo|picture|2x2|id_pic|avatar/i.test(documentId || documentLabel || '');
-    const photoFile = uploadedFiles.find((f) => f.dataUrl);
-    if (isPhotoDoc && photoFile && photoFile.dataUrl) {
+    const photoFile = uploadedFiles[0];
+    if (isPhotoDoc && photoFile && photoFile.fileUrl) {
       try {
         await db.query(
           `UPDATE solo_parent_applications 
@@ -344,7 +333,7 @@ exports.uploadDocuments = async (req, res) => {
                applicant_photo = $1,
                photo_url = $1
            WHERE id = $2`,
-          [photoFile.dataUrl, applicationId]
+          [photoFile.fileUrl, applicationId]
         );
       } catch (e) {
         console.warn('Could not update applicantPhoto field:', e);
