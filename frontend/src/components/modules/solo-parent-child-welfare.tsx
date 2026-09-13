@@ -2450,7 +2450,7 @@ export default function SoloParentChildWelfareAdmin() {
       setApplications(apps)
     } catch (err) {
       console.error("Failed to load applications:", err)
-      if (!silent && applications.length === 0) setLoadError("Hindi makuha ang mga application. Subukan ulit.")
+      if (!silent && applications.length === 0) setLoadError("Unable to load applications. Please try again.")
     } finally {
       isFetchingRef.current = false
       setIsLoading(false)
@@ -2912,12 +2912,12 @@ export default function SoloParentChildWelfareAdmin() {
 
           {isLoading && applications.length === 0 ? (
             <div className="text-center py-16 gw-card">
-              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>Naglo-load ng mga application...</p>
+              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>Loading applications...</p>
             </div>
           ) : loadError && applications.length === 0 ? (
             <div className="text-center py-16 gw-card">
               <p className="text-sm" style={{ color: "var(--redwood-ink)" }}>{loadError}</p>
-              <button onClick={() => loadApplications(false)} className="gw-btn-ghost px-4 py-2 mt-3">Subukan Ulit</button>
+              <button onClick={() => loadApplications(false)} className="gw-btn-ghost px-4 py-2 mt-3">Try Again</button>
             </div>
           ) : filteredApps.length === 0 ? (
             <div className="text-center py-16 gw-card">
