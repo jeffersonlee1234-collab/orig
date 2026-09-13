@@ -254,6 +254,13 @@ export default function ApplySoloParent() {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              typeParam === "renewal" ? aType === "renewal" :
+              typeParam === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
@@ -284,6 +291,13 @@ export default function ApplySoloParent() {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              typeParam === "renewal" ? aType === "renewal" :
+              typeParam === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)

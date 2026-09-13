@@ -1195,6 +1195,13 @@ export default function SoloParentApplicationWizard({
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              initialType === "renewal" ? aType === "renewal" :
+              initialType === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
@@ -1218,6 +1225,13 @@ export default function SoloParentApplicationWizard({
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              initialType === "renewal" ? aType === "renewal" :
+              initialType === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
@@ -1244,6 +1258,13 @@ export default function SoloParentApplicationWizard({
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              initialType === "renewal" ? aType === "renewal" :
+              initialType === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
@@ -1267,6 +1288,13 @@ export default function SoloParentApplicationWizard({
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           const match = parsed.find((a: any) => {
+            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+            const matchType =
+              initialType === "renewal" ? aType === "renewal" :
+              initialType === "loss" ? (aType === "loss" || aType === "replacement") :
+              (aType === "new" || !aType)
+            if (!matchType) return false
+
             const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
             const aEmail = String(a.email || "").toLowerCase().trim()
             return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
@@ -1389,9 +1417,19 @@ export default function SoloParentApplicationWizard({
           return isSoloCategory && isUserMatch
         })
 
-        const approvedApp = matchedUserApps.find((a) => {
+        const approvedAnyApp = matchedUserApps.find((a) => {
           const st = String(a.application_status || a.status || "").toLowerCase()
           return st === "approved" || st === "completed" || st === "for_release" || st === "active"
+        })
+
+        const approvedAppForType = matchedUserApps.find((a) => {
+          const st = String(a.application_status || a.status || "").toLowerCase()
+          const isApproved = st === "approved" || st === "completed" || st === "for_release" || st === "active"
+          if (!isApproved) return false
+          const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+          if (typeToCheck === "renewal") return aType === "renewal"
+          if (typeToCheck === "loss") return aType === "loss" || aType === "replacement"
+          return aType === "new" || !aType
         })
 
         const pendingApp = matchedUserApps.find((a) => {
@@ -1404,46 +1442,66 @@ export default function SoloParentApplicationWizard({
           return (st === "pending" || st === "draft" || st === "under_review") && isMatchPendingType
         })
 
-        if (!isReapply && (reasonFound === "approved" || approvedApp)) {
-          isBlockedFound = true
-          reasonFound = "approved"
-          refFound = approvedApp?.reference_number || approvedApp?.referenceNumber || refFound
-          appFound = approvedApp || appFound
-        } else if (!isBlockedFound) {
-          if (pendingApp) {
-            isBlockedFound = true
-            reasonFound = "pending"
-            refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
-            appFound = pendingApp
+        if (!isReapply) {
+          if (typeToCheck === "renewal" || typeToCheck === "loss") {
+            if (approvedAppForType) {
+              isBlockedFound = true
+              reasonFound = "approved"
+              refFound = approvedAppForType.reference_number || approvedAppForType.referenceNumber || refFound
+              appFound = approvedAppForType
+            } else if (pendingApp) {
+              isBlockedFound = true
+              reasonFound = "pending"
+              refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
+              appFound = pendingApp
+            } else {
+              isBlockedFound = false
+              reasonFound = null
+              refFound = ""
+              appFound = null
+            }
+          } else {
+            if (reasonFound === "approved" || approvedAnyApp) {
+              isBlockedFound = true
+              reasonFound = "approved"
+              refFound = approvedAnyApp?.reference_number || approvedAnyApp?.referenceNumber || refFound
+              appFound = approvedAnyApp || appFound
+            } else if (pendingApp) {
+              isBlockedFound = true
+              reasonFound = "pending"
+              refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
+              appFound = pendingApp
+            }
           }
         }
 
         // Pre-fill formData behind the scenes on Renewal / Loss without modifying Step 1 checkboxes or verification
-        if (approvedApp && (typeToCheck === "renewal" || typeToCheck === "loss") && !isBlockedFound) {
-          const emergencyData = extractEmergencyContact(approvedApp, prof)
+        const appToPreFill = approvedAnyApp || approvedAppForType
+        if (appToPreFill && (typeToCheck === "renewal" || typeToCheck === "loss") && !isBlockedFound) {
+          const emergencyData = extractEmergencyContact(appToPreFill, prof)
 
           if (isMounted) {
             setFormData((prev) => ({
               ...prev,
-              firstName: approvedApp.first_name || approvedApp.firstName || prof.firstName || prev.firstName,
-              middleName: approvedApp.middle_name || approvedApp.middleName || prof.middleName || prev.middleName,
-              lastName: approvedApp.last_name || approvedApp.lastName || prof.lastName || prev.lastName,
-              suffix: approvedApp.suffix || prof.suffix || prev.suffix,
-              citizenship: approvedApp.citizenship || approvedApp.nationality || prof.nationality || prev.citizenship || "FILIPINO",
-              dobMonth: approvedApp.dob_month || approvedApp.dobMonth || prof.dobMonth || prev.dobMonth,
-              dobDay: approvedApp.dob_day || approvedApp.dobDay || prof.dobDay || prev.dobDay,
-              dobYear: approvedApp.dob_year || approvedApp.dobYear || prof.dobYear || prev.dobYear,
-              age: String(approvedApp.age || prof.age || prev.age),
-              sex: approvedApp.sex || approvedApp.gender || prof.sex || prev.sex,
-              civilStatus: approvedApp.civil_status || approvedApp.civilStatus || prof.civilStatus || prev.civilStatus,
-              contactNo: approvedApp.contact_no || approvedApp.contactNo || approvedApp.phone_number || approvedApp.phoneNumber || prof.contactNo || prev.contactNo,
-              addressHouseNo: approvedApp.address_house_no || approvedApp.addressHouseNo || prof.addressHouseNo || prev.addressHouseNo,
-              addressStreet: approvedApp.address_street || approvedApp.addressStreet || prof.addressStreet || prev.addressStreet,
-              addressBarangay: approvedApp.address_barangay || approvedApp.addressBarangay || prof.addressBarangay || prev.addressBarangay,
-              addressCityMunicipality: approvedApp.address_city_municipality || approvedApp.addressCityMunicipality || prof.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
-              qcidNumber: approvedApp.qcid_number || approvedApp.qcidNumber || prof.qcidNo || prev.qcidNumber,
-              email: approvedApp.email || prof.email || prev.email,
-              bloodType: approvedApp.blood_type || approvedApp.bloodType || (prof as any).bloodType || prev.bloodType || "O+",
+              firstName: appToPreFill.first_name || appToPreFill.firstName || prof.firstName || prev.firstName,
+              middleName: appToPreFill.middle_name || appToPreFill.middleName || prof.middleName || prev.middleName,
+              lastName: appToPreFill.last_name || appToPreFill.lastName || prof.lastName || prev.lastName,
+              suffix: appToPreFill.suffix || prof.suffix || prev.suffix,
+              citizenship: appToPreFill.citizenship || appToPreFill.nationality || prof.nationality || prev.citizenship || "FILIPINO",
+              dobMonth: appToPreFill.dob_month || appToPreFill.dobMonth || prof.dobMonth || prev.dobMonth,
+              dobDay: appToPreFill.dob_day || appToPreFill.dobDay || prof.dobDay || prev.dobDay,
+              dobYear: appToPreFill.dob_year || appToPreFill.dobYear || prof.dobYear || prev.dobYear,
+              age: String(appToPreFill.age || prof.age || prev.age),
+              sex: appToPreFill.sex || appToPreFill.gender || prof.sex || prev.sex,
+              civilStatus: appToPreFill.civil_status || appToPreFill.civilStatus || prof.civilStatus || prev.civilStatus,
+              contactNo: appToPreFill.contact_no || appToPreFill.contactNo || appToPreFill.phone_number || appToPreFill.phoneNumber || prof.contactNo || prev.contactNo,
+              addressHouseNo: appToPreFill.address_house_no || appToPreFill.addressHouseNo || prof.addressHouseNo || prev.addressHouseNo,
+              addressStreet: appToPreFill.address_street || appToPreFill.addressStreet || prof.addressStreet || prev.addressStreet,
+              addressBarangay: appToPreFill.address_barangay || appToPreFill.addressBarangay || prof.addressBarangay || prev.addressBarangay,
+              addressCityMunicipality: appToPreFill.address_city_municipality || appToPreFill.addressCityMunicipality || prof.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
+              qcidNumber: appToPreFill.qcid_number || appToPreFill.qcidNumber || prof.qcidNo || prev.qcidNumber,
+              email: appToPreFill.email || prof.email || prev.email,
+              bloodType: appToPreFill.blood_type || appToPreFill.bloodType || (prof as any).bloodType || prev.bloodType || "O+",
               ...emergencyData,
             }))
           }
