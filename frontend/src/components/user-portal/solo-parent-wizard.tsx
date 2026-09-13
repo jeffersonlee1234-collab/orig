@@ -1182,8 +1182,8 @@ export default function SoloParentApplicationWizard({
   
   // ---- Eligibility check (bago pumasok sa wizard) ----
   const currentProf = getCurrentUserProfile()
-  const userId = userProfile.userId || (userProfile as any).id || currentProf.id || ""
-  const [checkingEligibility, setCheckingEligibility] = useState(true)
+  const userId = userProfile?.userId || (userProfile as any)?.id || currentProf?.id || ""
+  const [checkingEligibility, setCheckingEligibility] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockReason, setBlockReason] = useState<"draft" | "pending" | "approved" | null>(null)
   const [blockedReference, setBlockedReference] = useState("")
@@ -1811,17 +1811,7 @@ export default function SoloParentApplicationWizard({
   const applicationTypeLabel =
     idStatus === "renewal" ? t("spTypeRenewal") : idStatus === "loss" ? t("spTypeReplacementRequest") : t("spTypeApplication")
 
-  
-    if (checkingEligibility) {
-    return (
-      <div className="p-4 md:p-6 max-w-xl mx-auto">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-soft flex flex-col items-center text-center gap-3">
-          <Loader2 className="h-7 w-7 text-blue-600 animate-spin" />
-          <p className="text-sm text-muted-foreground">Sinusuri ang iyong eligibility...</p>
-        </div>
-      </div>
-    )
-  }
+
 
   if (isBlocked && (blockReason === "pending" || blockReason === "draft" || blockReason === "approved")) {
     const isAppApproved = blockReason === "approved" || blockedApp?.application_status === "approved" || blockedApp?.status === "approved"
