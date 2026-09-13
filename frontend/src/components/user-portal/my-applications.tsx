@@ -288,7 +288,7 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
   return {
     isPwd: false,
     isSolo: false,
-    isSenior: true,
+    isSenior,
     headerStart: "#1d4ed8",
     headerEnd: "#1e40af",
     subheaderBg: "#f59e0b",
