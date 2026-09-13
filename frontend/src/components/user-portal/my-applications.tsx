@@ -690,8 +690,6 @@ export async function downloadIdCardAsImage(
     // Draw Back Side at bottom
     drawBackCard(ctx, app, theme, sealImg, 40, 735)
 
-    const link = document.createElement("a")
-    link.download = `QC_ID_2SIDED_${app.applicationNo}.png`
     link.href = canvas.toDataURL("image/png")
     link.click()
   }
@@ -709,14 +707,14 @@ function DigitalIdCardModal({
 }) {
   const photoUrl = getApplicantPhotoUrl(app)
   const theme = getCardTheme(app)
-  const [activeSide, setActiveSide] = useState<"front" | "back" | "both">("front")
+  const [activeSide, setActiveSide] = useState<"front" | "back">("front")
   const [isDownloading, setIsDownloading] = useState(false)
 
   const handlePrint = () => {
     window.print()
   }
 
-  const handleDownloadSide = async (mode: "front" | "back" | "both") => {
+  const handleDownloadSide = async (mode: "front" | "back") => {
     setIsDownloading(true)
     try {
       await downloadIdCardAsImage(app, photoUrl, mode)
@@ -732,7 +730,7 @@ function DigitalIdCardModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Modal Top Bar */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -741,7 +739,7 @@ function DigitalIdCardModal({
               <IdCard className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Official 2-Sided Digital ID Card</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Digital ID Card</h3>
               <p className="text-xs text-slate-500 font-mono">Assigned ID Number: {app.applicationNo}</p>
             </div>
           </div>
@@ -759,272 +757,239 @@ function DigitalIdCardModal({
           <button
             type="button"
             onClick={() => setActiveSide("front")}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeSide === "front"
                 ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
             }`}
           >
-            🪪 Front Card
+            <IdCard className="w-4 h-4" />
+            <span>Harap (Front Card)</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveSide("back")}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeSide === "back"
                 ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
             }`}
           >
-            🔄 Back Card
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSide("both")}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeSide === "both"
-                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-            }`}
-          >
-            📄 Both Sides (Print Ready)
+            <RotateCcw className="w-4 h-4" />
+            <span>Likod (Back Card)</span>
           </button>
         </div>
 
         {/* ── CARD LIVE PREVIEWS ── */}
         <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
           {/* 1. FRONT CARD PREVIEW */}
-          {(activeSide === "front" || activeSide === "both") && (
-            <div className="space-y-1">
-              {activeSide === "both" && (
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                  FRONT SIDE:
-                </span>
-              )}
-              <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none">
-                {/* Header */}
-                <div
-                  className="px-4 py-2.5 flex items-center justify-between text-white shadow-xs"
-                  style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <img src="/gov-serves-seal.png" alt="QC Seal" className="w-8 h-8 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-                    <div>
-                      <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
-                      <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES • QUEZON CITY</p>
-                    </div>
-                  </div>
-                  <span className="text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
-                    {theme.idTitle}
-                  </span>
-                </div>
-
-                {/* Subheader */}
-                <div
-                  className="py-1 text-center text-[9.5px] font-black uppercase tracking-widest"
-                  style={{ backgroundColor: theme.subheaderBg, color: theme.subheaderText }}
-                >
-                  {theme.idSubTitle}
-                </div>
-
-                {/* Details & Photo */}
-                <div className="p-3.5 flex gap-3 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
-                  <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-                        <User className="w-8 h-8 text-slate-300 mb-1" />
-                        <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[7px] text-center py-0.5 font-bold uppercase">
-                      {theme.badgeText}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-1 relative z-10 text-slate-900">
-                    <div>
-                      <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Assigned ID Number</span>
-                      <p className="text-sm font-black text-blue-600 font-mono tracking-wide leading-none">{app.applicationNo}</p>
-                    </div>
-
-                    <div className="pt-0.5">
-                      <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
-                      <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
-                      <div>
-                        <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
-                      </div>
-                      <div>
-                        <span className="text-[7px] font-semibold text-slate-400 uppercase">Contact:</span> {app.contactNumber || "—"}
-                      </div>
-                    </div>
-
-                    <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
-                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "Quezon City"}
-                    </div>
-                  </div>
-
-                  {/* QC Official Seal on right */}
-                  <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
-                    <img
-                      src="/gov-serves-seal.png"
-                      alt="QC Official Seal"
-                      className="w-13 h-13 object-contain drop-shadow-md"
-                    />
-                    <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">AUTHENTIC</span>
-                  </div>
-                </div>
-
-                {/* Bottom Barcode & Signature */}
-                <div className="px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+          {activeSide === "front" && (
+            <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none animate-in fade-in duration-150">
+              {/* Header */}
+              <div
+                className="px-4 py-2.5 flex items-center justify-between text-white shadow-xs"
+                style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-8 h-8 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
                   <div>
-                    <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
-                    <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Officially Approved &amp; Active</span>
+                    <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
+                    <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES • QUEZON CITY</p>
                   </div>
-                  <div className="text-center">
-                    <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
-                    <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">HON. MA. JOSEFINA G. BELMONTE</p>
-                    <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor, Quezon City</p>
+                </div>
+                <span className="text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
+                  {theme.idTitle}
+                </span>
+              </div>
+
+              {/* Subheader */}
+              <div
+                className="py-1 text-center text-[9.5px] font-black uppercase tracking-widest"
+                style={{ backgroundColor: theme.subheaderBg, color: theme.subheaderText }}
+              >
+                {theme.idSubTitle}
+              </div>
+
+              {/* Details & Photo */}
+              <div className="p-3.5 flex gap-3 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+                <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                      <User className="w-8 h-8 text-slate-300 mb-1" />
+                      <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[7px] text-center py-0.5 font-bold uppercase">
+                    {theme.badgeText}
                   </div>
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-1 relative z-10 text-slate-900">
+                  <div>
+                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Assigned ID Number</span>
+                    <p className="text-sm font-black text-blue-600 font-mono tracking-wide leading-none">{app.applicationNo}</p>
+                  </div>
+
+                  <div className="pt-0.5">
+                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
+                    <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
+                    <div>
+                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
+                    </div>
+                    <div>
+                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Contact:</span> {app.contactNumber || "—"}
+                    </div>
+                  </div>
+
+                  <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
+                    <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "Quezon City"}
+                  </div>
+                </div>
+
+                {/* QC Official Seal on right */}
+                <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
+                  <img
+                    src="/gov-serves-seal.png"
+                    alt="QC Official Seal"
+                    className="w-13 h-13 object-contain drop-shadow-md"
+                  />
+                  <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">AUTHENTIC</span>
+                </div>
+              </div>
+
+              {/* Bottom Barcode & Signature */}
+              <div className="px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+                <div>
+                  <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
+                  <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Officially Approved &amp; Active</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
+                  <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">HON. MA. JOSEFINA G. BELMONTE</p>
+                  <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor, Quezon City</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* 2. BACK CARD PREVIEW */}
-          {(activeSide === "back" || activeSide === "both") && (
-            <div className="space-y-1">
-              {activeSide === "both" && (
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block pt-2">
-                  BACK SIDE:
-                </span>
-              )}
-              <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none relative">
-                {/* Watermark */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06]">
-                  <img src="/gov-serves-seal.png" alt="QC Watermark" className="w-48 h-48 object-contain" />
-                </div>
+          {activeSide === "back" && (
+            <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none relative animate-in fade-in duration-150">
+              {/* Watermark */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06]">
+                <img src="/gov-serves-seal.png" alt="QC Watermark" className="w-48 h-48 object-contain" />
+              </div>
 
-                {/* Header */}
-                <div
-                  className="px-4 py-2 flex items-center justify-between text-white shadow-xs"
-                  style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <img src="/gov-serves-seal.png" alt="QC Seal" className="w-6 h-6 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-                    <div>
-                      <p className="text-[8px] font-black tracking-wide leading-tight uppercase">QUEZON CITY SOCIAL SERVICES DEVELOPMENT DEPARTMENT</p>
-                      <p className="text-[6.5px] font-bold text-amber-200 tracking-widest uppercase">TERMS &amp; STATUTORY PRIVILEGES</p>
+              {/* Header */}
+              <div
+                className="px-4 py-2 flex items-center justify-between text-white shadow-xs"
+                style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
+              >
+                <div className="flex items-center gap-2">
+                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-6 h-6 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+                  <div>
+                    <p className="text-[8px] font-black tracking-wide leading-tight uppercase">QUEZON CITY SOCIAL SERVICES DEVELOPMENT DEPARTMENT</p>
+                    <p className="text-[6.5px] font-bold text-amber-200 tracking-widest uppercase">TERMS &amp; STATUTORY PRIVILEGES</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back Body (2 Columns) */}
+              <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[8.5px] text-slate-800 relative z-10">
+                {/* Left: Emergency Contact & Signature */}
+                <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1.5">
+                  <p className="text-[8px] font-black text-red-600 uppercase flex items-center gap-1">
+                    🚨 IN CASE OF EMERGENCY
+                  </p>
+                  <div>
+                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Contact Person:</span>
+                    <p className="font-bold text-slate-900 uppercase">{app.applicantName || "FAMILY / GUARDIAN"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Emergency Phone:</span>
+                    <p className="font-bold text-slate-900">{app.contactNumber || "911 / QC Helpline 122"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Jurisdiction Address:</span>
+                    <p className="text-slate-700 truncate">{app.address || "Quezon City, Metro Manila"}</p>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="border border-slate-300 rounded-lg p-2 text-center bg-white">
+                      <div className="w-24 border-b border-slate-400 mx-auto mt-3 mb-0.5" />
+                      <span className="text-[6.5px] font-black uppercase text-slate-500">SIGNATURE OF CARDHOLDER</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Back Body (2 Columns) */}
-                <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[8.5px] text-slate-800 relative z-10">
-                  {/* Left: Emergency Contact & Signature */}
-                  <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1.5">
-                    <p className="text-[8px] font-black text-red-600 uppercase flex items-center gap-1">
-                      🚨 IN CASE OF EMERGENCY
-                    </p>
-                    <div>
-                      <span className="text-[7px] font-semibold text-slate-400 block uppercase">Contact Person:</span>
-                      <p className="font-bold text-slate-900 uppercase">{app.applicantName || "FAMILY / GUARDIAN"}</p>
-                    </div>
-                    <div>
-                      <span className="text-[7px] font-semibold text-slate-400 block uppercase">Emergency Phone:</span>
-                      <p className="font-bold text-slate-900">{app.contactNumber || "911 / QC Helpline 122"}</p>
-                    </div>
-                    <div>
-                      <span className="text-[7px] font-semibold text-slate-400 block uppercase">Jurisdiction Address:</span>
-                      <p className="text-slate-700 truncate">{app.address || "Quezon City, Metro Manila"}</p>
-                    </div>
+                {/* Right: Statutory Rights & Return Info */}
+                <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1">
+                  <p className="text-[8px] font-black text-blue-900 uppercase">
+                    ⚖️ OFFICIAL NOTICE &amp; PRIVILEGES
+                  </p>
+                  <p className="text-[7.5px] text-slate-700 leading-tight">
+                    • Ang ID na ito ay non-transferable at may bisa sa lahat ng pribado at pampublikong establisimyento para sa 20% discount at statutory privileges alinsunod sa <strong>{theme.legalAct}</strong>.
+                  </p>
+                  <p className="text-[7.5px] text-slate-700 leading-tight">
+                    • Mahigpit na ipinagbabawal ang anumang pamemeke o pagpapahiram ng ID na ito alinsunod sa batas ng Pilipinas.
+                  </p>
 
-                    <div className="pt-2">
-                      <div className="border border-slate-300 rounded-lg p-2 text-center bg-white">
-                        <div className="w-24 border-b border-slate-400 mx-auto mt-3 mb-0.5" />
-                        <span className="text-[6.5px] font-black uppercase text-slate-500">SIGNATURE OF CARDHOLDER</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Statutory Rights & Return Info */}
-                  <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1">
-                    <p className="text-[8px] font-black text-blue-900 uppercase">
-                      ⚖️ OFFICIAL NOTICE &amp; PRIVILEGES
-                    </p>
-                    <p className="text-[7.5px] text-slate-700 leading-tight">
-                      • Ang ID na ito ay non-transferable at may bisa sa lahat ng pribado at pampublikong establisimyento para sa 20% discount at statutory privileges alinsunod sa <strong>{theme.legalAct}</strong>.
-                    </p>
-                    <p className="text-[7.5px] text-slate-700 leading-tight">
-                      • Mahigpit na ipinagbabawal ang anumang pamemeke o pagpapahiram ng ID na ito alinsunod sa batas ng Pilipinas.
-                    </p>
-
-                    <div className="p-1.5 rounded-lg bg-blue-50/90 border border-blue-200 text-[7px] text-blue-950 mt-1">
-                      <p className="font-black uppercase">KUNG MAPULOT, MANGYARING ISAULI SA:</p>
-                      <p className="font-bold">{theme.officeName}</p>
-                      <p>QC Hall Complex, Diliman, Quezon City • Hotline: 122</p>
-                    </div>
+                  <div className="p-1.5 rounded-lg bg-blue-50/90 border border-blue-200 text-[7px] text-blue-950 mt-1">
+                    <p className="font-black uppercase">KUNG MAPULOT, MANGYARING ISAULI SA:</p>
+                    <p className="font-bold">{theme.officeName}</p>
+                    <p>QC Hall Complex, Diliman, Quezon City • Hotline: 122</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Bottom Bar */}
-                <div className="px-3.5 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7px]">
-                  <p className="font-mono font-bold text-slate-700">QC-SSDD-VERIFIED: {app.applicationNo}</p>
-                  <p className="text-slate-500 font-semibold uppercase">Official Republic of the Philippines Document</p>
-                </div>
+              {/* Bottom Bar */}
+              <div className="px-3.5 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7px]">
+                <p className="font-mono font-bold text-slate-700">QC-SSDD-VERIFIED: {app.applicationNo}</p>
+                <p className="text-slate-500 font-semibold uppercase">Official Republic of the Philippines Document</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── ACTION BUTTONS: MULTI-SIDE DOWNLOADS & PRINT ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        {/* ── ACTION BUTTONS: FRONT PNG, BACK PNG, & PRINT ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
             disabled={isDownloading}
             onClick={() => handleDownloadSide("front")}
-            className="px-2.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:hover:bg-blue-900/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Front PNG</span>
+            <Download className="w-4 h-4" />
+            <span>Download Front (PNG)</span>
           </button>
 
           <button
             type="button"
             disabled={isDownloading}
             onClick={() => handleDownloadSide("back")}
-            className="px-2.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:hover:bg-indigo-900/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Back PNG</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isDownloading}
-            onClick={() => handleDownloadSide("both")}
-            className="px-2.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>2-Sided Sheet</span>
+            <Download className="w-4 h-4" />
+            <span>Download Back (PNG)</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrint}
-            className="px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print ID Card</span>
+            <Printer className="w-4 h-4" />
+            <span>Print Official ID</span>
           </button>
         </div>
 
         <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-          Maaari mong i-download ang parehong <strong>Harap (Front)</strong> at <strong>Likod (Back)</strong> ng ID o ang <strong>2-Sided Printable Sheet</strong> upang ma-print sa PVC card o photo paper.
+          Maaari mong i-download ang <strong>Harap (Front)</strong> at <strong>Likod (Back)</strong> ng ID bilang mga high-resolution PNG image o i-print para magsilbing opisyal na ID at diskwento.
         </p>
       </div>
     </div>
