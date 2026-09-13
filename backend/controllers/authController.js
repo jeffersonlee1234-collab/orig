@@ -214,6 +214,29 @@ exports.sendOtp = async (req, res) => {
       }
     }
 
+    // Check if email is already registered in Database or memory store
+    try {
+      const existingUserRes = await db.query('SELECT id, email, status FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+      if (existingUserRes.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          isAlreadyRegistered: true,
+          message: 'This email is already registered. Please log in or use Forgot Password to access your account.',
+        });
+      }
+    } catch (dbErr) {
+      console.warn('[DB Error] Email existence check failed, checking memory:', dbErr.message);
+    }
+
+    const memUser = memoryUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (memUser) {
+      return res.status(409).json({
+        success: false,
+        isAlreadyRegistered: true,
+        message: 'This email is already registered. Please log in or use Forgot Password to access your account.',
+      });
+    }
+
     // Generate random 6-digit numeric OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
@@ -390,55 +413,46 @@ exports.register = async (req, res) => {
     };
 
     try {
-      const existingUser = await db.query('SELECT id, qcid_number FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+      const existingUser = await db.query('SELECT id, email FROM users WHERE LOWER(email) = $1', [cleanEmail]);
       if (existingUser.rows.length > 0) {
-        const existingQcid = existingUser.rows[0].qcid_number || qcidNumber;
-        newUser.qcidNumber = existingQcid;
+        return res.status(409).json({
+          success: false,
+          isAlreadyRegistered: true,
+          message: 'An account with this email address already exists. Please sign in instead.',
+        });
+      }
 
-        // Update existing user
-        await db.query(
-          `UPDATE users SET
-            password = $1, first_name = $2, last_name = $3, middle_name = $4, suffix = $5,
-            birth_date = $6, birth_month = $7, birth_day = $8, birth_year = $9,
-            city = $10, barangay = $11, street = $12, house_no = $13,
-            working_in_qc = $14, occupation = $15, sex = $16, mobile_number = $17,
-            profile_photo_url = $18, qcid_number = $19, updated_at = NOW()
-           WHERE LOWER(email) = $20`,
-          [
-            newUser.password, newUser.firstName, newUser.lastName, newUser.middleName, newUser.suffix,
-            newUser.birthDate, newUser.birthMonth, newUser.birthDay, newUser.birthYear,
-            newUser.city, newUser.barangay, newUser.street, newUser.houseNo,
-            newUser.workingInQC, newUser.occupation, newUser.sex, newUser.mobileNumber,
-            newUser.profilePhotoUrl, newUser.qcidNumber, cleanEmail
-          ]
-        );
-      } else {
-        // Insert new user
-        const insertRes = await db.query(
-          `INSERT INTO users (
-            email, password, first_name, last_name, middle_name, suffix,
-            birth_date, birth_month, birth_day, birth_year,
-            city, barangay, street, house_no,
-            working_in_qc, occupation, sex, mobile_number, profile_photo_url,
-            qcid_number, role, is_email_verified, created_at, updated_at
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()
-          ) RETURNING id`,
-          [
-            newUser.email, newUser.password, newUser.firstName, newUser.lastName, newUser.middleName, newUser.suffix,
-            newUser.birthDate, newUser.birthMonth, newUser.birthDay, newUser.birthYear,
-            newUser.city, newUser.barangay, newUser.street, newUser.houseNo,
-            newUser.workingInQC, newUser.occupation, newUser.sex, newUser.mobileNumber,
-            newUser.profilePhotoUrl, newUser.qcidNumber, newUser.role, newUser.isEmailVerified
-          ]
-        );
-        if (insertRes.rows.length > 0) {
-          newUser.id = insertRes.rows[0].id;
-        }
+      // Insert new user
+      const insertRes = await db.query(
+        `INSERT INTO users (
+          email, password, first_name, last_name, middle_name, suffix,
+          birth_date, birth_month, birth_day, birth_year,
+          city, barangay, street, house_no,
+          working_in_qc, occupation, sex, mobile_number, profile_photo_url,
+          qcid_number, role, is_email_verified, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()
+        ) RETURNING id`,
+        [
+          newUser.email, newUser.password, newUser.firstName, newUser.lastName, newUser.middleName, newUser.suffix,
+          newUser.birthDate, newUser.birthMonth, newUser.birthDay, newUser.birthYear,
+          newUser.city, newUser.barangay, newUser.street, newUser.houseNo,
+          newUser.workingInQC, newUser.occupation, newUser.sex, newUser.mobileNumber,
+          newUser.profilePhotoUrl, newUser.qcidNumber, newUser.role, newUser.isEmailVerified
+        ]
+      );
+      if (insertRes.rows.length > 0) {
+        newUser.id = insertRes.rows[0].id;
       }
     } catch (dbErr) {
       console.warn('[DB Error] Saving user to DB failed, saving to memory fallback:', dbErr.message);
-      memoryUsers = memoryUsers.filter(u => u.email !== cleanEmail);
+      if (memoryUsers.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
+        return res.status(409).json({
+          success: false,
+          isAlreadyRegistered: true,
+          message: 'An account with this email address already exists. Please sign in instead.',
+        });
+      }
       memoryUsers.push(newUser);
     }
 

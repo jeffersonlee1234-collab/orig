@@ -624,8 +624,18 @@ export const Register = () => {
           />
 
           {error && (
-            <div className="w-full max-w-sm p-2.5 mb-5 text-xs text-red-600 bg-red-50 rounded-lg border border-red-200 text-center">
-              {error}
+            <div className="w-full max-w-sm p-3 mb-5 text-xs text-red-600 bg-red-50 rounded-xl border border-red-200 text-center space-y-1">
+              <p>{error}</p>
+              {error.toLowerCase().includes('already registered') && (
+                <div className="pt-1">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700 underline"
+                  >
+                    Go to Sign In →
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
