@@ -13,7 +13,6 @@ import {
   History,
   ChevronRight,
   Loader2,
-  RefreshCw,
   AlertTriangle,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
@@ -893,21 +892,8 @@ export default function BeneficiaryManagement() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">Beneficiary Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Centralized database of social service beneficiaries, program enrollments, and identity verification.
-          </p>
-        </div>
-        <button
-          onClick={() => fetchBeneficiaries()}
-          disabled={isLoading}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-xs disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Beneficiary Management</h1>
       </div>
 
       {/* Error Banner if any */}
