@@ -483,22 +483,70 @@ exports.getAllCases = async (req, res) => {
       return logs;
     }
 
+    // Check if an application is an actual Assistance case (not just ID / Booklet issuance)
+    function isAssistanceCase(prog, type, category, assistanceType) {
+      const p = String(prog || '').toUpperCase();
+      const text = `${type || ''} ${category || ''} ${assistanceType || ''}`.toLowerCase();
+
+      // AICS, Child Welfare, Livelihood are always assistance
+      if (p.includes('AICS') || p.includes('CHILD') || p.includes('LIVELIHOOD')) {
+        return true;
+      }
+
+      // Pure ID or Booklet services do NOT need appointment
+      if (
+        text.includes('booklet') ||
+        text.includes('id card') ||
+        text.includes('id only') ||
+        text.includes('id issuance') ||
+        text.includes('new id') ||
+        text.includes('id renewal') ||
+        (text.includes('id') && !text.includes('assist') && !text.includes('financial') && !text.includes('pension'))
+      ) {
+        return false;
+      }
+
+      // If explicitly assistance / subsidy / pension / cash / devices
+      if (
+        text.includes('assist') ||
+        text.includes('financial') ||
+        text.includes('medical') ||
+        text.includes('funeral') ||
+        text.includes('educational') ||
+        text.includes('pension') ||
+        text.includes('subsidy') ||
+        text.includes('cash') ||
+        text.includes('device') ||
+        text.includes('wheelchair') ||
+        text.includes('feeding') ||
+        text.includes('nutrition')
+      ) {
+        return true;
+      }
+
+      return false;
+    }
+
     const cases = [];
 
-    // Helper to match appointment
-    function findAppointment(ref, qcid, email) {
+    // Helper to match appointment strictly for the matching reference / assistance application
+    function findAppointment(ref, qcid, email, moduleName) {
       const cleanRef = String(ref || '').trim().toLowerCase();
       const cleanQcid = String(qcid || '').trim().toLowerCase();
-      const cleanEmail = String(email || '').trim().toLowerCase();
+      const cleanMod = String(moduleName || '').trim().toLowerCase();
+
       return appointments.find((a) => {
         const aRef = String(a.reference_number || a.reference_no || a.application_id || '').trim().toLowerCase();
         const aQcid = String(a.qcid_number || a.qc_id || '').trim().toLowerCase();
-        const aEmail = String(a.email || '').trim().toLowerCase();
-        return (
-          (cleanRef && aRef === cleanRef) ||
-          (cleanQcid && aQcid === cleanQcid) ||
-          (cleanEmail && aEmail === cleanEmail)
-        );
+        const aMod = String(a.module || '').trim().toLowerCase();
+        const aConcern = String(a.concern || '').trim().toLowerCase();
+
+        // Exclude ID and Booklet from appointments
+        if (aConcern.includes('id') || aConcern.includes('booklet')) return false;
+
+        if (cleanRef && aRef === cleanRef) return true;
+        if (cleanMod && aMod && cleanMod === aMod && cleanQcid && aQcid === cleanQcid) return true;
+        return false;
       });
     }
 
@@ -724,8 +772,9 @@ exports.getAllCases = async (req, res) => {
         const override = caseRecordsMap.get(ref) || caseRecordsMap.get(caseNum) || {};
         const isPwd = String(row.category || '').toUpperCase().includes('PWD');
         const prog = isPwd ? 'PWD' : 'Senior Citizen';
-        const appt = findAppointment(ref, qcid, row.email);
-        const fin = findFinancialAid(ref, qcid);
+        const isAssistance = isAssistanceCase(prog, row.type, row.category, row.service);
+        const appt = isAssistance ? findAppointment(ref, qcid, row.email, prog) : null;
+        const fin = isAssistance ? findFinancialAid(ref, qcid) : null;
 
         const fullName = [row.first_name, row.middle_name, row.last_name, row.suffix].filter(Boolean).join(' ').trim() || `${prog} Beneficiary`;
         const dateApplied = safeIsoDate(row.created_at, '2026-08-14');
@@ -870,8 +919,9 @@ exports.getAllCases = async (req, res) => {
         const qcid = row.qcid_number || row.solo_parent_id_number || ref;
         const caseNum = formatCaseNumber(ref, idx + 200);
         const override = caseRecordsMap.get(ref) || caseRecordsMap.get(caseNum) || {};
-        const appt = findAppointment(ref, qcid, row.email);
-        const fin = findFinancialAid(ref, qcid);
+        const isAssistance = isAssistanceCase('Solo Parent', row.classification_title, row.category, row.assistance_type);
+        const appt = isAssistance ? findAppointment(ref, qcid, row.email, 'Solo Parent') : null;
+        const fin = isAssistance ? findFinancialAid(ref, qcid) : null;
 
         const fullName = [row.first_name, row.middle_name, row.last_name, row.suffix].filter(Boolean).join(' ').trim() || 'Solo Parent Beneficiary';
         const dateApplied = safeIsoDate(row.created_at, '2026-08-15');

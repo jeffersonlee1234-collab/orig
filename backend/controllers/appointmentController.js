@@ -91,6 +91,16 @@ exports.getAppointments = async (req, res) => {
       `);
     } catch (_) {}
 
+    // Purge any appointments that are purely ID or Booklet requests (non-assistance)
+    try {
+      await db.query(`
+        DELETE FROM appointments 
+        WHERE LOWER(COALESCE(concern, '')) LIKE '%id%' 
+           OR LOWER(COALESCE(concern, '')) LIKE '%booklet%'
+           OR (module IN ('PWD', 'Senior Citizen', 'Solo Parent') AND LOWER(COALESCE(concern, '')) NOT LIKE '%assist%')
+      `);
+    } catch (_) {}
+
     // Auto-populate appointments from approved livelihood applications whose capital assistance is ready for release
     try {
       const approvedLivelihood = await db.query(
@@ -158,12 +168,15 @@ exports.getAppointments = async (req, res) => {
                SELECT reference_number FROM livelihood_assistance 
                WHERE assistance_status IN ('for_release', 'released', 'FOR RELEASE', 'RELEASED')
             ))
-         OR a.module IN ('PWD', 'Senior Citizen', 'Solo Parent', 'Child Welfare')
+         OR (a.module = 'Child Welfare')
+         OR (a.module IN ('PWD', 'Senior Citizen', 'Solo Parent') AND LOWER(COALESCE(a.concern, '')) LIKE '%assist%')
          OR a.reference_no IN (
            SELECT reference_no FROM aics_applications WHERE status IN ('approved', 'completed', 'for_release')
          )
          OR a.reference_no IN (
-           SELECT reference_number FROM pwd_senior_applications WHERE status IN ('approved', 'completed', 'for_release')
+           SELECT reference_number FROM pwd_senior_applications 
+           WHERE status IN ('approved', 'completed', 'for_release')
+             AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR service ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR extra_data ILIKE '%assist%')
          )
        )
        AND a.reference_no NOT IN (SELECT reference_no FROM deleted_appointments)

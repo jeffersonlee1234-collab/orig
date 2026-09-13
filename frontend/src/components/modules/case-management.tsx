@@ -1070,7 +1070,7 @@ export default function CaseManagement() {
       {/* Module Title Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
               <FolderKanban className="h-4 w-4" />
             </div>
@@ -1078,9 +1078,6 @@ export default function CaseManagement() {
               Case Management
             </h1>
           </div>
-          <p className="text-xs md:text-sm text-slate-500">
-            Real-time case supervision for approved applications across AICS, PWD, Senior, Solo Parent, Child Welfare &amp; Livelihood.
-          </p>
         </div>
       </div>
 
