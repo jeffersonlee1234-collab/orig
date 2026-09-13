@@ -296,7 +296,9 @@ exports.uploadDocuments = async (req, res) => {
         await db.query(
           `UPDATE solo_parent_applications 
            SET form_data = jsonb_set(COALESCE(form_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true),
-               extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
+               extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true),
+               applicant_photo = $1,
+               photo_url = $1
            WHERE id = $2`,
           [photoFile.dataUrl, applicationId]
         );

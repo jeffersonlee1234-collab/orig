@@ -279,7 +279,7 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
   }
   uploaded = parseJsonSafe(uploaded, [])
 
-  const applicantPhoto =
+  const rawPhoto =
     raw?.applicantPhoto ||
     raw?.applicant_photo ||
     raw?.photoUrl ||
@@ -290,7 +290,9 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
     raw?.form_data?.photoUrl ||
     raw?.extra_data?.applicantPhoto ||
     raw?.extra_data?.photoUrl ||
-    (raw ? getApplicantPhotoUrl(raw) : "")
+    ""
+
+  const applicantPhoto = (rawPhoto && typeof rawPhoto === "string" && !rawPhoto.includes("/samples/")) ? rawPhoto : ""
 
   const docs: ApplicationDocument[] = []
   if (Array.isArray(uploaded) && uploaded.length > 0) {
@@ -300,14 +302,21 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
         for (const f of group.files) {
           const docLabel = group.documentLabel || group.documentId || f.filename || "Uploaded Document"
           const isPhotoDoc = /2x2|photo|picture|1x1|id_pic|avatar/i.test(`${docLabel} ${f.filename || ""}`)
-          const directData = f.dataUrl || f.previewUrl || f.base64 || (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
+          const directData =
+            (f.dataUrl && !f.dataUrl.includes("/samples/"))
+              ? f.dataUrl
+              : (f.previewUrl && !f.previewUrl.includes("/samples/"))
+              ? f.previewUrl
+              : (f.base64 && !f.base64.includes("/samples/"))
+              ? f.base64
+              : (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
           const resolvedUrl = directData || resolveFileUrl(f.fileUrl || f.url || f.path, f.filename, isChildWelfare)
           docs.push({
             name: docLabel,
             filename: f.filename || docLabel,
-            fileUrl: resolvedUrl || getSampleDocumentFallback(docLabel, f.filename),
-            dataUrl: f.dataUrl || (isPhotoDoc ? applicantPhoto : undefined),
-            previewUrl: f.previewUrl || directData || undefined,
+            fileUrl: resolvedUrl || (isPhotoDoc ? "" : getSampleDocumentFallback(docLabel, f.filename)),
+            dataUrl: directData || (isPhotoDoc && applicantPhoto ? applicantPhoto : undefined),
+            previewUrl: directData || undefined,
             fileSize: f.fileSize || f.size || 0,
             uploadedAt: f.uploadedAt || f.date || raw?.created_at || new Date().toISOString(),
             status: "verified",
@@ -317,14 +326,21 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
         const docLabel = group.documentLabel || group.label || group.name || group.documentId || group.title || "Uploaded Document"
         const filename = group.filename || group.name || docLabel
         const isPhotoDoc = /2x2|photo|picture|1x1|id_pic|avatar/i.test(`${docLabel} ${filename}`)
-        const directData = group.dataUrl || group.previewUrl || group.base64 || (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
+        const directData =
+          (group.dataUrl && !group.dataUrl.includes("/samples/"))
+            ? group.dataUrl
+            : (group.previewUrl && !group.previewUrl.includes("/samples/"))
+            ? group.previewUrl
+            : (group.base64 && !group.base64.includes("/samples/"))
+            ? group.base64
+            : (isPhotoDoc && applicantPhoto ? applicantPhoto : "")
         const resolvedUrl = directData || resolveFileUrl(group.fileUrl || group.url || group.path, filename, isChildWelfare)
         docs.push({
           name: docLabel,
           filename: filename,
-          fileUrl: resolvedUrl || getSampleDocumentFallback(docLabel, filename),
-          dataUrl: group.dataUrl || (isPhotoDoc ? applicantPhoto : undefined),
-          previewUrl: group.previewUrl || directData || undefined,
+          fileUrl: resolvedUrl || (isPhotoDoc ? "" : getSampleDocumentFallback(docLabel, filename)),
+          dataUrl: directData || (isPhotoDoc && applicantPhoto ? applicantPhoto : undefined),
+          previewUrl: directData || undefined,
           fileSize: group.fileSize || group.size || 0,
           uploadedAt: group.uploadedAt || group.date || raw?.created_at || new Date().toISOString(),
           status: "verified",
@@ -947,21 +963,38 @@ function DocumentPreviewModal({
 
   const isPhotoDoc = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
   const realUserPhoto = isPhotoDoc
-    ? (doc.dataUrl || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (app ? getApplicantPhotoUrl(app) : ""))
+    ? ((doc.dataUrl && !doc.dataUrl.includes("samples"))
+        ? doc.dataUrl
+        : (doc.previewUrl && !doc.previewUrl.includes("samples"))
+        ? doc.previewUrl
+        : (doc.fileUrl && !doc.fileUrl.includes("samples"))
+        ? doc.fileUrl
+        : (app?.applicantPhoto && !app.applicantPhoto.includes("samples"))
+        ? app.applicantPhoto
+        : "")
     : ""
+
   const fallback = !isPhotoDoc ? getSampleDocumentFallback(doc.name, doc.filename) : ""
-  const initialSrc = (isPhotoDoc && realUserPhoto) ? realUserPhoto : (doc.fileUrl || fallback)
+  const initialSrc = realUserPhoto || (doc.dataUrl && !doc.dataUrl.includes("samples") ? doc.dataUrl : "") || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || fallback
 
   const [currentSrc, setCurrentSrc] = useState<string>(initialSrc)
-  const [hasError, setHasError] = useState(false)
+  const [hasError, setHasError] = useState(!initialSrc)
   const [isZoomed, setIsZoomed] = useState(false)
 
   useEffect(() => {
     const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
     const realPhoto = isPhoto
-      ? (doc.dataUrl || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (app ? getApplicantPhotoUrl(app) : ""))
+      ? ((doc.dataUrl && !doc.dataUrl.includes("samples"))
+          ? doc.dataUrl
+          : (doc.previewUrl && !doc.previewUrl.includes("samples"))
+          ? doc.previewUrl
+          : (doc.fileUrl && !doc.fileUrl.includes("samples"))
+          ? doc.fileUrl
+          : (app?.applicantPhoto && !app.applicantPhoto.includes("samples"))
+          ? app.applicantPhoto
+          : "")
       : ""
-    const targetSrc = (isPhoto && realPhoto) ? realPhoto : (doc.fileUrl || (!isPhoto ? getSampleDocumentFallback(doc.name, doc.filename) : ""))
+    const targetSrc = realPhoto || (doc.dataUrl && !doc.dataUrl.includes("samples") ? doc.dataUrl : "") || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (!isPhoto ? getSampleDocumentFallback(doc.name, doc.filename) : "")
     setCurrentSrc(targetSrc)
     setHasError(!targetSrc)
     setIsZoomed(false)
@@ -980,11 +1013,10 @@ function DocumentPreviewModal({
 
   const handleImageError = () => {
     const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
-    const realPhoto = isPhoto && app ? getApplicantPhotoUrl(app) : ""
-    if (realPhoto && currentSrc !== realPhoto) {
-      setCurrentSrc(realPhoto)
-    } else if (currentSrc !== fallback && fallback && !isPhoto) {
-      setCurrentSrc(fallback)
+    if (isPhoto && app?.applicantPhoto && !app.applicantPhoto.includes("samples") && currentSrc !== app.applicantPhoto) {
+      setCurrentSrc(app.applicantPhoto)
+    } else if (doc.dataUrl && currentSrc !== doc.dataUrl && !doc.dataUrl.includes("samples")) {
+      setCurrentSrc(doc.dataUrl)
     } else {
       setHasError(true)
     }

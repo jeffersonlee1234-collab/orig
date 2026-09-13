@@ -99,21 +99,21 @@ exports.getNotifications = async (req, res) => {
 
       if (identifiers.length > 0) {
         nameParams.push(identifiers);
-        nameOrClauses.push(`qcid = ANY($${nameParams.length}::text[]) OR reference_number = ANY($${nameParams.length}::text[])`);
+        nameOrClauses.push(`qcid = ANY($${nameParams.length}::text[]) OR reference_number = ANY($${nameParams.length}::text[]) OR user_id = ANY($${nameParams.length}::text[])`);
       }
       if (userEmail) {
         nameParams.push(userEmail);
-        nameOrClauses.push(`LOWER(email) = $${nameParams.length}`);
+        nameOrClauses.push(`(LOWER(email) = $${nameParams.length} OR LOWER(COALESCE(form_data->>'email', '')) = $${nameParams.length})`);
       }
       if (userFn && userLn) {
         nameParams.push(userFn, userLn);
-        nameOrClauses.push(`(LOWER(first_name) = $${nameParams.length - 1} AND LOWER(last_name) = $${nameParams.length})`);
+        nameOrClauses.push(`((LOWER(first_name) = $${nameParams.length - 1} OR first_name ILIKE '%' || $${nameParams.length - 1} || '%' OR LOWER(COALESCE(form_data->>'firstName', '')) = $${nameParams.length - 1}) AND (LOWER(last_name) = $${nameParams.length} OR last_name ILIKE '%' || $${nameParams.length} || '%' OR LOWER(COALESCE(form_data->>'lastName', '')) = $${nameParams.length}))`);
       }
 
       if (nameOrClauses.length > 0) {
         // Collect from solo_parent_applications
         const spLookup = await db.query(
-          `SELECT id, reference_number, assigned_id_number, solo_parent_id_number, qcid_number FROM solo_parent_applications WHERE ${nameOrClauses.join(' OR ').replace(/qcid/g, 'qcid_number')}`,
+          `SELECT id, reference_number, user_id, assigned_id_number, solo_parent_id_number, qcid_number FROM solo_parent_applications WHERE ${nameOrClauses.join(' OR ').replace(/qcid/g, 'qcid_number')}`,
           nameParams
         );
         spLookup.rows.forEach((r) => {
@@ -121,27 +121,30 @@ exports.getNotifications = async (req, res) => {
           if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
           if (r.solo_parent_id_number) identifiers.push(String(r.solo_parent_id_number));
           if (r.qcid_number) identifiers.push(String(r.qcid_number));
+          if (r.user_id) identifiers.push(String(r.user_id));
         });
 
         // Collect from pwd_senior_applications
         const pwdLookup = await db.query(
-          `SELECT id, reference_number, assigned_id_number, qcid FROM pwd_senior_applications WHERE ${nameOrClauses.join(' OR ')}`,
+          `SELECT id, reference_number, user_id, assigned_id_number, qcid FROM pwd_senior_applications WHERE ${nameOrClauses.join(' OR ')}`,
           nameParams
         );
         pwdLookup.rows.forEach((r) => {
           if (r.reference_number) identifiers.push(String(r.reference_number));
           if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
           if (r.qcid) identifiers.push(String(r.qcid));
+          if (r.user_id) identifiers.push(String(r.user_id));
         });
 
         // Collect from livelihood_applications
         const livLookup = await db.query(
-          `SELECT id, reference_number, qcid FROM livelihood_applications WHERE ${nameOrClauses.join(' OR ')}`,
+          `SELECT id, reference_number, user_id, qcid FROM livelihood_applications WHERE ${nameOrClauses.join(' OR ')}`,
           nameParams
         );
         livLookup.rows.forEach((r) => {
           if (r.reference_number) identifiers.push(String(r.reference_number));
           if (r.qcid) identifiers.push(String(r.qcid));
+          if (r.user_id) identifiers.push(String(r.user_id));
         });
 
         // Collect from aics_applications

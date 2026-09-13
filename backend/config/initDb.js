@@ -29,9 +29,13 @@ async function initDb() {
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100);
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT;
+      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS photo_url TEXT;
       CREATE INDEX IF NOT EXISTS idx_solo_parent_type ON solo_parent_applications(application_type);
       CREATE INDEX IF NOT EXISTS idx_solo_parent_id_num ON solo_parent_applications(solo_parent_id_number);
       CREATE INDEX IF NOT EXISTS idx_solo_parent_assigned_id ON solo_parent_applications(assigned_id_number);
