@@ -369,6 +369,7 @@ exports.register = async (req, res) => {
       workingInQC,
       occupation,
       sex,
+      bloodType,
       mobileNumber,
       profilePhotoUrl,
     } = req.body;
@@ -403,6 +404,7 @@ exports.register = async (req, res) => {
       workingInQC: workingInQC || 'No',
       occupation: (occupation || '').trim(),
       sex: sex || 'FEMALE',
+      bloodType: (bloodType || '').trim(),
       mobileNumber: (mobileNumber || '').trim(),
       profilePhotoUrl: profilePhotoUrl || null,
       qcidNumber: qcidNumber,
@@ -428,16 +430,16 @@ exports.register = async (req, res) => {
           email, password, first_name, last_name, middle_name, suffix,
           birth_date, birth_month, birth_day, birth_year,
           city, barangay, street, house_no,
-          working_in_qc, occupation, sex, mobile_number, profile_photo_url,
+          working_in_qc, occupation, sex, blood_type, mobile_number, profile_photo_url,
           qcid_number, role, is_email_verified, created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW()
         ) RETURNING id`,
         [
           newUser.email, newUser.password, newUser.firstName, newUser.lastName, newUser.middleName, newUser.suffix,
           newUser.birthDate, newUser.birthMonth, newUser.birthDay, newUser.birthYear,
           newUser.city, newUser.barangay, newUser.street, newUser.houseNo,
-          newUser.workingInQC, newUser.occupation, newUser.sex, newUser.mobileNumber,
+          newUser.workingInQC, newUser.occupation, newUser.sex, newUser.bloodType, newUser.mobileNumber,
           newUser.profilePhotoUrl, newUser.qcidNumber, newUser.role, newUser.isEmailVerified
         ]
       );
@@ -598,6 +600,7 @@ exports.login = async (req, res) => {
           workingInQC: dbUser.working_in_qc || 'No',
           occupation: dbUser.occupation || '',
           sex: dbUser.sex || 'FEMALE',
+          bloodType: dbUser.blood_type || '',
           mobileNumber: dbUser.mobile_number || '',
           profilePhotoUrl: dbUser.profile_photo_url || null,
           qcidNumber: dbUser.qcid_number || '110000116932100',
@@ -1136,6 +1139,7 @@ exports.getProfile = async (req, res) => {
             workingInQC: dbUser.working_in_qc || 'No',
             occupation: dbUser.occupation || '',
             sex: dbUser.sex || 'FEMALE',
+            bloodType: dbUser.blood_type || '',
             mobileNumber: dbUser.mobile_number || '',
             profilePhotoUrl: dbUser.profile_photo_url || null,
             qcidNumber: dbUser.qcid_number || '110000116932100',
@@ -1181,6 +1185,7 @@ exports.updateProfile = async (req, res) => {
       workingInQC,
       occupation,
       sex,
+      bloodType,
       mobileNumber,
       profilePhotoUrl,
     } = req.body;
@@ -1210,16 +1215,17 @@ exports.updateProfile = async (req, res) => {
           working_in_qc = COALESCE($13, working_in_qc),
           occupation = COALESCE($14, occupation),
           sex = COALESCE($15, sex),
-          mobile_number = COALESCE($16, mobile_number),
-          profile_photo_url = COALESCE($17, profile_photo_url),
+          blood_type = COALESCE($16, blood_type),
+          mobile_number = COALESCE($17, mobile_number),
+          profile_photo_url = COALESCE($18, profile_photo_url),
           updated_at = NOW()
-         WHERE LOWER(email) = $18
+         WHERE LOWER(email) = $19
          RETURNING *`,
         [
           firstName, lastName, middleName, suffix,
           finalBirthDate, birthMonth, birthDay, birthYear,
           city, houseNo, street, barangay,
-          workingInQC, occupation, sex, mobileNumber,
+          workingInQC, occupation, sex, bloodType, mobileNumber,
           profilePhotoUrl, cleanEmail
         ]
       );
@@ -1244,6 +1250,7 @@ exports.updateProfile = async (req, res) => {
           workingInQC: updated.working_in_qc || 'No',
           occupation: updated.occupation || '',
           sex: updated.sex || 'FEMALE',
+          bloodType: updated.blood_type || '',
           mobileNumber: updated.mobile_number || '',
           profilePhotoUrl: updated.profile_photo_url || null,
           qcidNumber: updated.qcid_number || '110000116932100',

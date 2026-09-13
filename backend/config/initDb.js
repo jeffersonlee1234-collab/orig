@@ -122,6 +122,7 @@ async function initDb() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session_token VARCHAR(255);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
 
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_email_otps_email ON email_otps(email);

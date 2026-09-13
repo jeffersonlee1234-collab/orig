@@ -91,6 +91,7 @@ export const Register = () => {
   const [workingInQC, setWorkingInQC] = useState<'Yes' | 'No' | ''>(() => savedDraft?.workingInQC ?? '');
   const [occupation, setOccupation] = useState(() => savedDraft?.occupation ?? '');
   const [sex, setSex] = useState(() => savedDraft?.sex ?? '');
+  const [bloodType, setBloodType] = useState(() => savedDraft?.bloodType ?? '');
   const [mobileNumber, setMobileNumber] = useState(() => savedDraft?.mobileNumber ?? '09');
 
   // Step 2 - Login Credentials
@@ -182,6 +183,7 @@ export const Register = () => {
           workingInQC,
           occupation,
           sex,
+          bloodType,
           mobileNumber,
         })
       );
@@ -205,6 +207,7 @@ export const Register = () => {
     workingInQC,
     occupation,
     sex,
+    bloodType,
     mobileNumber,
   ]);
 
@@ -497,6 +500,7 @@ export const Register = () => {
           workingInQC,
           occupation,
           sex,
+          bloodType,
           mobileNumber,
           website_url_hp: honeypot,
           interactionTimeMs: Date.now() - formStartTime,
@@ -987,7 +991,7 @@ export const Register = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className={labelClass}>{requiredMark} Sex</label>
                       <select
@@ -999,6 +1003,25 @@ export const Register = () => {
                         <option value="">Select Sex</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Blood Type</label>
+                      <select
+                        value={bloodType}
+                        onChange={(e) => setBloodType(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select Blood Type</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="Unknown">Unknown / Not Sure</option>
                       </select>
                     </div>
                     <div>
