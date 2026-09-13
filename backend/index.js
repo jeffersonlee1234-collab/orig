@@ -62,6 +62,37 @@ const livelihoodDir = path.join(uploadsDir, 'livelihood');
 // Serve static uploads uniformly
 app.use('/uploads', express.static(uploadsDir));
 
+// Fallback search in upload subdirectories (solo-parent, child-welfare, aics, livelihood, etc.)
+app.use('/uploads', (req, res, next) => {
+  try {
+    const rawPath = decodeURIComponent(req.path || '').replace(/^\/+/, '');
+    const filename = path.basename(rawPath);
+    if (!filename) return next();
+
+    // Check root uploads directory
+    const rootCandidate = path.join(uploadsDir, filename);
+    if (fs.existsSync(rootCandidate)) {
+      return res.sendFile(rootCandidate);
+    }
+
+    // Check known subdirectories
+    const subdirs = ['solo-parent', 'child-welfare', 'aics', 'livelihood', 'pwd', 'senior', 'pwd-senior', 'users', 'general'];
+    for (const sub of subdirs) {
+      const subCandidate = path.join(uploadsDir, sub, filename);
+      if (fs.existsSync(subCandidate)) {
+        return res.sendFile(subCandidate);
+      }
+      const nestedCandidate = path.join(uploadsDir, sub, rawPath);
+      if (fs.existsSync(nestedCandidate)) {
+        return res.sendFile(nestedCandidate);
+      }
+    }
+  } catch (err) {
+    console.warn('Upload fallback search error:', err);
+  }
+  next();
+});
+
 // Health check endpoints
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime() }));
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime() }));

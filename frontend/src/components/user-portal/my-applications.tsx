@@ -89,9 +89,40 @@ export function isIdOrDocumentApplication(app?: { assistance?: string; assistanc
 }
 
 export function getApplicantPhotoUrl(app: any): string {
-  if (app?.photoUrl) return app.photoUrl
-  if (app?.applicant_photo) return app.applicant_photo
-  if (app?.profilePhoto) return app.profilePhoto
+  if (!app) return "/samples/ID PICTURE (2X2).webp"
+
+  const direct =
+    app.applicantPhoto ||
+    app.applicant_photo ||
+    app.photoUrl ||
+    app.photo_url ||
+    app.profilePhotoUrl ||
+    app.profile_photo_url ||
+    app.idPhotoUrl ||
+    app.id_photo_url ||
+    app.avatarUrl ||
+    app.avatar_url ||
+    app.photo ||
+    app.avatar ||
+    app.idPhoto ||
+    app.id_photo ||
+    app.profilePhoto ||
+    app.image ||
+    app.imageUrl ||
+    app.formData?.applicantPhoto ||
+    app.formData?.photoUrl ||
+    app.formData?.idPhoto ||
+    app.extra_data?.applicantPhoto ||
+    app.extra_data?.photoUrl ||
+    app.extra_data?.idPhoto
+  if (direct && typeof direct === "string") {
+    if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://") || direct.startsWith("blob:")) {
+      return direct
+    }
+    if (direct.startsWith("/")) return `${API_BASE}${direct}`
+    if (direct.startsWith("uploads/")) return `${API_BASE}/${direct}`
+    return `${API_BASE}/uploads/${direct}`
+  }
 
   // Search in local storage applications
   try {
@@ -106,7 +137,14 @@ export function getApplicantPhotoUrl(app: any): string {
       const photoDoc = match.documents.find((d: any) =>
         /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || "")
       )
-      if (photoDoc?.fileUrl) return photoDoc.fileUrl
+      if (photoDoc) {
+        const raw = photoDoc.fileUrl || photoDoc.url || photoDoc.path || photoDoc.filename
+        if (raw) {
+          if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) return raw
+          if (raw.startsWith("/")) return `${API_BASE}${raw}`
+          return `${API_BASE}/uploads/${raw}`
+        }
+      }
     }
   } catch {}
 
@@ -115,18 +153,33 @@ export function getApplicantPhotoUrl(app: any): string {
     const match = spApps.find(
       (s: any) =>
         s.reference_number === app.applicationNo ||
-        s.assigned_id_number === app.applicationNo
+        s.assigned_id_number === app.applicationNo ||
+        s.id === app.id
     )
     if (match?.documents && Array.isArray(match.documents)) {
       const photoDoc = match.documents.find((d: any) =>
         /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || "")
       )
-      if (photoDoc?.fileUrl) return photoDoc.fileUrl
+      if (photoDoc) {
+        const raw = photoDoc.fileUrl || photoDoc.url || photoDoc.path || photoDoc.filename
+        if (raw) {
+          if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) return raw
+          if (raw.startsWith("/")) return `${API_BASE}${raw}`
+          return `${API_BASE}/uploads/solo-parent/${raw}`
+        }
+      }
     }
   } catch {}
 
   const profile = getCurrentUserProfile()
-  return (profile as any)?.photo || ""
+  const pPhoto = (profile as any)?.photo || (profile as any)?.photoUrl || (profile as any)?.avatar
+  if (pPhoto && typeof pPhoto === "string") {
+    if (pPhoto.startsWith("data:") || pPhoto.startsWith("http://") || pPhoto.startsWith("https://") || pPhoto.startsWith("blob:")) return pPhoto
+    if (pPhoto.startsWith("/")) return `${API_BASE}${pPhoto}`
+    return `${API_BASE}/uploads/${pPhoto}`
+  }
+
+  return "/samples/ID PICTURE (2X2).webp"
 }
 
 const loadImageSafely = (src: string): Promise<HTMLImageElement | null> => {
@@ -812,15 +865,33 @@ function ApplicantPhotoDisplay({
   isPwd?: boolean
 }) {
   const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [retryStep, setRetryStep] = useState<number>(0)
   const [hasFailed, setHasFailed] = useState(false)
 
   useEffect(() => {
     setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
+    setRetryStep(0)
     setHasFailed(false)
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+    if (!photoUrl || photoUrl === "/samples/ID PICTURE (2X2).webp") {
+      setHasFailed(true)
+      return
+    }
+
+    const filename = photoUrl.split("/").pop() || ""
+    if (retryStep === 0 && filename && !photoUrl.includes("/solo-parent/")) {
+      setRetryStep(1)
+      setImgSrc(`${API_BASE}/uploads/solo-parent/${filename}`)
+    } else if (retryStep <= 1 && filename && !photoUrl.includes("/child-welfare/")) {
+      setRetryStep(2)
+      setImgSrc(`${API_BASE}/uploads/child-welfare/${filename}`)
+    } else if (retryStep <= 2 && filename && !photoUrl.includes("/aics/")) {
+      setRetryStep(3)
+      setImgSrc(`${API_BASE}/uploads/aics/${filename}`)
+    } else if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+      setRetryStep(4)
       setImgSrc("/samples/ID PICTURE (2X2).webp")
     } else {
       setHasFailed(true)

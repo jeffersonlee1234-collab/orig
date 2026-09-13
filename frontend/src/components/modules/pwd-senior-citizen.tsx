@@ -684,20 +684,31 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     (app as any).extra_data?.formData?.idPhoto ||
     (app as any).extraData?.photoUrl ||
     (app as any).extraData?.idPhoto
-  if (direct && typeof direct === "string" && (direct.startsWith("data:") || direct.startsWith("http") || direct.startsWith("/") || direct.startsWith("blob:"))) {
-    return direct
+  if (direct && typeof direct === "string") {
+    if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://") || direct.startsWith("blob:")) {
+      return direct
+    }
+    if (direct.startsWith("/")) {
+      return `${API_BASE}${direct}`
+    }
+    if (direct.startsWith("uploads/")) {
+      return `${API_BASE}/${direct}`
+    }
+    return `${API_BASE}/uploads/${direct}`
   }
 
   const resolveDocSrc = (d: any): string => {
     if (!d) return ""
     if (typeof d === "string") {
-      if (d.startsWith("data:") || d.startsWith("http") || d.startsWith("/") || d.startsWith("blob:")) return d
+      if (d.startsWith("data:") || d.startsWith("http://") || d.startsWith("https://") || d.startsWith("blob:")) return d
+      if (d.startsWith("/")) return `${API_BASE}${d}`
       if (d.startsWith("uploads/")) return `${API_BASE}/${d}`
       return `${API_BASE}/uploads/${d}`
     }
     const rawUrl = d.fileUrl || d.url || d.previewUrl || d.path || d.filePath || d.dataUrl || d.src || d.file_path
     if (rawUrl && typeof rawUrl === "string") {
-      if (rawUrl.startsWith("data:") || rawUrl.startsWith("http") || rawUrl.startsWith("/") || rawUrl.startsWith("blob:")) return rawUrl
+      if (rawUrl.startsWith("data:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("blob:")) return rawUrl
+      if (rawUrl.startsWith("/")) return `${API_BASE}${rawUrl}`
       if (rawUrl.startsWith("uploads/")) return `${API_BASE}/${rawUrl}`
       return `${API_BASE}/uploads/${rawUrl}`
     }
@@ -820,7 +831,11 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
           const appEmail = String(app.email || "").trim().toLowerCase()
           if ((appRef && pRef && (pRef === appRef || appRef.includes(pRef))) || (appEmail && pEmail && pEmail === appEmail)) {
             const userPhoto = parsed.photoUrl || parsed.profilePhotoUrl || parsed.avatar || parsed.photo || parsed.idPhoto
-            if (userPhoto && typeof userPhoto === "string") return userPhoto
+            if (userPhoto && typeof userPhoto === "string") {
+              if (userPhoto.startsWith("data:") || userPhoto.startsWith("http://") || userPhoto.startsWith("https://") || userPhoto.startsWith("blob:")) return userPhoto
+              if (userPhoto.startsWith("/")) return `${API_BASE}${userPhoto}`
+              return `${API_BASE}/uploads/${userPhoto}`
+            }
           }
         }
       } catch {}
@@ -841,15 +856,33 @@ export function ApplicantPhotoDisplay({
   isPwd?: boolean
 }) {
   const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [retryStep, setRetryStep] = useState<number>(0)
   const [hasFailed, setHasFailed] = useState(false)
 
   useEffect(() => {
     setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
+    setRetryStep(0)
     setHasFailed(false)
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+    if (!photoUrl || photoUrl === "/samples/ID PICTURE (2X2).webp") {
+      setHasFailed(true)
+      return
+    }
+
+    const filename = photoUrl.split("/").pop() || ""
+    if (retryStep === 0 && filename && !photoUrl.includes("/solo-parent/")) {
+      setRetryStep(1)
+      setImgSrc(`${API_BASE}/uploads/solo-parent/${filename}`)
+    } else if (retryStep <= 1 && filename && !photoUrl.includes("/child-welfare/")) {
+      setRetryStep(2)
+      setImgSrc(`${API_BASE}/uploads/child-welfare/${filename}`)
+    } else if (retryStep <= 2 && filename && !photoUrl.includes("/aics/")) {
+      setRetryStep(3)
+      setImgSrc(`${API_BASE}/uploads/aics/${filename}`)
+    } else if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+      setRetryStep(4)
       setImgSrc("/samples/ID PICTURE (2X2).webp")
     } else {
       setHasFailed(true)
