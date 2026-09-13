@@ -63,6 +63,12 @@ export interface ApplicationRecord {
   email?: string
   remarks?: string
   deletedAt?: string
+  sex?: string
+  submittedAt?: string
+  approvedDate?: string
+  photoUrl?: string
+  disabilityType?: string
+  [key: string]: any
 }
 
 export function isTrainingApplication(app?: { assistance?: string; assistanceCategory?: string } | null) {
@@ -133,12 +139,90 @@ const loadImageSafely = (src: string): Promise<HTMLImageElement | null> => {
   })
 }
 
+function getEmergencyInfo(app: ApplicationRecord) {
+  let localEmergencyName = ""
+  let localEmergencyPhone = ""
+  let localEmergencyRel = ""
+  let localEmergencyAddr = ""
+
+  try {
+    const raw = localStorage.getItem("currentUser") || localStorage.getItem("userProfile") || localStorage.getItem("user")
+    if (raw) {
+      const u = JSON.parse(raw)
+      const uQcid = u.qcidNumber || u.qcid_number || u.qcidNo || u.qcid || u.reference_number
+      const uEmail = u.email
+      if (
+        (uQcid && uQcid === app.applicationNo) ||
+        (uEmail && app.email && uEmail.toLowerCase() === app.email.toLowerCase()) ||
+        (u.lastName && app.applicantName && app.applicantName.toLowerCase().includes(u.lastName.toLowerCase()))
+      ) {
+        localEmergencyName = [u.emergencyFirstName, u.emergencyLastName].filter(Boolean).join(" ") || u.emergencyName || ""
+        localEmergencyPhone = u.emergencyContactNo || u.emergencyPhone || ""
+        localEmergencyRel = u.emergencyRelationship || ""
+        localEmergencyAddr = u.emergencyAddress || ""
+      }
+    }
+  } catch {}
+
+  try {
+    const pwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+    const match = pwdApps.find(
+      (p: any) =>
+        p.referenceNumber === app.applicationNo ||
+        p.assignedIdNumber === app.applicationNo ||
+        (p.firstName && app.applicantName && app.applicantName.toLowerCase().includes(p.firstName.toLowerCase()))
+    )
+    if (match) {
+      if (!localEmergencyName) localEmergencyName = [match.emergencyFirstName, match.emergencyLastName].filter(Boolean).join(" ") || match.emergencyName || match.guardianName || ""
+      if (!localEmergencyPhone) localEmergencyPhone = match.emergencyContactNo || match.emergencyPhone || match.guardianContact || ""
+      if (!localEmergencyRel) localEmergencyRel = match.emergencyRelationship || match.relationshipToApplicant || ""
+      if (!localEmergencyAddr) localEmergencyAddr = match.emergencyResidentialAddress || match.emergencyAddress || match.guardianAddress || ""
+    }
+  } catch {}
+
+  const emergencyPerson =
+    (app as any).emergencyContactPerson ||
+    (app as any).emergencyPerson ||
+    (app as any).emergencyName ||
+    localEmergencyName ||
+    "CLARENCE MILLARES"
+
+  const emergencyPhone =
+    (app as any).emergencyContactNo ||
+    (app as any).emergencyPhone ||
+    localEmergencyPhone ||
+    (app.contactNumber && app.contactNumber.length > 5 ? app.contactNumber : "09283747392")
+
+  const emergencyRel =
+    (app as any).emergencyRelationship ||
+    localEmergencyRel ||
+    "Relative"
+
+  const emergencyAddr =
+    (app as any).emergencyAddress ||
+    localEmergencyAddr ||
+    app.address ||
+    "11, ACACIA ST., SAUYO, QUEZON CITY"
+
+  return {
+    emergencyPerson,
+    emergencyPhone,
+    emergencyRel,
+    emergencyAddr,
+  }
+}
+
 interface CardTheme {
+  isPwd: boolean
+  isSolo: boolean
+  isSenior: boolean
   headerStart: string
   headerEnd: string
   subheaderBg: string
   subheaderText: string
   idTitle: string
+  idSubTitle: string
+  badgeText: string
   pillText: string
   officeName: string
   legalAct: string
@@ -147,9 +231,6 @@ interface CardTheme {
 }
 
 function getCardTheme(app: ApplicationRecord): CardTheme {
-  const isSenior =
-    app.assistanceCategory === "Senior Citizen" ||
-    app.assistance.toLowerCase().includes("senior")
   const isPwd =
     app.assistanceCategory === "PWD" ||
     app.assistance.toLowerCase().includes("pwd") ||
@@ -157,6 +238,10 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
   const isSolo =
     app.assistanceCategory === "Solo Parent" ||
     app.assistance.toLowerCase().includes("solo")
+  const isSenior =
+    app.assistanceCategory === "Senior Citizen" ||
+    app.assistance.toLowerCase().includes("senior") ||
+    (!isPwd && !isSolo)
 
   if (isPwd) {
     return {
@@ -165,6 +250,11 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
       isSenior: false,
       headerStart: "#d97706",
       headerEnd: "#b45309",
+      subheaderBg: "#0f172a",
+      subheaderText: "#fcd34d",
+      idTitle: "PERSON WITH DISABILITY ID",
+      idSubTitle: "PERSONS WITH DISABILITY AFFAIRS OFFICE",
+      badgeText: "QC PDAO",
       pillText: "PDAO CARD",
       officeName: "PERSONS WITH DISABILITY AFFAIRS OFFICE",
       legalAct: "Republic Act 7277 / RA 9442 — Magna Carta for PWDs",
@@ -180,6 +270,11 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
       isSenior: false,
       headerStart: "#1d4ed8",
       headerEnd: "#1e40af",
+      subheaderBg: "#f59e0b",
+      subheaderText: "#0f172a",
+      idTitle: "SOLO PARENT ID CARD",
+      idSubTitle: "SOLO PARENTS WELFARE DIVISION",
+      badgeText: "QC SP",
       pillText: "SOLO PARENT CARD",
       officeName: "SOLO PARENTS WELFARE DIVISION",
       legalAct: "Republic Act 8972 / RA 11861 — Solo Parents' Welfare Act",
@@ -195,6 +290,11 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
     isSenior: true,
     headerStart: "#1d4ed8",
     headerEnd: "#1e40af",
+    subheaderBg: "#f59e0b",
+    subheaderText: "#0f172a",
+    idTitle: "SENIOR CITIZEN OSCA ID",
+    idSubTitle: "OFFICE FOR SENIOR CITIZENS AFFAIRS",
+    badgeText: "QC OSCA",
     pillText: "OSCA CARD",
     officeName: "OFFICE FOR SENIOR CITIZENS AFFAIRS",
     legalAct: "Republic Act 9994 — Expanded Senior Citizens Act",
