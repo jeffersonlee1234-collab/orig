@@ -30,6 +30,7 @@ type VerificationStatus = "verified" | "pending" | "unverified"
 
 interface EnrolledProgram {
   program: ProgramKey
+  assistanceType?: string
   referenceNo: string
   status: string
   dateEnrolled: string
@@ -186,9 +187,9 @@ function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (b: Beneficiar
             </p>
           <div className="flex items-center gap-2 flex-wrap mb-2">
             {b.enrolledPrograms.length > 0 ? (
-              b.enrolledPrograms.map((p, i) => (
-                <span key={i} className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${getProgramColor(p.program)}`}>
-                  {p.program}
+              Array.from(new Set(b.enrolledPrograms.map((p) => p.program))).map((prog, i) => (
+                <span key={i} className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${getProgramColor(prog)}`}>
+                  {prog}
                 </span>
               ))
             ) : (
@@ -398,6 +399,11 @@ function BeneficiaryProfileModal({
                           <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getProgramColor(p.program)}`}>
                             {p.program}
                           </span>
+                          {p.assistanceType && (
+                            <span className="text-xs font-semibold text-foreground">
+                              {p.assistanceType}
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground font-mono font-medium">{p.referenceNo}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">Enrolled on {formatDate(p.dateEnrolled)}</p>

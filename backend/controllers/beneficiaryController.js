@@ -6,9 +6,115 @@ let memoryVerifications = [];
 let memoryHistory = [];
 
 /**
- * Automatically synchronize real users and applicants into beneficiaries table
+ * Automatically synchronize real users and applicants from all service tables into beneficiaries table
  * and purge any obsolete mock/dummy records.
  */
+async function insertBeneficiaryIfMissing(applicantData) {
+  try {
+    const {
+      userId,
+      firstName,
+      middleName,
+      lastName,
+      suffix,
+      fullName,
+      age,
+      sex,
+      civilStatus,
+      address,
+      contactNo,
+      email,
+      qcid,
+      createdAt,
+    } = applicantData;
+
+    const resolvedName = (
+      fullName ||
+      [firstName, middleName, lastName, suffix].filter(Boolean).join(' ') ||
+      email ||
+      'Citizen Beneficiary'
+    ).trim().toUpperCase();
+
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanQcid = (qcid || '').trim();
+    const cleanFirst = (firstName || '').trim().toLowerCase();
+    const cleanLast = (lastName || '').trim().toLowerCase();
+    const parsedUserId = userId && !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : null;
+
+    const searchConditions = [];
+    const searchParams = [];
+    let pIdx = 1;
+
+    if (parsedUserId) {
+      searchConditions.push(`user_id = $${pIdx++}`);
+      searchParams.push(parsedUserId);
+    }
+    if (cleanEmail) {
+      searchConditions.push(`(email IS NOT NULL AND LOWER(email) = $${pIdx++})`);
+      searchParams.push(cleanEmail);
+    }
+    if (cleanQcid) {
+      searchConditions.push(`(qcid_number IS NOT NULL AND qcid_number = $${pIdx++})`);
+      searchParams.push(cleanQcid);
+    }
+    if (cleanFirst && cleanLast) {
+      searchConditions.push(`(LOWER(first_name) = $${pIdx} AND LOWER(last_name) = $${pIdx + 1})`);
+      searchParams.push(cleanFirst, cleanLast);
+      pIdx += 2;
+    }
+    if (resolvedName && resolvedName !== 'CITIZEN BENEFICIARY') {
+      searchConditions.push(`(full_name IS NOT NULL AND LOWER(full_name) = $${pIdx++})`);
+      searchParams.push(resolvedName.toLowerCase());
+    }
+
+    if (searchConditions.length === 0) return;
+
+    const existing = await db.query(
+      `SELECT id, civil_status FROM beneficiaries WHERE ${searchConditions.join(' OR ')} LIMIT 1`,
+      searchParams
+    ).catch(() => ({ rows: [] }));
+
+    if (existing.rows.length === 0) {
+      const bnfNumber = await generateBeneficiaryNumber();
+      await db.query(
+        `INSERT INTO beneficiaries (
+          user_id, beneficiary_number, full_name, first_name, middle_name, last_name, suffix,
+          age, sex, civil_status, address, contact_no, email, qcid_number, household_members,
+          verification_status, verified_by, verification_date, verification_remarks,
+          id_type, id_number, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, '1',
+          'pending', NULL, NULL, 'Pending identity verification by Social Worker.',
+          $15, $16, $17, NOW()
+        ) ON CONFLICT (beneficiary_number) DO NOTHING`,
+        [
+          parsedUserId,
+          bnfNumber,
+          resolvedName,
+          firstName || null,
+          middleName || null,
+          lastName || null,
+          suffix || null,
+          age ? String(age) : '—',
+          sex || '—',
+          civilStatus && civilStatus !== '—' ? civilStatus : 'Single',
+          address || 'Quezon City',
+          contactNo || '—',
+          email || null,
+          cleanQcid || null,
+          cleanQcid ? 'QCitizen ID' : 'Government ID',
+          cleanQcid || null,
+          createdAt || new Date(),
+        ]
+      ).catch(() => {});
+    } else if (civilStatus && civilStatus !== '—' && (!existing.rows[0].civil_status || existing.rows[0].civil_status === '—')) {
+      await db.query(`UPDATE beneficiaries SET civil_status = $1 WHERE id = $2`, [civilStatus, existing.rows[0].id]).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('⚠️ insertBeneficiaryIfMissing error:', err.message);
+  }
+}
+
 async function syncRealUsersAndApplicantsToBeneficiaries() {
   try {
     // 1. Ensure existing names are uppercase and civil_status is defaulted
@@ -30,12 +136,6 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
     const users = usersRes.rows || [];
 
     for (const u of users) {
-      const resolvedName = ([u.first_name, u.middle_name, u.last_name, u.suffix].filter(Boolean).join(' ').trim() || u.email || 'Citizen User').toUpperCase();
-      const cleanEmail = (u.email || '').trim().toLowerCase();
-      const cleanQcid = (u.qcid_number || '').trim();
-      const userId = u.id;
-
-      // Construct address
       const addressParts = [
         u.house_no,
         u.street,
@@ -44,7 +144,6 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
       ].filter(Boolean);
       const resolvedAddress = addressParts.join(', ') || 'Quezon City';
 
-      // Calculate age if available
       let calcAge = null;
       if (u.birth_year && !isNaN(parseInt(u.birth_year, 10))) {
         calcAge = String(new Date().getFullYear() - parseInt(u.birth_year, 10));
@@ -53,57 +152,157 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
         if (!isNaN(bYear)) calcAge = String(new Date().getFullYear() - bYear);
       }
 
-      const userCivilStatus = (u.civil_status && u.civil_status !== '—' && u.civil_status.trim() !== '') ? u.civil_status : 'Single';
+      await insertBeneficiaryIfMissing({
+        userId: u.id,
+        firstName: u.first_name,
+        middleName: u.middle_name,
+        lastName: u.last_name,
+        suffix: u.suffix,
+        age: calcAge,
+        sex: u.sex,
+        civilStatus: u.civil_status,
+        address: resolvedAddress,
+        contactNo: u.mobile_number,
+        email: u.email,
+        qcid: u.qcid_number,
+        createdAt: u.created_at,
+      });
+    }
 
-      // Check if beneficiary already exists for this user
-      const existing = await db.query(
-        `SELECT id, civil_status, verification_status FROM beneficiaries WHERE user_id = $1 OR (email IS NOT NULL AND LOWER(email) = $2) OR (qcid_number IS NOT NULL AND qcid_number = $3) LIMIT 1`,
-        [userId, cleanEmail, cleanQcid || '___NONE___']
-      ).catch(() => ({ rows: [] }));
+    // 3. Sync applicants from AICS applications
+    const aicsRes = await db.query(`SELECT * FROM aics_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    for (const a of aicsRes.rows || []) {
+      await insertBeneficiaryIfMissing({
+        firstName: a.first_name,
+        middleName: a.middle_name,
+        lastName: a.last_name,
+        suffix: a.suffix,
+        age: a.age,
+        sex: a.gender,
+        civilStatus: a.civil_status,
+        address: a.address,
+        contactNo: a.phone,
+        email: a.email,
+        qcid: a.qc_id,
+        createdAt: a.created_at,
+      });
+    }
 
-      if (existing.rows.length === 0) {
-        const bnfNumber = await generateBeneficiaryNumber();
-        await db.query(
-          `INSERT INTO beneficiaries (
-            user_id, beneficiary_number, full_name, first_name, middle_name, last_name, suffix,
-            age, sex, civil_status, address, contact_no, email, qcid_number, household_members,
-            verification_status, verified_by, verification_date, verification_remarks,
-            id_type, id_number, created_at, updated_at
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, '1',
-            $15, $16, $17, $18, $19, $20, $21, NOW()
-          ) ON CONFLICT (beneficiary_number) DO NOTHING`,
-          [
-            userId,
-            bnfNumber,
-            resolvedName,
-            u.first_name || null,
-            u.middle_name || null,
-            u.last_name || null,
-            u.suffix || null,
-            calcAge || '—',
-            u.sex || '—',
-            userCivilStatus,
-            resolvedAddress,
-            u.mobile_number || '—',
-            u.email || null,
-            u.qcid_number || null,
-            'pending',
-            null,
-            null,
-            'Pending identity verification by Social Worker.',
-            cleanQcid ? 'QCitizen ID' : 'Government ID',
-            cleanQcid || null,
-            u.created_at || new Date(),
-          ]
-        ).catch(() => {});
-      } else if (!existing.rows[0].civil_status || existing.rows[0].civil_status === '—') {
-        await db.query(`UPDATE beneficiaries SET civil_status = $1 WHERE id = $2`, [userCivilStatus, existing.rows[0].id]).catch(() => {});
-      }
+    // 4. Sync applicants from PWD / Senior applications
+    const pwdRes = await db.query(`SELECT * FROM pwd_senior_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    for (const p of pwdRes.rows || []) {
+      await insertBeneficiaryIfMissing({
+        firstName: p.first_name,
+        middleName: p.middle_name,
+        lastName: p.last_name,
+        suffix: p.suffix,
+        age: p.age,
+        sex: p.gender || p.sex,
+        civilStatus: p.civil_status,
+        address: p.address,
+        contactNo: p.contact_number || p.mobile_number || p.phone,
+        email: p.email,
+        qcid: p.reference_number || p.qcid_number,
+        createdAt: p.submitted_at || p.created_at,
+      });
+    }
+
+    // 5. Sync applicants from Solo Parent applications
+    const soloRes = await db.query(`SELECT * FROM solo_parent_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    for (const s of soloRes.rows || []) {
+      await insertBeneficiaryIfMissing({
+        firstName: s.first_name,
+        middleName: s.middle_name,
+        lastName: s.last_name,
+        suffix: s.suffix,
+        age: s.age,
+        sex: s.gender || s.sex,
+        civilStatus: s.civil_status,
+        address: s.address,
+        contactNo: s.contact_no || s.phone,
+        email: s.email,
+        qcid: s.qcid_number,
+        createdAt: s.created_at,
+      });
+    }
+
+    // 6. Sync applicants from Child Welfare applications
+    const childRes = await db.query(`SELECT * FROM child_welfare_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    for (const c of childRes.rows || []) {
+      await insertBeneficiaryIfMissing({
+        firstName: c.guardian_first_name || c.first_name,
+        middleName: c.guardian_middle_name || c.middle_name,
+        lastName: c.guardian_last_name || c.last_name,
+        suffix: c.guardian_suffix || c.suffix,
+        address: c.address,
+        contactNo: c.guardian_contact_no || c.contact_no || c.phone,
+        email: c.guardian_email || c.email,
+        createdAt: c.created_at,
+      });
+    }
+
+    // 7. Sync applicants from Livelihood applications
+    const livRes = await db.query(`SELECT * FROM livelihood_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    for (const l of livRes.rows || []) {
+      await insertBeneficiaryIfMissing({
+        firstName: l.first_name,
+        middleName: l.middle_name,
+        lastName: l.last_name,
+        suffix: l.suffix,
+        age: l.age,
+        sex: l.gender || l.sex,
+        civilStatus: l.civil_status,
+        address: l.address,
+        contactNo: l.contact_no || l.phone,
+        email: l.email,
+        qcid: l.qcid,
+        createdAt: l.created_at,
+      });
     }
   } catch (err) {
     console.warn('⚠️ Syncing real users to beneficiaries failed:', err.message);
   }
+}
+
+/**
+ * Match helper to link an application record with a beneficiary profile
+ */
+function matchesApplicant(b, app) {
+  if (!b || !app) return false;
+  const bQcid = String(b.qcid_number || b.id_number || '').trim().toLowerCase();
+  const bEmail = String(b.email || '').trim().toLowerCase();
+  const bName = String(b.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const bFirst = String(b.first_name || '').trim().toLowerCase();
+  const bLast = String(b.last_name || '').trim().toLowerCase();
+  const bUserId = b.user_id ? String(b.user_id) : null;
+
+  const appQc = String(app.qc_id || app.qcid || app.qcid_number || app.reference_number || app.reference_no || '').trim().toLowerCase();
+  const appEmail = String(app.email || app.guardian_email || '').trim().toLowerCase();
+  const appUserId = app.user_id ? String(app.user_id) : null;
+  const appFirst = String(app.first_name || app.guardian_first_name || '').trim().toLowerCase();
+  const appMiddle = String(app.middle_name || app.guardian_middle_name || '').trim().toLowerCase();
+  const appLast = String(app.last_name || app.guardian_last_name || '').trim().toLowerCase();
+  const appFullName = [appFirst, appMiddle, appLast].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+  const appFirstLast = [appFirst, appLast].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+
+  // 1. User ID match
+  if (bUserId && appUserId && bUserId === appUserId) return true;
+
+  // 2. QCID / Reference match
+  if (bQcid && bQcid.length >= 4 && appQc && (appQc === bQcid || appQc.includes(bQcid) || bQcid.includes(appQc))) return true;
+
+  // 3. Email match
+  if (bEmail && appEmail && bEmail === appEmail) return true;
+
+  // 4. Exact first and last name match
+  if (bFirst && bLast && appFirst && appLast && bFirst === appFirst && bLast === appLast) return true;
+
+  // 5. Full name match
+  if (bName && appFullName && (bName === appFullName || bName.includes(appFullName) || appFullName.includes(bName))) return true;
+  if (bName && appFirstLast && (bName === appFirstLast || bName.includes(appFirstLast) || appFirstLast.includes(bName))) return true;
+  if (bName && appFirst && appLast && bName.includes(appFirst) && bName.includes(appLast)) return true;
+
+  return false;
 }
 
 /**
@@ -418,24 +617,15 @@ async function getAllBeneficiaries(req, res) {
       const bNum = b.beneficiary_number || `BNF-2026-${String(bId).padStart(4, '0')}`;
       const bQcid = (b.qcid_number || '').trim().toLowerCase();
       const bEmail = (b.email || '').trim().toLowerCase();
-      const bName = (b.full_name || '').trim().toLowerCase();
-      const bFirst = (b.first_name || '').trim().toLowerCase();
-      const bLast = (b.last_name || '').trim().toLowerCase();
 
       const enrolledPrograms = [];
 
       // Check AICS
       aicsList.forEach((app) => {
-        const appQc = String(app.qc_id || app.reference_no || '').toLowerCase();
-        const appEmail = String(app.email || '').toLowerCase();
-        const appName = `${app.first_name || ''} ${app.last_name || ''}`.trim().toLowerCase();
-        if (
-          (bQcid && appQc.includes(bQcid)) ||
-          (bEmail && appEmail === bEmail) ||
-          (bName && appName && (bName.includes(appName) || appName.includes(bName)))
-        ) {
+        if (matchesApplicant(b, app)) {
           enrolledPrograms.push({
             program: "AICS",
+            assistanceType: app.assistance_type || "Medical Assistance",
             referenceNo: app.reference_no,
             status: (app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'Pending').slice(1),
             dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
@@ -445,14 +635,7 @@ async function getAllBeneficiaries(req, res) {
 
       // Check PWD / Senior
       pwdList.forEach((app) => {
-        const appRef = String(app.reference_number || app.id || '').toLowerCase();
-        const appEmail = String(app.email || '').toLowerCase();
-        const appName = `${app.first_name || ''} ${app.last_name || ''}`.trim().toLowerCase();
-        if (
-          (bQcid && appRef.includes(bQcid)) ||
-          (bEmail && appEmail === bEmail) ||
-          (bName && appName && (bName.includes(appName) || appName.includes(bName)))
-        ) {
+        if (matchesApplicant(b, app)) {
           const progName = (app.category || '').toLowerCase().includes('senior') ? 'Senior Citizen' : 'PWD';
           enrolledPrograms.push({
             program: progName,
@@ -465,14 +648,7 @@ async function getAllBeneficiaries(req, res) {
 
       // Check Solo Parent
       soloList.forEach((app) => {
-        const appQc = String(app.qcid_number || app.reference_number || app.user_id || '').toLowerCase();
-        const appEmail = String(app.email || '').toLowerCase();
-        const appName = `${app.first_name || ''} ${app.last_name || ''}`.trim().toLowerCase();
-        if (
-          (bQcid && appQc.includes(bQcid)) ||
-          (bEmail && appEmail === bEmail) ||
-          (bName && appName && (bName.includes(appName) || appName.includes(bName)))
-        ) {
+        if (matchesApplicant(b, app)) {
           enrolledPrograms.push({
             program: "Solo Parent",
             referenceNo: app.reference_number || app.solo_parent_id_number || `SP-${app.id}`,
@@ -484,14 +660,7 @@ async function getAllBeneficiaries(req, res) {
 
       // Check Child Welfare
       childList.forEach((app) => {
-        const appQc = String(app.reference_number || app.user_id || '').toLowerCase();
-        const appEmail = String(app.email || app.guardian_email || '').toLowerCase();
-        const appName = `${app.guardian_first_name || ''} ${app.guardian_last_name || ''}`.trim().toLowerCase();
-        if (
-          (bQcid && appQc.includes(bQcid)) ||
-          (bEmail && appEmail === bEmail) ||
-          (bName && appName && (bName.includes(appName) || appName.includes(bName)))
-        ) {
+        if (matchesApplicant(b, app)) {
           enrolledPrograms.push({
             program: "Child Welfare",
             referenceNo: app.reference_number || `CW-${app.id}`,
@@ -503,14 +672,7 @@ async function getAllBeneficiaries(req, res) {
 
       // Check Livelihood
       livList.forEach((app) => {
-        const appQc = String(app.qcid || app.reference_number || app.user_id || '').toLowerCase();
-        const appEmail = String(app.email || '').toLowerCase();
-        const appName = `${app.first_name || ''} ${app.last_name || ''}`.trim().toLowerCase();
-        if (
-          (bQcid && appQc.includes(bQcid)) ||
-          (bEmail && appEmail === bEmail) ||
-          (bName && appName && (bName.includes(appName) || appName.includes(bName)))
-        ) {
+        if (matchesApplicant(b, app)) {
           enrolledPrograms.push({
             program: "Livelihood",
             referenceNo: app.reference_number || `LP-${app.id}`,
