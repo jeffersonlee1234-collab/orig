@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   Check,
   X,
@@ -19,7 +19,9 @@ import {
   Printer,
   Trash2,
   ShieldAlert,
+  Download,
 } from "lucide-react"
+import { toPng } from "html-to-image"
 import { API_BASE as APP_API_BASE } from "../../config/api"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { useLanguage } from "../ui/language-context"
@@ -29,7 +31,7 @@ import {
   pushUserNotification,
   type SyncedDisbursementRecord,
 } from "../../utils/financialAidSync"
-import { getApplicantPhotoUrl } from "./pwd-senior-citizen"
+import { getApplicantPhotoUrl, ApplicantPhotoDisplay } from "./pwd-senior-citizen"
 
 interface ApplicationDocument {
   name: string
@@ -1187,18 +1189,20 @@ function SoloParentCardFront({
   idNumber,
   appDate,
   expiryDateStr,
+  cardRef,
 }: {
   app: WelfareSubmission
   photoUrl: string
   idNumber: string
   appDate: string
   expiryDateStr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-300 relative bg-white select-none print:shadow-none print:border-slate-400"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
       style={{
-        aspectRatio: "1.586 / 1",
         background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #eff6ff 100%)",
         WebkitPrintColorAdjust: "exact",
         printColorAdjust: "exact",
@@ -1210,7 +1214,7 @@ function SoloParentCardFront({
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-2">
-          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+          <img src="/gov-serves-seal.png" alt="QC Seal" crossOrigin="anonymous" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
           <div>
             <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
             <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES</p>
@@ -1234,22 +1238,10 @@ function SoloParentCardFront({
 
       {/* Details with QC Logo on right side */}
       <div className="p-3 flex gap-2.5 items-start relative">
-        <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-          {photoUrl ? (
-            <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-              <User className="w-8 h-8 text-slate-300 mb-1" />
-              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-            </div>
-          )}
-          <div
-            className="absolute bottom-0 inset-x-0 bg-red-900/90 text-white text-[6.5px] text-center py-0.5 font-bold uppercase"
-            style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
-          >
-            QC SSDD
-          </div>
-        </div>
+        <ApplicantPhotoDisplay
+          photoUrl={photoUrl}
+          tag="QC SSDD"
+        />
 
         <div className="flex-1 min-w-0 space-y-1 relative z-10">
           <div>
@@ -1286,6 +1278,7 @@ function SoloParentCardFront({
           <img
             src="/gov-serves-seal.png"
             alt="QC Official Seal"
+            crossOrigin="anonymous"
             className="w-14 h-14 object-contain drop-shadow-md hover:scale-105 transition-transform"
           />
           <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
@@ -1321,18 +1314,20 @@ function SoloParentCardBack({
   emergencyPhone,
   emergencyRel,
   emergencyAddr,
+  cardRef,
 }: {
   app: WelfareSubmission
   emergencyPerson: string
   emergencyPhone: string
   emergencyRel: string
   emergencyAddr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-300 relative bg-white select-none flex flex-col justify-between print:shadow-none print:border-slate-400"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
-        aspectRatio: "1.586 / 1",
         background: "linear-gradient(135deg, #fff5f5 0%, #ffffff 50%, #fef2f2 100%)",
         WebkitPrintColorAdjust: "exact",
         printColorAdjust: "exact",
@@ -1340,7 +1335,7 @@ function SoloParentCardBack({
     >
       {/* Background Watermark Seal */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
-        <img src="/gov-serves-seal.png" alt="" className="w-48 h-48 object-contain" />
+        <img src="/gov-serves-seal.png" alt="" crossOrigin="anonymous" className="w-48 h-48 object-contain" />
       </div>
 
       {/* Back Header Strip */}
@@ -1349,7 +1344,7 @@ function SoloParentCardBack({
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-1.5">
-          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
+          <img src="/gov-serves-seal.png" alt="QC Seal" crossOrigin="anonymous" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
           <p className="text-[8.5px] font-black uppercase tracking-wide leading-tight">
             Republic Act 11861 — Expanded Solo Parents Welfare Act
           </p>
@@ -1470,9 +1465,33 @@ function OfficialSoloParentIdCardModal({
   })
 
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
+  const [isDownloading, setIsDownloading] = useState(false)
 
-  const handlePrint = () => {
-    window.print()
+  const frontDownloadRef = useRef<HTMLDivElement>(null)
+  const backDownloadRef = useRef<HTMLDivElement>(null)
+
+  const handleDownloadSide = async (mode: "front" | "back") => {
+    setIsDownloading(true)
+    try {
+      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
+      if (targetElement) {
+        const dataUrl = await toPng(targetElement, {
+          pixelRatio: 3,
+          cacheBust: true,
+          quality: 1,
+          width: 500,
+          height: 315,
+        })
+        const link = document.createElement("a")
+        link.download = `QC_SOLO_PARENT_${mode.toUpperCase()}_${idNumber}.png`
+        link.href = dataUrl
+        link.click()
+      }
+    } catch (err) {
+      console.error("Failed to export PNG:", err)
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const photoUrl = getApplicantPhotoUrl(app)
@@ -1519,12 +1538,15 @@ function OfficialSoloParentIdCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center p-4 print:static print:p-0 print:bg-white print:z-auto print:block"
-      style={{ background: "rgba(15,23,42,0.7)" }}
+      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      onClick={onClose}
     >
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col animate-in fade-in zoom-in-95 duration-200 print:shadow-none print:border-none print:max-w-none print:w-full print:rounded-none">
-        {/* Modal Header (Hidden on Print) */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50 print:hidden">
+      <div
+        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
             <IdCard className="w-5 h-5 text-blue-600" />
             <div>
@@ -1539,8 +1561,8 @@ function OfficialSoloParentIdCardModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl font-light leading-none p-1 cursor-pointer">×</button>
         </div>
 
-        {/* Side Selector (Hidden on Print) */}
-        <div className="flex border-b border-gray-200 bg-gray-50 px-6 pt-3 gap-3 print:hidden">
+        {/* Side Selector */}
+        <div className="flex border-b border-gray-200 bg-gray-50 px-6 pt-3 gap-3">
           <button
             onClick={() => setActiveSide("front")}
             className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
@@ -1559,8 +1581,8 @@ function OfficialSoloParentIdCardModal({
           </button>
         </div>
 
-        {/* Card Body (Interactive Screen View — Hidden on Print) */}
-        <div className="p-6 bg-slate-100/80 flex flex-col items-center justify-center overflow-y-auto print:hidden">
+        {/* Card Body Interactive Screen View */}
+        <div className="p-6 bg-slate-100/80 flex flex-col items-center justify-center overflow-x-auto min-h-[380px]">
           {activeSide === "front" ? (
             <SoloParentCardFront
               app={app}
@@ -1580,72 +1602,80 @@ function OfficialSoloParentIdCardModal({
           )}
         </div>
 
-        {/* ========================================================================= */}
-        {/* PRINT-ONLY CONTAINER: RENDERS BOTH FRONT AND BACK WITH FULL RICH COLORS   */}
-        {/* ========================================================================= */}
-        <div id="official-id-card-print-area" className="hidden print:flex print:flex-col print:items-center print:justify-center print:gap-6 print:w-full print:py-4">
-          <div className="text-center print:block mb-1">
-            <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase">
-              Republic of the Philippines • City Government of Quezon City
-            </p>
-            <p className="text-[9px] text-slate-500 font-medium">
-              Official Solo Parent Identification Card (Front &amp; Back) — RA 11861
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-            {/* Front Card */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">FRONT CARD</span>
-              <SoloParentCardFront
-                app={app}
-                photoUrl={photoUrl}
-                idNumber={idNumber}
-                appDate={appDate}
-                expiryDateStr={expiryDateStr}
-              />
-            </div>
-
-            {/* Back Card */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">BACK CARD</span>
-              <SoloParentCardBack
-                app={app}
-                emergencyPerson={emergencyPerson}
-                emergencyPhone={emergencyPhone}
-                emergencyRel={emergencyRel}
-                emergencyAddr={emergencyAddr}
-              />
-            </div>
-          </div>
-
-          <div className="text-center print:block mt-1">
-            <p className="text-[8px] text-slate-400 italic">
-              ✂ Cut along the solid outer border of the cards. Laminate or fold front and back together.
-            </p>
-          </div>
+        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Isolated with 0 offset and exact dimensions) ── */}
+        <div
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "500px",
+            height: "315px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <SoloParentCardFront
+            cardRef={frontDownloadRef}
+            app={app}
+            photoUrl={photoUrl}
+            idNumber={idNumber}
+            appDate={appDate}
+            expiryDateStr={expiryDateStr}
+          />
+        </div>
+        <div
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "500px",
+            height: "315px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <SoloParentCardBack
+            cardRef={backDownloadRef}
+            app={app}
+            emergencyPerson={emergencyPerson}
+            emergencyPhone={emergencyPhone}
+            emergencyRel={emergencyRel}
+            emergencyAddr={emergencyAddr}
+          />
         </div>
 
-        {/* Modal Footer (Hidden on Print) */}
-        <div className="p-4 border-t border-gray-200 bg-white flex items-center justify-between gap-3 print:hidden">
-          <span className="text-xs text-slate-500">
-            Compliant with RA 11861 &amp; Quezon City Solo Parent Welfare ID guidelines.
-          </span>
-          <div className="flex gap-2">
+        {/* Modal Footer */}
+        <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
-              className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("front")}
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-3.5 h-3.5" />
-              Print Card
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Front (PNG)</span>
             </button>
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("back")}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              Close
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Back (PNG)</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

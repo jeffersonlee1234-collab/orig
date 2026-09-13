@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   Check,
   X,
@@ -15,7 +15,9 @@ import {
   IdCard,
   Printer,
   Trash2,
+  Download,
 } from "lucide-react"
+import { toPng } from "html-to-image"
 import { API_BASE } from "../../config/api"
 import {
   pushUserNotification,
@@ -653,18 +655,36 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
 export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): string {
   if (!app) return "/samples/ID PICTURE (2X2).webp"
 
-  // 1. Direct properties on the application
+  // 1. Direct properties on the application (check all possible variants)
   const direct =
+    app.applicantPhoto ||
+    app.applicant_photo ||
     app.photoUrl ||
+    app.photo_url ||
     app.profilePhotoUrl ||
+    app.profile_photo_url ||
     app.idPhotoUrl ||
+    app.id_photo_url ||
     app.avatarUrl ||
+    app.avatar_url ||
     app.photo ||
     app.avatar ||
     app.idPhoto ||
+    app.id_photo ||
+    app.image ||
+    app.imageUrl ||
+    app.image_url ||
+    (app as any).formData?.applicantPhoto ||
+    (app as any).formData?.photoUrl ||
     (app as any).formData?.idPhoto ||
+    (app as any).formData?.id_photo ||
+    (app as any).extra_data?.applicantPhoto ||
     (app as any).extra_data?.photoUrl ||
-    (app as any).extra_data?.idPhoto
+    (app as any).extra_data?.idPhoto ||
+    (app as any).extra_data?.formData?.photoUrl ||
+    (app as any).extra_data?.formData?.idPhoto ||
+    (app as any).extraData?.photoUrl ||
+    (app as any).extraData?.idPhoto
   if (direct && typeof direct === "string" && (direct.startsWith("data:") || direct.startsWith("http") || direct.startsWith("/") || direct.startsWith("blob:"))) {
     return direct
   }
@@ -676,7 +696,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
       if (d.startsWith("uploads/")) return `${API_BASE}/${d}`
       return `${API_BASE}/uploads/${d}`
     }
-    const rawUrl = d.fileUrl || d.url || d.previewUrl || d.path || d.filePath || d.dataUrl || d.src
+    const rawUrl = d.fileUrl || d.url || d.previewUrl || d.path || d.filePath || d.dataUrl || d.src || d.file_path
     if (rawUrl && typeof rawUrl === "string") {
       if (rawUrl.startsWith("data:") || rawUrl.startsWith("http") || rawUrl.startsWith("/") || rawUrl.startsWith("blob:")) return rawUrl
       if (rawUrl.startsWith("uploads/")) return `${API_BASE}/${rawUrl}`
@@ -719,7 +739,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
 
   // 3. Find explicit photo/picture doc
   const photoDoc = flatDocs.find((d) => {
-    const n = String(d.name || d.documentId || d.label || d.id || "").toLowerCase()
+    const n = String(d.name || d.documentId || d.label || d.id || d.documentType || d.type || "").toLowerCase()
     const fn = String(d.filename || "").toLowerCase()
     return (
       n.includes("photo") ||
@@ -812,6 +832,59 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
   return "/samples/ID PICTURE (2X2).webp"
 }
 
+export function ApplicantPhotoDisplay({
+  photoUrl,
+  tag,
+  isPwd,
+}: {
+  photoUrl?: string
+  tag: string
+  isPwd?: boolean
+}) {
+  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [hasFailed, setHasFailed] = useState(false)
+
+  useEffect(() => {
+    setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
+    setHasFailed(false)
+  }, [photoUrl])
+
+  const handleImageError = () => {
+    if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+      setImgSrc("/samples/ID PICTURE (2X2).webp")
+    } else {
+      setHasFailed(true)
+    }
+  }
+
+  return (
+    <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+      {!hasFailed ? (
+        <img
+          src={imgSrc}
+          alt=""
+          crossOrigin="anonymous"
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full">
+          <User className="w-8 h-8 text-slate-300 mb-1" />
+          <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+        </div>
+      )}
+      <div
+        className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${
+          isPwd ? "bg-amber-600" : tag.includes("SOLO") || tag.includes("SSDD") ? "bg-red-900" : "bg-blue-900"
+        }`}
+        style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+      >
+        {tag}
+      </div>
+    </div>
+  )
+}
+
 function DocumentViewerModal({
   doc,
   onClose,
@@ -820,46 +893,74 @@ function DocumentViewerModal({
   onClose: () => void
 }) {
   if (!doc) return null
-  const imageUrl = getDocImageUrl(doc)
+  const src = doc.fileUrl || (doc.filename ? `${API_BASE}/uploads/${doc.filename}` : "")
+  const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src)
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4" style={{ background: "rgba(15,23,42,0.65)" }}>
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-5 border-b border-gray-200 shrink-0 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <FileText className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900 leading-tight">{doc.name}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{doc.filename || doc.name}</p>
-            </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+          <div>
+            <h3 className="font-bold text-gray-900">{doc.name}</h3>
+            {doc.filename && <p className="text-xs text-gray-400">{doc.filename}</p>}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl font-light leading-none p-1 cursor-pointer">×</button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex items-center justify-center bg-slate-100/60 min-h-[360px]">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={doc.name}
-              className="max-h-[60vh] max-w-full rounded-xl border border-border shadow-md object-contain bg-white"
-            />
+        <div className="flex-1 overflow-auto py-4 flex items-center justify-center min-h-[300px] bg-gray-50 rounded-xl my-4">
+          {src ? (
+            isImage ? (
+              <img
+                src={src}
+                alt={doc.name}
+                className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
+                onError={(e) => {
+                  ;(e.target as HTMLElement).style.display = "none"
+                  const parent = (e.target as HTMLElement).parentElement
+                  if (parent) {
+                    parent.innerHTML = `<div class="text-center p-8 text-gray-400"><p class="font-semibold">Unable to load image</p><p class="text-xs mt-1">The file may not exist on the server</p></div>`
+                  }
+                }}
+              />
+            ) : (
+              <div className="text-center p-8">
+                <FileText className="w-16 h-16 text-blue-500 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-700">{doc.filename || doc.name}</p>
+                <a
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-block px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Open in New Tab
+                </a>
+              </div>
+            )
           ) : (
-            <div className="bg-white rounded-xl p-8 text-center text-muted-foreground w-full max-w-sm border border-border">
-              <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-sm font-semibold">{doc.name}</p>
-              <p className="text-xs mt-1">Uploaded document on file.</p>
+            <div className="text-center p-8 text-gray-400">
+              <Paperclip className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No preview available for this document</p>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 flex items-center justify-end gap-3 shrink-0 bg-white">
+        <div className="flex justify-end pt-2">
           <button
             onClick={onClose}
-            className="px-6 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+            className="px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-xs rounded-xl hover:bg-gray-200 transition-colors"
           >
-            CLOSE
+            Close
           </button>
         </div>
       </div>
@@ -875,6 +976,7 @@ function OfficialIdCardFront({
   idNumber,
   appDate,
   expiryDateStr,
+  cardRef,
 }: {
   app: ApplicationSubmission
   isPwdApp: boolean
@@ -882,12 +984,13 @@ function OfficialIdCardFront({
   idNumber: string
   appDate: string
   expiryDateStr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-300 relative bg-white select-none print:shadow-none print:border-slate-400"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
       style={{
-        aspectRatio: "1.586 / 1",
         background: isPwdApp
           ? "linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #eff6ff 100%)"
           : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
@@ -905,7 +1008,7 @@ function OfficialIdCardFront({
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-2">
-          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+          <img src="/gov-serves-seal.png" alt="QC Seal" crossOrigin="anonymous" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
           <div>
             <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${isPwdApp ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
               Republic of the Philippines
@@ -941,23 +1044,12 @@ function OfficialIdCardFront({
 
       {/* Details with QC Logo on right side */}
       <div className="p-3 flex gap-2.5 items-start relative">
-        {/* 2x2 Photo */}
-        <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-          {photoUrl ? (
-            <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-              <User className="w-8 h-8 text-slate-300 mb-1" />
-              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-            </div>
-          )}
-          <div
-            className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${isPwdApp ? "bg-amber-600" : "bg-blue-900"}`}
-            style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
-          >
-            QC {isPwdApp ? "PDAO" : "OSCA"}
-          </div>
-        </div>
+        {/* 2x2 Photo with error fallback */}
+        <ApplicantPhotoDisplay
+          photoUrl={photoUrl}
+          tag={`QC ${isPwdApp ? "PDAO" : "OSCA"}`}
+          isPwd={isPwdApp}
+        />
 
         {/* Details text */}
         <div className="flex-1 min-w-0 space-y-1 relative z-10">
@@ -990,7 +1082,7 @@ function OfficialIdCardFront({
               <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
             </div>
             <div>
-              <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {app.sex || "—"} / O+
+              <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {app.sex || "Male"} / O+
             </div>
           </div>
 
@@ -1004,6 +1096,7 @@ function OfficialIdCardFront({
           <img
             src="/gov-serves-seal.png"
             alt="QC Official Seal"
+            crossOrigin="anonymous"
             className="w-14 h-14 object-contain drop-shadow-md hover:scale-105 transition-transform"
           />
           <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
@@ -1041,6 +1134,7 @@ function OfficialIdCardBack({
   emergencyPhone,
   emergencyRel,
   emergencyAddr,
+  cardRef,
 }: {
   isPwdApp: boolean
   appDate: string
@@ -1049,12 +1143,13 @@ function OfficialIdCardBack({
   emergencyPhone: string
   emergencyRel: string
   emergencyAddr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-300 relative bg-white select-none flex flex-col justify-between print:shadow-none print:border-slate-400"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
-        aspectRatio: "1.586 / 1",
         background: isPwdApp
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
           : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
@@ -1064,7 +1159,7 @@ function OfficialIdCardBack({
     >
       {/* Background Watermark Seal */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
-        <img src="/gov-serves-seal.png" alt="" className="w-48 h-48 object-contain" />
+        <img src="/gov-serves-seal.png" alt="" crossOrigin="anonymous" className="w-48 h-48 object-contain" />
       </div>
 
       {/* Back Header Strip */}
@@ -1077,7 +1172,7 @@ function OfficialIdCardBack({
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
         <div className="flex items-center gap-1.5">
-          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
+          <img src="/gov-serves-seal.png" alt="QC Seal" crossOrigin="anonymous" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
           <p className="text-[8.5px] font-black uppercase tracking-wide leading-tight">
             {isPwdApp
               ? "Republic Act 7277 / RA 9442 — Magna Carta for PWDs"
@@ -1156,15 +1251,19 @@ function OfficialIdCardBack({
 function OfficialIdCardModal({
   app,
   onClose,
+  allSubmissions,
 }: {
   app: ApplicationSubmission | null
   onClose: () => void
+  allSubmissions?: ApplicationSubmission[]
 }) {
   if (!app) return null
   const isPwdApp = isPWD(app)
-  const contactNumber = isPwdApp ? (app.contactNo || app.cellphoneNo || "") : (app.cellphoneNo || app.contactNo || "")
-  const idNumber = generateOfficialIdNumber(app)
-  const issueDateObj = new Date(app.approvedDate || app.submittedAt || Date.now())
+  const idNumber =
+    app.assignedIdNumber ||
+    app.idNumber ||
+    (isPwdApp ? generateOfficialPwdId(app, allSubmissions) : generateOfficialOscaId(app, allSubmissions))
+  const issueDateObj = new Date(app.dateApproved || app.submittedAt || Date.now())
   const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
   const appDate = validIssueDate.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -1180,23 +1279,63 @@ function OfficialIdCardModal({
   })
 
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
+  const [isDownloading, setIsDownloading] = useState(false)
 
-  const handlePrint = () => {
-    window.print()
+  const frontDownloadRef = useRef<HTMLDivElement>(null)
+  const backDownloadRef = useRef<HTMLDivElement>(null)
+
+  const handleDownloadSide = async (mode: "front" | "back") => {
+    setIsDownloading(true)
+    try {
+      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
+      if (targetElement) {
+        const dataUrl = await toPng(targetElement, {
+          pixelRatio: 3,
+          cacheBust: true,
+          quality: 1,
+          width: 500,
+          height: 315,
+        })
+        const link = document.createElement("a")
+        link.download = `QC_${isPwdApp ? "PDAO" : "OSCA"}_${mode.toUpperCase()}_${idNumber}.png`
+        link.href = dataUrl
+        link.click()
+      }
+    } catch (err) {
+      console.error("Failed to export PNG:", err)
+    } finally {
+      setIsDownloading(false)
+    }
   }
+
+  const contactNumber =
+    app.phone ||
+    app.contactNo ||
+    app.contact_number ||
+    (app as any).mobileNo ||
+    (app as any).mobile_number ||
+    (app as any).formData?.contactNo ||
+    (app as any).formData?.mobileNo ||
+    (app as any).extra_data?.contactNo ||
+    (app as any).extra_data?.mobileNo ||
+    ""
 
   let localEmergencyName = ""
   let localEmergencyPhone = ""
   let localEmergencyRel = ""
   let localEmergencyAddr = ""
+
   try {
-    const raw = localStorage.getItem("currentUser") || localStorage.getItem("userProfile") || localStorage.getItem("user")
-    if (raw) {
-      const u = JSON.parse(raw)
-      const uQcid = u.qcidNumber || u.qcid_number || u.qcidNo || u.qcid || u.reference_number
-      const uEmail = u.email
+    const rawUsers = localStorage.getItem("users")
+    const allUsers = rawUsers ? JSON.parse(rawUsers) : []
+    const rawActive = localStorage.getItem("active_applications")
+    const activeApps = rawActive ? JSON.parse(rawActive) : []
+    const combined = [...allUsers, ...activeApps]
+
+    for (const u of combined) {
+      if (!u) continue
+      const uEmail = u.email || u.username
       if (
-        (uQcid && uQcid === app.referenceNumber) ||
         (uEmail && app.email && uEmail.toLowerCase() === app.email.toLowerCase()) ||
         (u.lastName && app.lastName && u.lastName.toLowerCase() === app.lastName.toLowerCase())
       ) {
@@ -1245,12 +1384,15 @@ function OfficialIdCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center p-4 print:static print:p-0 print:bg-white print:z-auto print:block"
-      style={{ background: "rgba(15,23,42,0.7)" }}
+      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      onClick={onClose}
     >
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col animate-in fade-in zoom-in-95 duration-200 print:shadow-none print:border-none print:max-w-none print:w-full print:rounded-none">
-        {/* Modal Header (Hidden on Print) */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50 print:hidden">
+      <div
+        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
             <IdCard className="w-5 h-5 text-blue-600" />
             <div>
@@ -1265,8 +1407,8 @@ function OfficialIdCardModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl font-light leading-none p-1 cursor-pointer">×</button>
         </div>
 
-        {/* Side Selector (Hidden on Print) */}
-        <div className="flex border-b border-gray-200 bg-gray-50 px-6 pt-3 gap-3 print:hidden">
+        {/* Side Selector */}
+        <div className="flex border-b border-gray-200 bg-gray-50 px-6 pt-3 gap-3">
           <button
             onClick={() => setActiveSide("front")}
             className={`pb-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
@@ -1285,8 +1427,8 @@ function OfficialIdCardModal({
           </button>
         </div>
 
-        {/* Card Body (Interactive Screen View — Hidden on Print) */}
-        <div className="p-6 bg-slate-100/80 flex flex-col items-center justify-center overflow-y-auto print:hidden">
+        {/* Card Body Live View */}
+        <div className="p-6 bg-slate-100/80 flex flex-col items-center justify-center overflow-x-auto min-h-[380px]">
           {activeSide === "front" ? (
             <OfficialIdCardFront
               app={app}
@@ -1309,75 +1451,83 @@ function OfficialIdCardModal({
           )}
         </div>
 
-        {/* ========================================================================= */}
-        {/* PRINT-ONLY CONTAINER: RENDERS BOTH FRONT AND BACK WITH FULL RICH COLORS   */}
-        {/* ========================================================================= */}
-        <div id="official-id-card-print-area" className="hidden print:flex print:flex-col print:items-center print:justify-center print:gap-6 print:w-full print:py-4">
-          <div className="text-center print:block mb-1">
-            <p className="text-[11px] font-bold text-slate-800 tracking-wide uppercase">
-              Republic of the Philippines • City Government of Quezon City
-            </p>
-            <p className="text-[9px] text-slate-500 font-medium">
-              Official {isPwdApp ? "PDAO Disability" : "OSCA Senior Citizen"} Identification Card (Front &amp; Back)
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-            {/* Front Card */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">FRONT CARD</span>
-              <OfficialIdCardFront
-                app={app}
-                isPwdApp={isPwdApp}
-                photoUrl={photoUrl}
-                idNumber={idNumber}
-                appDate={appDate}
-                expiryDateStr={expiryDateStr}
-              />
-            </div>
-
-            {/* Back Card */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">BACK CARD</span>
-              <OfficialIdCardBack
-                isPwdApp={isPwdApp}
-                appDate={appDate}
-                expiryDateStr={expiryDateStr}
-                emergencyPerson={emergencyPerson}
-                emergencyPhone={emergencyPhone}
-                emergencyRel={emergencyRel}
-                emergencyAddr={emergencyAddr}
-              />
-            </div>
-          </div>
-
-          <div className="text-center print:block mt-1">
-            <p className="text-[8px] text-slate-400 italic">
-              ✂ Cut along the solid outer border of the cards. Laminate or fold front and back together.
-            </p>
-          </div>
+        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Isolated with 0 offset and exact dimensions) ── */}
+        <div
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "500px",
+            height: "315px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <OfficialIdCardFront
+            cardRef={frontDownloadRef}
+            app={app}
+            isPwdApp={isPwdApp}
+            photoUrl={photoUrl}
+            idNumber={idNumber}
+            appDate={appDate}
+            expiryDateStr={expiryDateStr}
+          />
+        </div>
+        <div
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "500px",
+            height: "315px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <OfficialIdCardBack
+            cardRef={backDownloadRef}
+            isPwdApp={isPwdApp}
+            appDate={appDate}
+            expiryDateStr={expiryDateStr}
+            emergencyPerson={emergencyPerson}
+            emergencyPhone={emergencyPhone}
+            emergencyRel={emergencyRel}
+            emergencyAddr={emergencyAddr}
+          />
         </div>
 
-        {/* Modal Footer (Hidden on Print) */}
-        <div className="p-4 border-t border-gray-200 bg-white flex items-center justify-between gap-3 print:hidden">
-          <span className="text-xs text-slate-500">
-            Compliant with official Quezon City PDAO &amp; OSCA card issuance guidelines.
-          </span>
-          <div className="flex gap-2">
+        {/* Modal Footer */}
+        <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
-              className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("front")}
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-3.5 h-3.5" />
-              Print Card
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Front (PNG)</span>
             </button>
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("back")}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              Close
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Back (PNG)</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

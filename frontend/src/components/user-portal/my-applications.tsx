@@ -802,6 +802,58 @@ export async function downloadIdCardAsImage(
   }
 }
 
+function ApplicantPhotoDisplay({
+  photoUrl,
+  tag,
+  isPwd,
+}: {
+  photoUrl?: string
+  tag: string
+  isPwd?: boolean
+}) {
+  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [hasFailed, setHasFailed] = useState(false)
+
+  useEffect(() => {
+    setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
+    setHasFailed(false)
+  }, [photoUrl])
+
+  const handleImageError = () => {
+    if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
+      setImgSrc("/samples/ID PICTURE (2X2).webp")
+    } else {
+      setHasFailed(true)
+    }
+  }
+
+  return (
+    <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
+      {!hasFailed ? (
+        <img
+          src={imgSrc}
+          alt=""
+          crossOrigin="anonymous"
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full">
+          <User className="w-8 h-8 text-slate-300 mb-1" />
+          <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+        </div>
+      )}
+      <div
+        className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${
+          isPwd ? "bg-amber-600" : tag.includes("SOLO") || tag.includes("SSDD") ? "bg-red-900" : "bg-blue-900"
+        }`}
+      >
+        {tag}
+      </div>
+    </div>
+  )
+}
+
 /**
  * Dedicated Official Digital ID Card Modal matching official QC OSCA & PDAO standards
  */
@@ -880,22 +932,12 @@ function OfficialFrontCardView({
 
       {/* Middle Details with QC Logo on right side */}
       <div className="px-3.5 py-2 flex gap-3 items-center relative flex-1">
-        {/* 2x2 Photo */}
-        <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-          {photoUrl ? (
-            <img src={photoUrl} alt="Cardholder" crossOrigin="anonymous" className="w-full h-full object-cover" />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-              <User className="w-8 h-8 text-slate-300 mb-1" />
-              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-            </div>
-          )}
-          <div
-            className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${theme.isPwd ? "bg-amber-600" : "bg-blue-900"}`}
-          >
-            {theme.photoTag}
-          </div>
-        </div>
+        {/* 2x2 Photo with error fallback */}
+        <ApplicantPhotoDisplay
+          photoUrl={photoUrl}
+          tag={theme.photoTag}
+          isPwd={theme.isPwd}
+        />
 
         {/* Details text */}
         <div className="flex-1 min-w-0 space-y-1 relative z-10">
