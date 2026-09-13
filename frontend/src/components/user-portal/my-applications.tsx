@@ -139,10 +139,11 @@ interface CardTheme {
   subheaderBg: string
   subheaderText: string
   idTitle: string
-  idSubTitle: string
-  badgeText: string
+  pillText: string
   officeName: string
   legalAct: string
+  photoTag: string
+  classification: string
 }
 
 function getCardTheme(app: ApplicationRecord): CardTheme {
@@ -157,58 +158,48 @@ function getCardTheme(app: ApplicationRecord): CardTheme {
     app.assistanceCategory === "Solo Parent" ||
     app.assistance.toLowerCase().includes("solo")
 
-  if (isSenior) {
-    return {
-      headerStart: "#78350f",
-      headerEnd: "#b45309",
-      subheaderBg: "#fcd34d",
-      subheaderText: "#78350f",
-      idTitle: "SENIOR CITIZEN ID CARD",
-      idSubTitle: "QUEZON CITY SENIOR CITIZEN IDENTIFICATION CARD (RA 9994)",
-      badgeText: "SENIOR CITIZEN",
-      officeName: "Office of Senior Citizens Affairs (OSCA)",
-      legalAct: "Republic Act No. 9994 (Expanded Senior Citizens Act)",
-    }
-  }
-
   if (isPwd) {
     return {
-      headerStart: "#581c87",
-      headerEnd: "#7e22ce",
-      subheaderBg: "#d8b4fe",
-      subheaderText: "#581c87",
-      idTitle: "PERSON WITH DISABILITY ID",
-      idSubTitle: "QUEZON CITY PERSON WITH DISABILITY IDENTIFICATION CARD (RA 10754)",
-      badgeText: "PWD CITIZEN",
-      officeName: "Persons with Disability Affairs Division (PDAO)",
-      legalAct: "Republic Act No. 10754 (Benefits & Privileges of PWDs)",
+      isPwd: true,
+      isSolo: false,
+      isSenior: false,
+      headerStart: "#d97706",
+      headerEnd: "#b45309",
+      pillText: "PDAO CARD",
+      officeName: "PERSONS WITH DISABILITY AFFAIRS OFFICE",
+      legalAct: "Republic Act 7277 / RA 9442 — Magna Carta for PWDs",
+      photoTag: "QC PDAO",
+      classification: (app as any).disabilityType || "Visual Disability",
     }
   }
 
   if (isSolo) {
     return {
-      headerStart: "#4c1d95",
-      headerEnd: "#6d28d9",
-      subheaderBg: "#c4b5fd",
-      subheaderText: "#4c1d95",
-      idTitle: "SOLO PARENT ID CARD",
-      idSubTitle: "QUEZON CITY SOLO PARENT IDENTIFICATION CARD (RA 11861)",
-      badgeText: "SOLO PARENT",
-      officeName: "Solo Parent Welfare Division",
-      legalAct: "Republic Act No. 11861 (Expanded Solo Parents Welfare Act)",
+      isPwd: false,
+      isSolo: true,
+      isSenior: false,
+      headerStart: "#1d4ed8",
+      headerEnd: "#1e40af",
+      pillText: "SOLO PARENT CARD",
+      officeName: "SOLO PARENTS WELFARE DIVISION",
+      legalAct: "Republic Act 8972 / RA 11861 — Solo Parents' Welfare Act",
+      photoTag: "QC SP",
+      classification: "Solo Parent Welfare Beneficiary",
     }
   }
 
+  // Default: Senior Citizen (OSCA)
   return {
-    headerStart: "#1e3a8a",
+    isPwd: false,
+    isSolo: false,
+    isSenior: true,
+    headerStart: "#1d4ed8",
     headerEnd: "#1e40af",
-    subheaderBg: "#f59e0b",
-    subheaderText: "#0f172a",
-    idTitle: "QUEZON CITY RESIDENT ID",
-    idSubTitle: "QUEZON CITY RESIDENT IDENTIFICATION CARD",
-    badgeText: "QC CITIZEN",
-    officeName: "Social Services Development Department (SSDD)",
-    legalAct: "Quezon City Unified Citizen ID Ordinance",
+    pillText: "OSCA CARD",
+    officeName: "OFFICE FOR SENIOR CITIZENS AFFAIRS",
+    legalAct: "Republic Act 9994 — Expanded Senior Citizens Act",
+    photoTag: "QC OSCA",
+    classification: "Senior Citizen Welfare Beneficiary",
   }
 }
 
@@ -225,157 +216,184 @@ function drawFrontCard(
   const w = 1000
   const h = 630
 
-  // 1. Card Background & Border
+  const issueDateObj = new Date(app.submittedAt || Date.now())
+  const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
+  const appDate = validIssueDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const expiryDateObj = new Date(validIssueDate)
+  expiryDateObj.setFullYear(expiryDateObj.getFullYear() + 1)
+  const expiryDateStr = expiryDateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
   ctx.save()
   ctx.translate(ox, oy)
 
+  // 1. Card Background & Border
   ctx.fillStyle = "#ffffff"
   ctx.fillRect(0, 0, w, h)
 
-  // Subtle gradient body
   const bgGrad = ctx.createLinearGradient(0, 0, w, h)
-  bgGrad.addColorStop(0, "#f8fafc")
-  bgGrad.addColorStop(0.5, "#ffffff")
-  bgGrad.addColorStop(1, "#f1f5f9")
+  if (theme.isPwd) {
+    bgGrad.addColorStop(0, "#fffbeb")
+    bgGrad.addColorStop(0.5, "#ffffff")
+    bgGrad.addColorStop(1, "#fefce8")
+  } else {
+    bgGrad.addColorStop(0, "#eff6ff")
+    bgGrad.addColorStop(0.5, "#ffffff")
+    bgGrad.addColorStop(1, "#f0fdf4")
+  }
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, w, h)
 
-  // Outer border
   ctx.strokeStyle = "#cbd5e1"
   ctx.lineWidth = 2
   ctx.strokeRect(0, 0, w, h)
 
-  // 2. Top Header Gradient
+  // 2. Top Header Gradient (Blue / Amber)
   const headGrad = ctx.createLinearGradient(0, 0, w, 0)
   headGrad.addColorStop(0, theme.headerStart)
   headGrad.addColorStop(1, theme.headerEnd)
   ctx.fillStyle = headGrad
-  ctx.fillRect(0, 0, w, 100)
+  ctx.fillRect(0, 0, w, 88)
 
-  // Header QC Seal Logo
+  // Header QC Seal
   if (sealImg) {
-    ctx.drawImage(sealImg, 30, 16, 68, 68)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(60, 44, 28, 0, Math.PI * 2)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)"
+    ctx.fill()
+    ctx.drawImage(sealImg, 34, 18, 52, 52)
+    ctx.restore()
   }
 
-  // Header Texts
-  ctx.fillStyle = "#ffffff"
-  ctx.font = "bold 17px sans-serif"
-  ctx.fillText("REPUBLIC OF THE PHILIPPINES", 112, 40)
-  ctx.font = "900 27px sans-serif"
-  ctx.fillText("GOV SERVICES • QUEZON CITY", 112, 74)
+  // Header Titles
+  ctx.fillStyle = theme.isPwd ? "#1e293b" : "#dbeafe"
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText("REPUBLIC OF THE PHILIPPINES", 100, 36)
+  ctx.fillStyle = theme.isPwd ? "#0f172a" : "#ffffff"
+  ctx.font = "900 24px sans-serif"
+  ctx.fillText("GOV SERVICES", 100, 68)
 
-  // Right ID Badge Pill
-  ctx.fillStyle = "rgba(255, 255, 255, 0.22)"
+  // Header Right Pill Badge
+  const pillW = 180
+  const pillH = 38
+  const pillX = w - pillW - 30
+  const pillY = 25
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)"
   ctx.beginPath()
   if (typeof (ctx as any).roundRect === "function") {
-    (ctx as any).roundRect(w - 280, 26, 250, 48, 24)
+    (ctx as any).roundRect(pillX, pillY, pillW, pillH, 19)
   } else {
-    ctx.rect(w - 280, 26, 250, 48)
+    ctx.rect(pillX, pillY, pillW, pillH)
   }
   ctx.fill()
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"
   ctx.lineWidth = 1.5
   ctx.stroke()
 
   ctx.fillStyle = "#ffffff"
   ctx.font = "900 15px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText(theme.idTitle, w - 155, 56)
+  ctx.fillText(theme.pillText, pillX + pillW / 2, pillY + 24)
   ctx.textAlign = "left"
 
-  // 3. Subheader Bar
-  ctx.fillStyle = theme.subheaderBg
-  ctx.fillRect(0, 100, w, 36)
-  ctx.fillStyle = theme.subheaderText
-  ctx.font = "900 13.5px sans-serif"
+  // 3. Sub-header (Yellow/Amber or Dark Bar)
+  ctx.fillStyle = theme.isPwd ? "#0f172a" : "#f59e0b"
+  ctx.fillRect(0, 88, w, 36)
+  ctx.fillStyle = theme.isPwd ? "#fcd34d" : "#0f172a"
+  ctx.font = "900 14px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText(theme.idSubTitle, w / 2, 123)
+  ctx.fillText(theme.officeName, w / 2, 111)
   ctx.textAlign = "left"
 
-  // 4. Photo Box (Left)
-  const photoX = 40
-  const photoY = 155
-  const photoW = 200
-  const photoH = 250
+  // 4. 2x2 Photo Box (Left)
+  const photoX = 35
+  const photoY = 145
+  const photoW = 190
+  const photoH = 245
 
-  ctx.fillStyle = "#e2e8f0"
+  ctx.fillStyle = "#ffffff"
   ctx.fillRect(photoX, photoY, photoW, photoH)
-  ctx.strokeStyle = "#94a3b8"
-  ctx.lineWidth = 3
+  ctx.strokeStyle = "#cbd5e1"
+  ctx.lineWidth = 2.5
   ctx.strokeRect(photoX, photoY, photoW, photoH)
 
   if (photoImg) {
-    ctx.drawImage(photoImg, photoX, photoY, photoW, photoH - 32)
+    ctx.drawImage(photoImg, photoX, photoY, photoW, photoH - 30)
   } else {
     ctx.fillStyle = "#64748b"
-    ctx.font = "bold 20px sans-serif"
+    ctx.font = "bold 18px sans-serif"
     ctx.textAlign = "center"
-    ctx.fillText("2x2 PHOTO", photoX + photoW / 2, photoY + 115)
+    ctx.fillText("2x2 PHOTO", photoX + photoW / 2, photoY + 110)
     ctx.textAlign = "left"
   }
 
-  // Photo Badge
-  ctx.fillStyle = "#0f172a"
-  ctx.fillRect(photoX, photoY + photoH - 32, photoW, 32)
+  // Photo Tag at bottom
+  ctx.fillStyle = theme.isPwd ? "#d97706" : "#1e3a8a"
+  ctx.fillRect(photoX, photoY + photoH - 30, photoW, 30)
   ctx.fillStyle = "#ffffff"
   ctx.font = "900 13px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText(theme.badgeText, photoX + photoW / 2, photoY + photoH - 11)
+  ctx.fillText(theme.photoTag, photoX + photoW / 2, photoY + photoH - 10)
   ctx.textAlign = "left"
 
   // 5. Details Section (Center)
-  const infoX = 265
-  let currY = 180
+  const infoX = 250
+  let currY = 168
 
-  // Assigned ID Number
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 13px sans-serif"
-  ctx.fillText("ASSIGNED ID NUMBER:", infoX, currY)
-  ctx.fillStyle = "#0284c7"
+  // QC ID NUMBER
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("QC ID NUMBER", infoX, currY)
+  ctx.fillStyle = theme.isPwd ? "#b45309" : "#1e3a8a"
   ctx.font = "900 24px monospace"
-  ctx.fillText(app.applicationNo, infoX, currY + 28)
+  ctx.fillText(app.applicationNo, infoX, currY + 26)
 
-  // Cardholder Name
-  currY += 72
+  // CARDHOLDER FULL NAME
+  currY += 66
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("CARDHOLDER FULL NAME", infoX, currY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "900 21px sans-serif"
+  ctx.fillText((app.applicantName || "RESIDENT").toUpperCase(), infoX, currY + 24)
+
+  // CLASSIFICATION
+  currY += 58
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText(theme.isPwd ? "TYPE OF DISABILITY" : "CLASSIFICATION", infoX, currY)
+  ctx.fillStyle = theme.isPwd ? "#b91c1c" : "#065f46"
+  ctx.font = "900 16px sans-serif"
+  ctx.fillText(theme.classification, infoX, currY + 22)
+
+  // BIRTHDATE & SEX / BLOOD
+  currY += 54
   ctx.fillStyle = "#64748b"
   ctx.font = "bold 13px sans-serif"
-  ctx.fillText("CARDHOLDER FULL NAME:", infoX, currY)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "900 22px sans-serif"
-  ctx.fillText((app.applicantName || "RESIDENT").toUpperCase(), infoX, currY + 28)
+  ctx.fillText(`BIRTHDATE: ${app.dateOfBirth || "—"}`, infoX, currY)
+  ctx.fillText(`SEX / BLOOD: ${app.sex || "Male"} / O+`, infoX + 270, currY)
 
-  // Date of Birth & Contact
-  currY += 68
+  // ADDRESS
+  currY += 34
   ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("DATE OF BIRTH:", infoX, currY)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "bold 16px sans-serif"
-  ctx.fillText(app.dateOfBirth || "September 2026", infoX, currY + 22)
-
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("CONTACT NUMBER:", infoX + 260, currY)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "bold 16px sans-serif"
-  ctx.fillText(app.contactNumber || "0915 000 0000", infoX + 260, currY + 22)
-
-  // Registered Address
-  currY += 62
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("OFFICIAL RESIDENCE / ADDRESS:", infoX, currY)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "bold 15px sans-serif"
-  ctx.fillText(app.address || "Quezon City, Metro Manila", infoX, currY + 22)
+  ctx.font = "bold 13px sans-serif"
+  ctx.fillText(`ADDRESS: ${app.address || "11 ACACIA ST., SAUYO, QUEZON CITY"}`, infoX, currY, 520)
 
   // 6. Right Side Authentic QC Seal
   if (sealImg) {
-    ctx.drawImage(sealImg, 790, 165, 170, 170)
+    ctx.drawImage(sealImg, 795, 175, 155, 155)
     ctx.fillStyle = "#475569"
     ctx.font = "900 12px sans-serif"
     ctx.textAlign = "center"
-    ctx.fillText("AUTHENTIC QC SEAL", 875, 360)
+    ctx.fillText("QC SEAL", 872, 355)
     ctx.textAlign = "left"
   }
 
@@ -390,29 +408,34 @@ function drawFrontCard(
   ctx.lineTo(w, botY)
   ctx.stroke()
 
-  // Barcode simulation
-  ctx.fillStyle = "#1e293b"
-  ctx.font = "24px monospace"
-  ctx.fillText("|||| | || |||| | | ||| ||||", 40, botY + 42)
-  ctx.fillStyle = "#16a34a"
-  ctx.font = "900 11px sans-serif"
-  ctx.fillText("STATUS: OFFICIALLY APPROVED & ACTIVE", 40, botY + 68)
+  // Barcode
+  ctx.fillStyle = "#334155"
+  ctx.font = "bold 20px monospace"
+  ctx.fillText("|||| | || |||| | | ||| ||||", 35, botY + 36)
+
+  // Issue / Expiry
+  ctx.fillStyle = "#64748b"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText(`Issued: ${appDate}`, 35, botY + 62)
+  ctx.fillStyle = "#92400e"
+  ctx.font = "900 12px sans-serif"
+  ctx.fillText(`• Expires: ${expiryDateStr}`, 220, botY + 62)
 
   // Mayor Signature Line
-  ctx.strokeStyle = "#475569"
-  ctx.lineWidth = 2
+  ctx.strokeStyle = "#94a3b8"
+  ctx.lineWidth = 1.5
   ctx.beginPath()
-  ctx.moveTo(w - 340, botY + 44)
-  ctx.lineTo(w - 50, botY + 44)
+  ctx.moveTo(w - 320, botY + 40)
+  ctx.lineTo(w - 40, botY + 40)
   ctx.stroke()
 
   ctx.fillStyle = "#0f172a"
-  ctx.font = "900 15px sans-serif"
+  ctx.font = "900 14px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText("HON. MA. JOSEFINA G. BELMONTE", w - 195, botY + 38)
-  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("MA. JOSEFINA G. BELMONTE", w - 180, botY + 34)
+  ctx.font = "bold 11px sans-serif"
   ctx.fillStyle = "#64748b"
-  ctx.fillText("City Mayor, Quezon City", w - 195, botY + 64)
+  ctx.fillText("CITY MAYOR", w - 180, botY + 58)
   ctx.textAlign = "left"
 
   ctx.restore()
@@ -430,16 +453,39 @@ function drawBackCard(
   const w = 1000
   const h = 630
 
+  const emergencyInfo = getEmergencyInfo(app)
+  const issueDateObj = new Date(app.submittedAt || Date.now())
+  const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
+  const appDate = validIssueDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const expiryDateObj = new Date(validIssueDate)
+  expiryDateObj.setFullYear(expiryDateObj.getFullYear() + 1)
+  const expiryDateStr = expiryDateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
   ctx.save()
   ctx.translate(ox, oy)
 
-  // 1. Background & Border
+  // 1. Background
   ctx.fillStyle = "#ffffff"
   ctx.fillRect(0, 0, w, h)
 
   const bgGrad = ctx.createLinearGradient(0, 0, w, h)
-  bgGrad.addColorStop(0, "#f8fafc")
-  bgGrad.addColorStop(1, "#f1f5f9")
+  if (theme.isPwd) {
+    bgGrad.addColorStop(0, "#fffbeb")
+    bgGrad.addColorStop(0.5, "#ffffff")
+    bgGrad.addColorStop(1, "#fefce8")
+  } else {
+    bgGrad.addColorStop(0, "#eff6ff")
+    bgGrad.addColorStop(0.5, "#ffffff")
+    bgGrad.addColorStop(1, "#f0fdf4")
+  }
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, w, h)
 
@@ -447,180 +493,187 @@ function drawBackCard(
   ctx.lineWidth = 2
   ctx.strokeRect(0, 0, w, h)
 
-  // Watermark Seal (Low Opacity)
+  // Watermark Seal (Center Background)
   if (sealImg) {
     ctx.save()
-    ctx.globalAlpha = 0.07
-    ctx.drawImage(sealImg, 350, 160, 300, 300)
+    ctx.globalAlpha = 0.05
+    ctx.drawImage(sealImg, 350, 165, 300, 300)
     ctx.restore()
   }
 
-  // 2. Top Header Gradient
+  // 2. Top Header
   const headGrad = ctx.createLinearGradient(0, 0, w, 0)
   headGrad.addColorStop(0, theme.headerStart)
   headGrad.addColorStop(1, theme.headerEnd)
   ctx.fillStyle = headGrad
-  ctx.fillRect(0, 0, w, 75)
+  ctx.fillRect(0, 0, w, 68)
 
   if (sealImg) {
-    ctx.drawImage(sealImg, 25, 12, 50, 50)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(45, 34, 20, 0, Math.PI * 2)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)"
+    ctx.fill()
+    ctx.drawImage(sealImg, 27, 16, 36, 36)
+    ctx.restore()
   }
 
-  ctx.fillStyle = "#ffffff"
-  ctx.font = "900 19px sans-serif"
-  ctx.fillText("QUEZON CITY SOCIAL SERVICES DEVELOPMENT DEPARTMENT", 90, 36)
-  ctx.fillStyle = "#fef08a"
-  ctx.font = "bold 13px sans-serif"
-  ctx.fillText("OFFICIAL CITIZEN IDENTIFICATION CARD • TERMS & STATUTORY PRIVILEGES", 90, 58)
+  ctx.fillStyle = theme.isPwd ? "#0f172a" : "#ffffff"
+  ctx.font = "900 17px sans-serif"
+  ctx.fillText(theme.legalAct, 75, 41)
 
-  // 3. Left Section: Emergency Contact & Cardholder Signature
-  const leftX = 35
-  const leftW = 445
-  const boxY = 95
-  const boxH = 430
-
-  // Emergency Box
-  ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-  ctx.strokeStyle = "#e2e8f0"
-  ctx.lineWidth = 1.5
-  ctx.fillRect(leftX, boxY, leftW, boxH)
-  ctx.strokeRect(leftX, boxY, leftW, boxH)
-
-  // Header: Emergency
-  ctx.fillStyle = "#dc2626"
-  ctx.font = "900 14px sans-serif"
-  ctx.fillText("🚨 IN CASE OF EMERGENCY / NOTIFICATION", leftX + 18, boxY + 30)
-
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("PERSON TO CONTACT:", leftX + 18, boxY + 62)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "900 15px sans-serif"
-  ctx.fillText((app.applicantName || "FAMILY / GUARDIAN").toUpperCase(), leftX + 18, boxY + 84)
-
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("EMERGENCY CONTACT NO:", leftX + 18, boxY + 118)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "900 15px sans-serif"
-  ctx.fillText(app.contactNumber || "911 / QC Helpline 122", leftX + 18, boxY + 140)
-
-  ctx.fillStyle = "#64748b"
-  ctx.font = "bold 12px sans-serif"
-  ctx.fillText("RESIDENCE JURISDICTION:", leftX + 18, boxY + 174)
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "bold 14px sans-serif"
-  ctx.fillText(app.address || "Quezon City, Metro Manila", leftX + 18, boxY + 196)
-
-  // Signature Box
-  const sigBoxY = boxY + 235
-  ctx.fillStyle = "#ffffff"
-  ctx.strokeStyle = "#cbd5e1"
-  ctx.lineWidth = 1.5
-  ctx.fillRect(leftX + 18, sigBoxY, leftW - 36, 130)
-  ctx.strokeRect(leftX + 18, sigBoxY, leftW - 36, 130)
-
-  ctx.strokeStyle = "#94a3b8"
-  ctx.lineWidth = 1.5
+  // Right pill badge
+  const pillW = 120
+  const pillH = 34
+  const pillX = w - pillW - 25
+  const pillY = 17
+  ctx.fillStyle = theme.isPwd ? "#0f172a" : "#fbbf24"
   ctx.beginPath()
-  ctx.moveTo(leftX + 38, sigBoxY + 85)
-  ctx.lineTo(leftX + leftW - 56, sigBoxY + 85)
-  ctx.stroke()
-
-  ctx.fillStyle = "#64748b"
-  ctx.font = "900 12px sans-serif"
+  if (typeof (ctx as any).roundRect === "function") {
+    (ctx as any).roundRect(pillX, pillY, pillW, pillH, 17)
+  } else {
+    ctx.rect(pillX, pillY, pillW, pillH)
+  }
+  ctx.fill()
+  ctx.fillStyle = theme.isPwd ? "#fcd34d" : "#0f172a"
+  ctx.font = "900 14px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText("SIGNATURE OF CARDHOLDER / THUMBMARK", leftX + leftW / 2, sigBoxY + 110)
+  ctx.fillText(theme.photoTag, pillX + pillW / 2, pillY + 22)
   ctx.textAlign = "left"
 
-  // 4. Right Section: Terms, Conditions, & Legal Notice
-  const rightX = 515
-  const rightW = 450
+  // 3. Benefits Box
+  const boxX = 35
+  const boxY = 88
+  const boxW = 930
+  const boxH = 205
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-  ctx.strokeStyle = "#e2e8f0"
-  ctx.lineWidth = 1.5
-  ctx.fillRect(rightX, boxY, rightW, boxH)
-  ctx.strokeRect(rightX, boxY, rightW, boxH)
-
-  ctx.fillStyle = "#1e3a8a"
-  ctx.font = "900 14px sans-serif"
-  ctx.fillText("⚖️ LEGAL NOTICE & STATUTORY PRIVILEGES", rightX + 18, boxY + 30)
-
-  const rules = [
-    "1. This official ID is non-transferable and valid for statutory benefits, discounts, and priority lane privileges across the Philippines.",
-    `2. Issued pursuant to ${theme.legalAct} and City Ordinances of Quezon City.`,
-    "3. Any unauthorized reproduction, alteration, or fraudulent use of this card is strictly punishable by law.",
-    "4. In case of loss or damage, immediately report to the issuing office for cancellation and replacement.",
-    "5. IF FOUND, PLEASE RETURN TO:",
-  ]
-
-  let ruleY = boxY + 62
-  ctx.fillStyle = "#334155"
-  ctx.font = "12px sans-serif"
-
-  rules.forEach((r, idx) => {
-    if (idx === 4) {
-      ctx.font = "900 12px sans-serif"
-      ctx.fillStyle = "#0f172a"
-    }
-    ctx.fillText(r, rightX + 18, ruleY, rightW - 36)
-    ruleY += idx === 1 ? 38 : 34
-  })
-
-  // Return address box
-  const retY = ruleY + 5
-  ctx.fillStyle = "#f1f5f9"
-  ctx.strokeStyle = "#cbd5e1"
-  ctx.lineWidth = 1
-  ctx.fillRect(rightX + 18, retY, rightW - 36, 95)
-  ctx.strokeRect(rightX + 18, retY, rightW - 36, 95)
-
-  ctx.fillStyle = "#0f172a"
-  ctx.font = "900 12.5px sans-serif"
-  ctx.fillText(theme.officeName, rightX + 28, retY + 24)
-  ctx.fillStyle = "#475569"
-  ctx.font = "bold 11.5px sans-serif"
-  ctx.fillText("Quezon City Hall Complex, Elliptical Road, Diliman, QC", rightX + 28, retY + 46)
-  ctx.fillText("Hotline: (02) 8988-4242 / QC Contact Center 122", rightX + 28, retY + 68)
-
-  // 5. Bottom Validation Bar
-  const botY = h - 85
-  ctx.fillStyle = "#f8fafc"
-  ctx.fillRect(0, botY, w, 85)
-  ctx.strokeStyle = "#cbd5e1"
+  ctx.fillStyle = theme.isPwd ? "rgba(254, 243, 199, 0.75)" : "rgba(239, 246, 255, 0.75)"
+  ctx.strokeStyle = theme.isPwd ? "#fde68a" : "#bfdbfe"
   ctx.lineWidth = 1.5
   ctx.beginPath()
-  ctx.moveTo(0, botY)
-  ctx.lineTo(w, botY)
+  if (typeof (ctx as any).roundRect === "function") {
+    (ctx as any).roundRect(boxX, boxY, boxW, boxH, 16)
+  } else {
+    ctx.rect(boxX, boxY, boxW, boxH)
+  }
+  ctx.fill()
   ctx.stroke()
 
-  ctx.fillStyle = "#1e293b"
-  ctx.font = "900 14px monospace"
-  ctx.fillText(`QC-SSDD-VERIFIED: ${app.applicationNo}`, 40, botY + 38)
-  ctx.font = "bold 11px sans-serif"
-  ctx.fillStyle = "#64748b"
-  ctx.fillText("Verified Digital Government Document • City Government of Quezon City", 40, botY + 62)
+  let lineY = boxY + 45
+  // Benefit 1
+  ctx.fillStyle = theme.isPwd ? "#b45309" : "#1d4ed8"
+  ctx.font = "bold 20px sans-serif"
+  ctx.fillText("✓", boxX + 25, lineY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "bold 16px sans-serif"
+  ctx.fillText("20% Discount & VAT Exemption on medicines, medical supplies, and dental services.", boxX + 55, lineY)
 
-  if (sealImg) {
-    ctx.drawImage(sealImg, w - 100, botY + 12, 60, 60)
+  // Benefit 2
+  lineY += 52
+  ctx.fillStyle = theme.isPwd ? "#b45309" : "#1d4ed8"
+  ctx.font = "bold 20px sans-serif"
+  ctx.fillText("✓", boxX + 25, lineY)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "bold 16px sans-serif"
+  ctx.fillText("20% Discount on public domestic transportation (air, sea, land, MRT/LRT), hotels, and restaurants.", boxX + 55, lineY)
+
+  // Benefit 3
+  lineY += 52
+  ctx.fillStyle = theme.isPwd ? "#b45309" : "#1d4ed8"
+  ctx.font = "bold 20px sans-serif"
+  ctx.fillText("✓", boxX + 25, lineY)
+  ctx.fillStyle = "#334155"
+  ctx.font = "16px sans-serif"
+  ctx.fillText("Valid from ", boxX + 55, lineY)
+  ctx.font = "900 16px sans-serif"
+  ctx.fillStyle = "#0f172a"
+  ctx.fillText(appDate, boxX + 138, lineY)
+  ctx.font = "16px sans-serif"
+  ctx.fillStyle = "#334155"
+  ctx.fillText(" to ", boxX + 285, lineY)
+  ctx.font = "900 16px sans-serif"
+  ctx.fillStyle = "#0f172a"
+  ctx.fillText(expiryDateStr, boxX + 310, lineY)
+  ctx.font = "16px sans-serif"
+  ctx.fillStyle = "#334155"
+  ctx.fillText(" across all cities in the Philippines.", boxX + 455, lineY)
+
+  // 4. Divider Line
+  ctx.strokeStyle = theme.isPwd ? "#fde68a" : "#bfdbfe"
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(35, 318)
+  ctx.lineTo(w - 35, 318)
+  ctx.stroke()
+
+  // 5. Emergency Notification Box
+  const emY = 338
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "900 14px sans-serif"
+  ctx.fillText("IN CASE OF EMERGENCY, PLEASE NOTIFY:", boxX + 10, emY + 14)
+
+  const cardY = emY + 26
+  const cardH = 225
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)"
+  ctx.strokeStyle = theme.isPwd ? "#fde68a" : "#bfdbfe"
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  if (typeof (ctx as any).roundRect === "function") {
+    (ctx as any).roundRect(boxX, cardY, boxW, cardH, 16)
+  } else {
+    ctx.rect(boxX, cardY, boxW, cardH)
   }
+  ctx.fill()
+  ctx.stroke()
+
+  // 2x2 Grid inside Emergency card
+  const col1X = boxX + 30
+  const col2X = boxX + 480
+
+  // Row 1: Contact Person & Phone
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("CONTACT PERSON:", col1X, cardY + 45)
+  ctx.fillStyle = "#0f172a"
+  ctx.font = "900 18px sans-serif"
+  ctx.fillText(emergencyInfo.emergencyPerson.toUpperCase(), col1X + 145, cardY + 45)
+
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("PHONE:", col2X, cardY + 45)
+  ctx.fillStyle = theme.isPwd ? "#b45309" : "#1d4ed8"
+  ctx.font = "900 18px monospace"
+  ctx.fillText(emergencyInfo.emergencyPhone, col2X + 65, cardY + 45)
+
+  // Row 2: Relation & Address
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("RELATION:", col1X, cardY + 115)
+  ctx.fillStyle = "#1e293b"
+  ctx.font = "bold 16px sans-serif"
+  ctx.fillText(emergencyInfo.emergencyRel, col1X + 90, cardY + 115)
+
+  ctx.fillStyle = "#94a3b8"
+  ctx.font = "bold 12px sans-serif"
+  ctx.fillText("ADDRESS:", col2X, cardY + 115)
+  ctx.fillStyle = "#1e293b"
+  ctx.font = "bold 15px sans-serif"
+  ctx.fillText(emergencyInfo.emergencyAddr, col2X + 80, cardY + 115, 380)
 
   ctx.restore()
 }
 
 /**
  * Generate and download a high-resolution authentic Quezon City Digital ID Card PNG
- * Supports: "front" (Front side), "back" (Back side), "both" (2-sided printable sheet)
  */
 export async function downloadIdCardAsImage(
   app: ApplicationRecord,
   photoUrl?: string,
-  mode: "front" | "back" | "both" = "both"
+  mode: "front" | "back" = "front"
 ) {
   const theme = getCardTheme(app)
 
-  // 1. Preload Images Safely
+  // Preload Images Safely
   const [sealImg, photoImg] = await Promise.all([
     loadImageSafely("/gov-serves-seal.png"),
     photoUrl ? loadImageSafely(photoUrl) : Promise.resolve(null),
@@ -630,73 +683,26 @@ export async function downloadIdCardAsImage(
   const ctx = canvas.getContext("2d")
   if (!ctx) return
 
-  if (mode === "front") {
-    canvas.width = 1000
-    canvas.height = 630
-    drawFrontCard(ctx, app, theme, photoImg, sealImg, 0, 0)
+  canvas.width = 1000
+  canvas.height = 630
 
+  if (mode === "front") {
+    drawFrontCard(ctx, app, theme, photoImg, sealImg, 0, 0)
     const link = document.createElement("a")
     link.download = `QC_ID_FRONT_${app.applicationNo}.png`
     link.href = canvas.toDataURL("image/png")
     link.click()
-  } else if (mode === "back") {
-    canvas.width = 1000
-    canvas.height = 630
+  } else {
     drawBackCard(ctx, app, theme, sealImg, 0, 0)
-
     const link = document.createElement("a")
     link.download = `QC_ID_BACK_${app.applicationNo}.png`
-    link.href = canvas.toDataURL("image/png")
-    link.click()
-  } else {
-    // Both sides on a printable A4-proportioned sheet (1080 x 1380 px)
-    canvas.width = 1080
-    canvas.height = 1380
-
-    // Sheet Background
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Top Header on Sheet
-    ctx.fillStyle = "#0f172a"
-    ctx.font = "900 20px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText("QUEZON CITY GOVERNMENT • CITIZEN DIGITAL ID CARD PRINTABLE SHEET", canvas.width / 2, 40)
-    ctx.font = "bold 13px sans-serif"
-    ctx.fillStyle = "#64748b"
-    ctx.fillText(`Official Document Record: ${app.applicationNo} • Standard CR80 ID Proportion (85.6mm × 53.98mm)`, canvas.width / 2, 62)
-    ctx.textAlign = "left"
-
-    // Draw Front Side at top
-    drawFrontCard(ctx, app, theme, photoImg, sealImg, 40, 75)
-
-    // Center Cutting Guideline
-    const cutY = 720
-    ctx.strokeStyle = "#94a3b8"
-    ctx.lineWidth = 1.5
-    ctx.setLineDash([8, 6])
-    ctx.beginPath()
-    ctx.moveTo(40, cutY)
-    ctx.lineTo(canvas.width - 40, cutY)
-    ctx.stroke()
-    ctx.setLineDash([])
-
-    ctx.fillStyle = "#64748b"
-    ctx.font = "bold 12px monospace"
-    ctx.textAlign = "center"
-    ctx.fillText("✂️ - - - - - - - - - - - - - [ CUT HERE / FOLD FOR 2-SIDED ID CARD ] - - - - - - - - - - - - - ✂️", canvas.width / 2, cutY - 6)
-    ctx.textAlign = "left"
-
-    // Draw Back Side at bottom
-    drawBackCard(ctx, app, theme, sealImg, 40, 735)
-
     link.href = canvas.toDataURL("image/png")
     link.click()
   }
 }
 
 /**
- * Dedicated 2-Sided Digital ID Card Interactive Modal with Live Front/Back Switcher, Download PNG, & Print
+ * Dedicated Official Digital ID Card Modal matching official QC OSCA & PDAO standards
  */
 function DigitalIdCardModal({
   app,
@@ -707,8 +713,24 @@ function DigitalIdCardModal({
 }) {
   const photoUrl = getApplicantPhotoUrl(app)
   const theme = getCardTheme(app)
+  const emergencyInfo = getEmergencyInfo(app)
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
   const [isDownloading, setIsDownloading] = useState(false)
+
+  const issueDateObj = new Date(app.submittedAt || Date.now())
+  const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
+  const appDate = validIssueDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const expiryDateObj = new Date(validIssueDate)
+  expiryDateObj.setFullYear(expiryDateObj.getFullYear() + 1)
+  const expiryDateStr = expiryDateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 
   const handlePrint = () => {
     window.print()
@@ -730,88 +752,115 @@ function DigitalIdCardModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Modal Top Bar */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <IdCard className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+              <IdCard className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Digital ID Card</h3>
-              <p className="text-xs text-slate-500 font-mono">Assigned ID Number: {app.applicationNo}</p>
+              <h3 className="text-sm font-bold text-gray-900 leading-none">
+                Official Quezon City {theme.isPwd ? "Persons with Disability (PWD) ID Card" : theme.isSolo ? "Solo Parent ID Card" : "Senior Citizen OSCA ID Card"}
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-1 font-mono">
+                Card ID: <span className="text-blue-600 font-bold">{app.applicationNo}</span>
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* ── SIDE SWITCHER TABS ── */}
-        <div className="flex items-center justify-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+        {/* ── UNDERLINE NAVIGATION TABS ── */}
+        <div className="border-b border-gray-200 px-6 flex gap-6 bg-white">
           <button
             type="button"
             onClick={() => setActiveSide("front")}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            className={`py-3 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-b-2 ${
               activeSide === "front"
-                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            <IdCard className="w-4 h-4" />
-            <span>Harap (Front Card)</span>
+            FRONT OF ID CARD
           </button>
           <button
             type="button"
             onClick={() => setActiveSide("back")}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            className={`py-3 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-b-2 ${
               activeSide === "back"
-                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Likod (Back Card)</span>
+            BACK OF ID CARD (PRIVILEGES &amp; EMERGENCY)
           </button>
         </div>
 
         {/* ── CARD LIVE PREVIEWS ── */}
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+        <div className="p-6 bg-slate-100/70 flex items-center justify-center min-h-[380px]">
           {/* 1. FRONT CARD PREVIEW */}
-          {activeSide === "front" && (
-            <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none animate-in fade-in duration-150">
+          {activeSide === "front" ? (
+            <div
+              className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none"
+              style={{
+                aspectRatio: "1.586 / 1",
+                background: theme.isPwd
+                  ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
+                  : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
+              }}
+            >
               {/* Header */}
               <div
-                className="px-4 py-2.5 flex items-center justify-between text-white shadow-xs"
-                style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
+                className={`px-3.5 py-2 flex items-center justify-between shadow-xs ${
+                  theme.isPwd
+                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
+                    : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
+                }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-8 h-8 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
+                <div className="flex items-center gap-2">
+                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
                   <div>
-                    <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
-                    <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES • QUEZON CITY</p>
+                    <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${theme.isPwd ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
+                      Republic of the Philippines
+                    </p>
+                    <p className={`text-xs font-black tracking-wide leading-tight uppercase ${theme.isPwd ? "text-slate-950" : "text-white"}`}>
+                      GOV SERVICES
+                    </p>
                   </div>
                 </div>
-                <span className="text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
-                  {theme.idTitle}
+                <span
+                  className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    theme.isPwd
+                      ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
+                      : "bg-white/20 text-white border-white/30"
+                  }`}
+                >
+                  {theme.pillText}
                 </span>
               </div>
 
-              {/* Subheader */}
+              {/* Sub-header */}
               <div
-                className="py-1 text-center text-[9.5px] font-black uppercase tracking-widest"
-                style={{ backgroundColor: theme.subheaderBg, color: theme.subheaderText }}
+                className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
+                  theme.isPwd
+                    ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
+                    : "bg-amber-400 text-slate-950"
+                }`}
               >
-                {theme.idSubTitle}
+                {theme.officeName}
               </div>
 
-              {/* Details & Photo */}
-              <div className="p-3.5 flex gap-3 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+              {/* Details with QC Logo on right side */}
+              <div className="p-3 flex gap-2.5 items-start relative">
+                {/* 2x2 Photo */}
                 <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
                   {photoUrl ? (
                     <img src={photoUrl} alt="Cardholder" className="w-full h-full object-cover" />
@@ -821,15 +870,20 @@ function DigitalIdCardModal({
                       <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
                     </div>
                   )}
-                  <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[7px] text-center py-0.5 font-bold uppercase">
-                    {theme.badgeText}
+                  <div
+                    className={`absolute bottom-0 inset-x-0 text-white text-[6.5px] text-center py-0.5 font-bold uppercase ${theme.isPwd ? "bg-amber-600" : "bg-blue-900"}`}
+                  >
+                    {theme.photoTag}
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0 space-y-1 relative z-10 text-slate-900">
+                {/* Details text */}
+                <div className="flex-1 min-w-0 space-y-1 relative z-10">
                   <div>
-                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Assigned ID Number</span>
-                    <p className="text-sm font-black text-blue-600 font-mono tracking-wide leading-none">{app.applicationNo}</p>
+                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">QC ID Number</span>
+                    <p className={`text-sm font-black font-mono tracking-wide leading-none ${theme.isPwd ? "text-amber-700" : "text-blue-900"}`}>
+                      {app.applicationNo}
+                    </p>
                   </div>
 
                   <div className="pt-0.5">
@@ -837,160 +891,190 @@ function DigitalIdCardModal({
                     <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{app.applicantName || "RESIDENT"}</p>
                   </div>
 
+                  <div className="pt-0.5">
+                    <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">
+                      {theme.isPwd ? "Type of Disability" : "Classification"}
+                    </span>
+                    <p className={`text-[9.5px] font-bold leading-tight truncate ${theme.isPwd ? "text-red-700" : "text-emerald-800"}`}>
+                      {theme.classification}
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
                     <div>
                       <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {app.dateOfBirth || "—"}
                     </div>
                     <div>
-                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Contact:</span> {app.contactNumber || "—"}
+                      <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {app.sex || "Male"} / O+
                     </div>
                   </div>
 
                   <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
-                    <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "Quezon City"}
+                    <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {app.address || "11 ACACIA ST., SAUYO, QUEZON CITY"}
                   </div>
                 </div>
 
-                {/* QC Official Seal on right */}
+                {/* QC Official Logo on the right side */}
                 <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
                   <img
                     src="/gov-serves-seal.png"
                     alt="QC Official Seal"
-                    className="w-13 h-13 object-contain drop-shadow-md"
+                    className="w-14 h-14 object-contain drop-shadow-md hover:scale-105 transition-transform"
                   />
-                  <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">AUTHENTIC</span>
+                  <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
                 </div>
               </div>
 
-              {/* Bottom Barcode & Signature */}
-              <div className="px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+              {/* Bottom Signatures & Barcode */}
+              <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
                 <div>
-                  <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
-                  <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Officially Approved &amp; Active</span>
+                  <p className="font-mono font-bold text-slate-700 tracking-widest text-[8.5px]">|||| | || |||| | | ||| ||||</p>
+                  <div className="flex items-center gap-1.5 text-[6.5px] uppercase tracking-wider font-semibold">
+                    <span className="text-slate-400">Issued: {appDate}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-amber-800 font-bold">Expires: {expiryDateStr}</span>
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="w-18 border-b border-slate-400 mx-auto mb-0.5" />
-                  <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">HON. MA. JOSEFINA G. BELMONTE</p>
-                  <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor, Quezon City</p>
+                  <p className="font-bold text-slate-800 text-[7.5px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
+                  <p className="text-[6.5px] text-slate-500 uppercase leading-none">City Mayor</p>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* 2. BACK CARD PREVIEW */}
-          {activeSide === "back" && (
-            <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md bg-white select-none relative animate-in fade-in duration-150">
-              {/* Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06]">
-                <img src="/gov-serves-seal.png" alt="QC Watermark" className="w-48 h-48 object-contain" />
+          ) : (
+            <div
+              className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
+              style={{
+                aspectRatio: "1.586 / 1",
+                background: theme.isPwd
+                  ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
+                  : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
+              }}
+            >
+              {/* Background Watermark Seal */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
+                <img src="/gov-serves-seal.png" alt="" className="w-48 h-48 object-contain" />
               </div>
 
-              {/* Header */}
+              {/* Back Header Strip */}
               <div
-                className="px-4 py-2 flex items-center justify-between text-white shadow-xs"
-                style={{ background: `linear-gradient(to right, ${theme.headerStart}, ${theme.headerEnd})` }}
+                className={`px-3.5 py-1.5 flex items-center justify-between shadow-xs relative z-10 ${
+                  theme.isPwd
+                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
+                    : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
+                }`}
               >
-                <div className="flex items-center gap-2">
-                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-6 h-6 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-                  <div>
-                    <p className="text-[8px] font-black tracking-wide leading-tight uppercase">QUEZON CITY SOCIAL SERVICES DEVELOPMENT DEPARTMENT</p>
-                    <p className="text-[6.5px] font-bold text-amber-200 tracking-widest uppercase">TERMS &amp; STATUTORY PRIVILEGES</p>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <img src="/gov-serves-seal.png" alt="QC Seal" className="w-4 h-4 object-contain rounded-full bg-white/20 p-0.5" />
+                  <p className="text-[8.5px] font-black uppercase tracking-wide leading-tight">
+                    {theme.legalAct}
+                  </p>
                 </div>
+                <span
+                  className={`text-[7.5px] font-black px-2 py-0.5 rounded-full border shadow-xs ${
+                    theme.isPwd
+                      ? "bg-slate-950 text-amber-300 border-slate-800"
+                      : "bg-amber-400 text-slate-950 border-amber-500"
+                  }`}
+                >
+                  {theme.photoTag}
+                </span>
               </div>
 
-              {/* Back Body (2 Columns) */}
-              <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[8.5px] text-slate-800 relative z-10">
-                {/* Left: Emergency Contact & Signature */}
-                <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1.5">
-                  <p className="text-[8px] font-black text-red-600 uppercase flex items-center gap-1">
-                    🚨 IN CASE OF EMERGENCY
+              <div className="p-3 pt-2 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
+                {/* Benefits / Rights List */}
+                <div
+                  className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
+                    theme.isPwd ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
+                  }`}
+                >
+                  <p className="flex items-start gap-1">
+                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+                    <span><strong>20% Discount &amp; VAT Exemption</strong> on medicines, medical supplies, and dental services.</span>
                   </p>
-                  <div>
-                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Contact Person:</span>
-                    <p className="font-bold text-slate-900 uppercase">{app.applicantName || "FAMILY / GUARDIAN"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Emergency Phone:</span>
-                    <p className="font-bold text-slate-900">{app.contactNumber || "911 / QC Helpline 122"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[7px] font-semibold text-slate-400 block uppercase">Jurisdiction Address:</span>
-                    <p className="text-slate-700 truncate">{app.address || "Quezon City, Metro Manila"}</p>
-                  </div>
+                  <p className="flex items-start gap-1">
+                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+                    <span><strong>20% Discount</strong> on public domestic transportation (air, sea, land, MRT/LRT), hotels, and restaurants.</span>
+                  </p>
+                  <p className="flex items-start gap-1">
+                    <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
+                    <span>Valid from <strong className="text-slate-900">{appDate}</strong> to <strong className="text-slate-900">{expiryDateStr}</strong> across all cities in the Philippines.</span>
+                  </p>
+                </div>
 
-                  <div className="pt-2">
-                    <div className="border border-slate-300 rounded-lg p-2 text-center bg-white">
-                      <div className="w-24 border-b border-slate-400 mx-auto mt-3 mb-0.5" />
-                      <span className="text-[6.5px] font-black uppercase text-slate-500">SIGNATURE OF CARDHOLDER</span>
+                {/* Emergency Contact */}
+                <div className={`border-t pt-1.5 ${theme.isPwd ? "border-amber-200/70" : "border-blue-200/70"}`}>
+                  <p className="text-[7.5px] font-black text-slate-800 uppercase tracking-wider mb-1">In case of emergency, please notify:</p>
+                  <div
+                    className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${
+                      theme.isPwd ? "border-amber-200/60" : "border-blue-200/60"
+                    }`}
+                  >
+                    <div>
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Contact Person: </span>
+                      <span className="font-bold text-slate-900 truncate">{emergencyInfo.emergencyPerson}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Phone: </span>
+                      <span className={`font-mono font-bold ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>{emergencyInfo.emergencyPhone}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Relation: </span>
+                      <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyRel}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[6px]">Address: </span>
+                      <span className="font-semibold text-slate-800 truncate">{emergencyInfo.emergencyAddr}</span>
                     </div>
                   </div>
                 </div>
-
-                {/* Right: Statutory Rights & Return Info */}
-                <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200 space-y-1">
-                  <p className="text-[8px] font-black text-blue-900 uppercase">
-                    ⚖️ OFFICIAL NOTICE &amp; PRIVILEGES
-                  </p>
-                  <p className="text-[7.5px] text-slate-700 leading-tight">
-                    • Ang ID na ito ay non-transferable at may bisa sa lahat ng pribado at pampublikong establisimyento para sa 20% discount at statutory privileges alinsunod sa <strong>{theme.legalAct}</strong>.
-                  </p>
-                  <p className="text-[7.5px] text-slate-700 leading-tight">
-                    • Mahigpit na ipinagbabawal ang anumang pamemeke o pagpapahiram ng ID na ito alinsunod sa batas ng Pilipinas.
-                  </p>
-
-                  <div className="p-1.5 rounded-lg bg-blue-50/90 border border-blue-200 text-[7px] text-blue-950 mt-1">
-                    <p className="font-black uppercase">KUNG MAPULOT, MANGYARING ISAULI SA:</p>
-                    <p className="font-bold">{theme.officeName}</p>
-                    <p>QC Hall Complex, Diliman, Quezon City • Hotline: 122</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Bar */}
-              <div className="px-3.5 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7px]">
-                <p className="font-mono font-bold text-slate-700">QC-SSDD-VERIFIED: {app.applicationNo}</p>
-                <p className="text-slate-500 font-semibold uppercase">Official Republic of the Philippines Document</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── ACTION BUTTONS: FRONT PNG, BACK PNG, & PRINT ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            disabled={isDownloading}
-            onClick={() => handleDownloadSide("front")}
-            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Front (PNG)</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isDownloading}
-            onClick={() => handleDownloadSide("back")}
-            className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Back (PNG)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Print Official ID</span>
-          </button>
+        {/* ── MODAL FOOTER ACTION BAR ── */}
+        <div className="p-4 border-t border-gray-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[11px] text-gray-500 leading-snug">
+            Compliant with official Quezon City PDAO &amp; OSCA card issuance guidelines.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("front")}
+              className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Front (PNG)</span>
+            </button>
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadSide("back")}
+              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Back (PNG)</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Card</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
-
-        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-          Maaari mong i-download ang <strong>Harap (Front)</strong> at <strong>Likod (Back)</strong> ng ID bilang mga high-resolution PNG image o i-print para magsilbing opisyal na ID at diskwento.
-        </p>
       </div>
     </div>
   )
@@ -2486,29 +2570,29 @@ export default function MyApplications() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
-                    onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "both")}
+                    onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "front")}
                     className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download 2-Sided Sheet (PNG)</span>
+                    <span>Download Front (PNG)</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                    onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "back")}
+                    className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span>Print Official ID Card</span>
+                    <Download className="w-4 h-4" />
+                    <span>Download Back (PNG)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIdCardApp(selectedApp)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer border border-slate-300 dark:border-slate-700"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span>View Modal Switcher</span>
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>View &amp; Print Official ID</span>
                   </button>
                 </div>
               </div>
