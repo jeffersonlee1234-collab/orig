@@ -811,71 +811,75 @@ function OfficialFrontCardView({
   photoUrl,
   appDate,
   expiryDateStr,
+  cardRef,
 }: {
   app: ApplicationRecord
   theme: CardTheme
   photoUrl: string
   appDate: string
   expiryDateStr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none text-slate-900"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none text-slate-900 flex flex-col justify-between"
       style={{
-        aspectRatio: "1.586 / 1",
         background: theme.isPwd
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
           : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
       }}
     >
-      {/* Header */}
-      <div
-        className={`px-3.5 py-2 flex items-center justify-between shadow-xs ${
-          theme.isPwd
-            ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
-            : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <img
-            src="/gov-serves-seal.png"
-            alt="QC Seal"
-            crossOrigin="anonymous"
-            className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5"
-          />
-          <div>
-            <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${theme.isPwd ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
-              Republic of the Philippines
-            </p>
-            <p className={`text-xs font-black tracking-wide leading-tight uppercase ${theme.isPwd ? "text-slate-950" : "text-white"}`}>
-              GOV SERVICES
-            </p>
-          </div>
-        </div>
-        <span
-          className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+      {/* Top Header */}
+      <div>
+        <div
+          className={`px-3.5 py-2 flex items-center justify-between shadow-xs ${
             theme.isPwd
-              ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
-              : "bg-white/20 text-white border-white/30"
+              ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950"
+              : "bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 text-white"
           }`}
         >
-          {theme.pillText}
-        </span>
+          <div className="flex items-center gap-2">
+            <img
+              src="/gov-serves-seal.png"
+              alt="QC Seal"
+              crossOrigin="anonymous"
+              className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5"
+            />
+            <div>
+              <p className={`text-[7.5px] font-bold tracking-widest uppercase leading-tight ${theme.isPwd ? "text-slate-800" : "text-blue-100 opacity-90"}`}>
+                Republic of the Philippines
+              </p>
+              <p className={`text-xs font-black tracking-wide leading-tight uppercase ${theme.isPwd ? "text-slate-950" : "text-white"}`}>
+                GOV SERVICES
+              </p>
+            </div>
+          </div>
+          <span
+            className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+              theme.isPwd
+                ? "bg-slate-950 text-amber-300 border-slate-800 shadow-xs"
+                : "bg-white/20 text-white border-white/30"
+            }`}
+          >
+            {theme.pillText}
+          </span>
+        </div>
+
+        {/* Sub-header */}
+        <div
+          className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
+            theme.isPwd
+              ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
+              : "bg-amber-400 text-slate-950"
+          }`}
+        >
+          {theme.officeName}
+        </div>
       </div>
 
-      {/* Sub-header */}
-      <div
-        className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${
-          theme.isPwd
-            ? "bg-slate-950 text-amber-300 border-b border-amber-500/40"
-            : "bg-amber-400 text-slate-950"
-        }`}
-      >
-        {theme.officeName}
-      </div>
-
-      {/* Details with QC Logo on right side */}
-      <div className="p-3 flex gap-2.5 items-start relative">
+      {/* Middle Details with QC Logo on right side */}
+      <div className="px-3.5 py-2 flex gap-3 items-center relative flex-1">
         {/* 2x2 Photo */}
         <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
           {photoUrl ? (
@@ -943,7 +947,7 @@ function OfficialFrontCardView({
       </div>
 
       {/* Bottom Signatures & Barcode */}
-      <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
+      <div className="px-3.5 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
         <div>
           <p className="font-mono font-bold text-slate-700 tracking-widest text-[8.5px]">|||| | || |||| | | ||| ||||</p>
           <div className="flex items-center gap-1.5 text-[6.5px] uppercase tracking-wider font-semibold">
@@ -967,17 +971,19 @@ function OfficialBackCardView({
   emergencyInfo,
   appDate,
   expiryDateStr,
+  cardRef,
 }: {
   theme: CardTheme
   emergencyInfo: ReturnType<typeof getEmergencyInfo>
   appDate: string
   expiryDateStr: string
+  cardRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
-      className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
+      ref={cardRef}
+      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
-        aspectRatio: "1.586 / 1",
         background: theme.isPwd
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
           : "linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdf4 100%)",
@@ -1018,22 +1024,22 @@ function OfficialBackCardView({
         </span>
       </div>
 
-      <div className="p-3 pt-2 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
+      <div className="p-3 space-y-2 relative z-10 flex-1 flex flex-col justify-between">
         {/* Benefits / Rights List */}
         <div
-          className={`rounded-lg p-2 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
+          className={`rounded-xl p-2.5 space-y-1 text-[7.5px] text-slate-800 leading-tight border ${
             theme.isPwd ? "bg-amber-50/80 border-amber-200/80" : "bg-blue-50/80 border-blue-200/80"
           }`}
         >
-          <p className="flex items-start gap-1">
+          <p className="flex items-start gap-1.5">
             <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
             <span><strong>20% Discount &amp; VAT Exemption</strong> on medicines, medical supplies, and dental services.</span>
           </p>
-          <p className="flex items-start gap-1">
+          <p className="flex items-start gap-1.5">
             <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
             <span><strong>20% Discount</strong> on public domestic transportation (air, sea, land, MRT/LRT), hotels, and restaurants.</span>
           </p>
-          <p className="flex items-start gap-1">
+          <p className="flex items-start gap-1.5">
             <span className={`font-bold shrink-0 ${theme.isPwd ? "text-amber-700" : "text-blue-700"}`}>✓</span>
             <span>Valid from <strong className="text-slate-900">{appDate}</strong> to <strong className="text-slate-900">{expiryDateStr}</strong> across all cities in the Philippines.</span>
           </p>
@@ -1043,7 +1049,7 @@ function OfficialBackCardView({
         <div className={`border-t pt-1.5 ${theme.isPwd ? "border-amber-200/70" : "border-blue-200/70"}`}>
           <p className="text-[7.5px] font-black text-slate-800 uppercase tracking-wider mb-1">In case of emergency, please notify:</p>
           <div
-            className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-1.5 rounded-lg border shadow-xs ${
+            className={`grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] text-slate-700 bg-white/90 p-2 rounded-xl border shadow-xs ${
               theme.isPwd ? "border-amber-200/60" : "border-blue-200/60"
             }`}
           >
@@ -1086,8 +1092,8 @@ function DigitalIdCardModal({
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
   const [isDownloading, setIsDownloading] = useState(false)
 
-  const frontCardRef = useRef<HTMLDivElement>(null)
-  const backCardRef = useRef<HTMLDivElement>(null)
+  const frontDownloadRef = useRef<HTMLDivElement>(null)
+  const backDownloadRef = useRef<HTMLDivElement>(null)
 
   const issueDateObj = new Date(app.submittedAt || Date.now())
   const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
@@ -1111,13 +1117,15 @@ function DigitalIdCardModal({
   const handleDownloadSide = async (mode: "front" | "back") => {
     setIsDownloading(true)
     try {
-      const targetElement = mode === "front" ? frontCardRef.current : backCardRef.current
+      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
       if (targetElement) {
-        // Generate high resolution image identical to rendered component
+        // High-resolution rasterization centered perfectly with exact 500x315 dimensions
         const dataUrl = await toPng(targetElement, {
           pixelRatio: 3,
           cacheBust: true,
           quality: 1,
+          width: 500,
+          height: 315,
         })
         const link = document.createElement("a")
         link.download = `QC_ID_${mode.toUpperCase()}_${app.applicationNo}.png`
@@ -1194,7 +1202,7 @@ function DigitalIdCardModal({
         </div>
 
         {/* ── CARD LIVE PREVIEWS ── */}
-        <div className="p-6 bg-slate-100/70 flex items-center justify-center min-h-[380px]">
+        <div className="p-6 bg-slate-100/70 flex items-center justify-center min-h-[380px] overflow-x-auto">
           {activeSide === "front" ? (
             <OfficialFrontCardView
               app={app}
@@ -1213,35 +1221,47 @@ function DigitalIdCardModal({
           )}
         </div>
 
-        {/* ── OFF-SCREEN HIGH-RESOLUTION CAPTURE CONTAINERS (Exact 1:1 with Pic 2 & Pic 1) ── */}
+        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Bound directly with 0 offset and exact dimensions) ── */}
         <div
           style={{
             position: "fixed",
-            left: "-9999px",
+            left: "-99999px",
             top: 0,
             width: "500px",
+            height: "315px",
             pointerEvents: "none",
             zIndex: -999,
           }}
           aria-hidden="true"
         >
-          <div ref={frontCardRef} className="w-[500px]">
-            <OfficialFrontCardView
-              app={app}
-              theme={theme}
-              photoUrl={photoUrl}
-              appDate={appDate}
-              expiryDateStr={expiryDateStr}
-            />
-          </div>
-          <div ref={backCardRef} className="w-[500px] mt-4">
-            <OfficialBackCardView
-              theme={theme}
-              emergencyInfo={emergencyInfo}
-              appDate={appDate}
-              expiryDateStr={expiryDateStr}
-            />
-          </div>
+          <OfficialFrontCardView
+            cardRef={frontDownloadRef}
+            app={app}
+            theme={theme}
+            photoUrl={photoUrl}
+            appDate={appDate}
+            expiryDateStr={expiryDateStr}
+          />
+        </div>
+        <div
+          style={{
+            position: "fixed",
+            left: "-99999px",
+            top: 0,
+            width: "500px",
+            height: "315px",
+            pointerEvents: "none",
+            zIndex: -999,
+          }}
+          aria-hidden="true"
+        >
+          <OfficialBackCardView
+            cardRef={backDownloadRef}
+            theme={theme}
+            emergencyInfo={emergencyInfo}
+            appDate={appDate}
+            expiryDateStr={expiryDateStr}
+          />
         </div>
 
         {/* ── MODAL FOOTER ACTION BAR ── */}
