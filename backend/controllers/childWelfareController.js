@@ -23,6 +23,63 @@ async function getUniqueReferenceNumber(baseRef) {
 }
 
 async function initChildWelfareColumns() {
+  const columnDefs = [
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_id VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_title VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_first_name VARCHAR(150)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_middle_name VARCHAR(150)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_last_name VARCHAR(150)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_sex VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_date_of_birth VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_age INTEGER",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_civil_status VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_relationship_to_child VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_contact_no VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_valid_id VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_sex VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birthday VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_age INTEGER",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_daycare VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birth_certificate VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_grade_level VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_address TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_enrollment_status VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs_specify TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS household_members VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS children_studying VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS monthly_household_income VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS main_source_income VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_financial_support TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_types JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_other TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS primary_reason_for_assistance TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS specific_needs TEXT",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS estimated_amount_needed VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS urgency VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_living_arrangement VARCHAR(100)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_needing_assistance VARCHAR(10)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_count VARCHAR(50)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_assistance_received VARCHAR(10)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_program VARCHAR(255)",
+    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS additional_info TEXT",
+  ];
+
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS child_welfare_applications (
@@ -33,63 +90,15 @@ async function initChildWelfareColumns() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_id VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_title VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_first_name VARCHAR(150);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_middle_name VARCHAR(150);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_last_name VARCHAR(150);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_sex VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_date_of_birth VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_age INTEGER;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_civil_status VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_relationship_to_child VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_contact_no VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_valid_id VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_sex VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birthday VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_age INTEGER;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_daycare VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birth_certificate VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_grade_level VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_address TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_enrollment_status VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs_specify TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS household_members VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS children_studying VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS monthly_household_income VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS main_source_income VARCHAR(255);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_financial_support TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_types JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_other TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS primary_reason_for_assistance TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS specific_needs TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS estimated_amount_needed VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS urgency VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_living_arrangement VARCHAR(100);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_needing_assistance VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_count VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_assistance_received VARCHAR(50);
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_program TEXT;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS additional_info TEXT;
     `);
-  } catch (e) {
-    console.warn('[Child Welfare DB init columns]:', e.message);
+  } catch (err) {
+    console.warn('[Child Welfare Table Init]:', err.message);
+  }
+
+  for (const colQuery of columnDefs) {
+    try {
+      await db.query(colQuery);
+    } catch {}
   }
 }
 initChildWelfareColumns();
@@ -529,35 +538,52 @@ exports.updateApplicationStatus = async (req, res) => {
     const finalAmount = status === 'approved' ? (approvedAmount || '5000') : null;
     const targetRef = referenceNumber || reference_number || applicationId;
     const cleanId = String(applicationId).replace(/^CW-/, '').trim();
+    const appBy = status === 'approved' ? (req.user?.id || 'Social Worker Admin') : null;
 
-    const findRes = await db.query(
-      `SELECT * FROM child_welfare_applications
-       WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 OR id::text = $3 LIMIT 1`,
-      [applicationId, targetRef, cleanId]
-    );
+    let app = null;
 
-    if (findRes.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Application not found' });
+    try {
+      const q = await db.query(
+        `UPDATE child_welfare_applications
+         SET application_status = $1,
+             admin_notes = COALESCE($2, admin_notes),
+             rejection_reason = $3,
+             approved_by = $4,
+             approved_amount = $5,
+             updated_at = NOW()
+         WHERE reference_number = $6 OR reference_number = $7 OR id::text = $6 OR id::text = $8
+         RETURNING *`,
+        [
+          status,
+          adminNotes || null,
+          status === 'rejected' ? rejectionReason : null,
+          appBy,
+          finalAmount,
+          applicationId,
+          targetRef,
+          cleanId,
+        ]
+      );
+      if (q.rows.length > 0) {
+        app = q.rows[0];
+      }
+    } catch (dbErr) {
+      console.warn('[DB Error] Child Welfare update failed, trying fallback:', dbErr.message);
+      try {
+        const fallbackQ = await db.query(
+          `UPDATE child_welfare_applications
+           SET application_status = $1, updated_at = NOW()
+           WHERE reference_number = $2 OR reference_number = $3 OR id::text = $2 OR id::text = $4
+           RETURNING *`,
+          [status, applicationId, targetRef, cleanId]
+        );
+        if (fallbackQ.rows.length > 0) {
+          app = fallbackQ.rows[0];
+        }
+      } catch (fErr) {
+        console.warn('[Fallback Error]:', fErr.message);
+      }
     }
-
-    const targetRow = findRes.rows[0];
-
-    const result = await db.query(
-      `UPDATE child_welfare_applications
-       SET application_status = $1, admin_notes = $2, rejection_reason = $3,
-           approved_by = $4, approved_amount = $5, updated_at = NOW()
-       WHERE id = $6 RETURNING *`,
-      [
-        status,
-        adminNotes || null,
-        status === 'rejected' ? rejectionReason : null,
-        status === 'approved' ? (req.user?.id || 'admin') : null,
-        finalAmount,
-        targetRow.id,
-      ]
-    );
-
-    const app = result.rows[0];
 
     // Auto-sync with Financial Aid Disbursements and Appointments upon approval
     if (status === 'approved') {
