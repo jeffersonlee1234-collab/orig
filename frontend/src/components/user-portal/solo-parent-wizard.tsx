@@ -332,7 +332,7 @@ interface SoloParentApplicationWizardProps {
   initialCategoryId?: number | null
   initialType?: IdStatus
   isModalOpen?: boolean
-  onBlockedStatusChange?: (blocked: boolean) => void
+  onBlockedStatusChange?: (blocked: boolean, app?: any) => void
   onStepChange?: (step: number) => void
   onSubmissionStageChange?: (stage: "form" | "matching" | "pending") => void
 }

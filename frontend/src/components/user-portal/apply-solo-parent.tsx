@@ -296,7 +296,7 @@ export default function ApplySoloParent() {
       return false
     }
   })
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+  const [selectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [cwSubmissionStage, setCwSubmissionStage] = useState<"form" | "matching" | "pending">("form")
