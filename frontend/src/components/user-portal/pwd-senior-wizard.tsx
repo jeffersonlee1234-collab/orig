@@ -5,6 +5,7 @@ import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
+import { readFileAsDataUrl } from "../../utils/fileUpload"
 
 type DisabilityClass = "apparent" | "non-apparent" | null
 type IdStatus = "new" | "renewal" | "loss" | null
@@ -1352,18 +1353,42 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     setStep((s) => Math.max(s - 1, 1))
   }
 
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     setSubmitStatus("submitting")
     const refNum = generateReferenceNumber(userProfile?.qcidNo)
 
     try {
       const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+      const docItems = await Promise.all(
+        Object.keys(uploaded).map(async (k) => {
+          const up = uploaded[k]
+          let fileUrl = up?.previewUrl || ""
+          if (!fileUrl || fileUrl.startsWith("blob:")) {
+            if (up?.file) {
+              fileUrl = await readFileAsDataUrl(up.file)
+            }
+          }
+          return {
+            name: k,
+            filename: up?.file?.name || "doc.jpg",
+            fileUrl: fileUrl,
+            uploadedAt: new Date().toISOString(),
+            status: "verified",
+          }
+        })
+      )
+
+      const photoDoc = docItems.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ""))
+      const applicantPhoto = photoDoc?.fileUrl || ""
+
       const newApp = {
         id: `APP-${Date.now()}`,
         submittedAt: new Date().toISOString(),
         referenceNumber: refNum,
         category: "PWD",
         type: idStatus === "renewal" ? "renewal" : idStatus === "loss" ? "replacement" : "new",
+        applicantPhoto: applicantPhoto,
+        photoUrl: applicantPhoto,
         firstName: formData.firstName || userProfile?.firstName || "",
         middleName: formData.middleName || userProfile?.middleName || "",
         lastName: formData.lastName || userProfile?.lastName || "",
@@ -1418,13 +1443,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         emergencyRelationship: formData.emergencyRelationship || userProfile?.emergencyRelationship || "",
         emergencyAddress: formData.emergencyAddress || userProfile?.emergencyAddress || "",
         emergencyResidentialAddress: formData.emergencyAddress || userProfile?.emergencyAddress || "",
-        documents: Object.keys(uploaded).map((k) => ({
-          name: k,
-          filename: uploaded[k]?.file.name || "doc.jpg",
-          fileUrl: uploaded[k]?.previewUrl,
-          uploadedAt: new Date().toISOString(),
-          status: "verified",
-        })),
+        documents: docItems,
         status: "pending",
       }
       localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
@@ -3206,12 +3225,13 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         isOpen={Boolean(cameraDoc)}
         onClose={() => setCameraDoc(null)}
         docTitle={cameraDoc || undefined}
-        onCapture={(file) => {
+        onCapture={async (file) => {
           if (cameraDoc) {
+            const dataUrl = await readFileAsDataUrl(file)
             setUploaded((prev) => {
               const existing = prev[cameraDoc]
-              if (existing) URL.revokeObjectURL(existing.previewUrl)
-              return { ...prev, [cameraDoc]: { file, previewUrl: URL.createObjectURL(file) } }
+              if (existing && existing.previewUrl.startsWith("blob:")) URL.revokeObjectURL(existing.previewUrl)
+              return { ...prev, [cameraDoc]: { file, previewUrl: dataUrl || URL.createObjectURL(file) } }
             })
           }
         }}

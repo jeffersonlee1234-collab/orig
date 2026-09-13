@@ -620,11 +620,35 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
+function getSampleFallbackDoc(name: string): string {
+  const n = (name || "").toLowerCase()
+  if (n.includes("loss") || n.includes("affidavit")) return "/samples/AFFIDAVIT OF LOSS.webp"
+  if (n.includes("2x2") || n.includes("picture (2x2)") || n.includes("id picture") || n.includes("id photo") || n.includes("idphoto") || n.includes("1x1") || n.includes("photo") || n.includes("picture")) return "/samples/ID PICTURE (2X2).webp"
+  if (n.includes("whole body") || n.includes("body")) return "/samples/WHOLE BODY.jpg"
+  if (n.includes("signature") || n.includes("pirma")) return "/samples/SIGNATURE.avif"
+  if (n.includes("disability") || n.includes("medical") || n.includes("certificate of disability")) return "/samples/CERTIFICATE OF DISABILITY.jpg"
+  if (n.includes("residence") || n.includes("residency")) return "/samples/PROOF OF RESIDENCE.webp"
+  if (n.includes("barangay")) return "/samples/BARANGAY CERTIFICATE.webp"
+  if (n.includes("birth") || n.includes("psa")) return "/samples/BIRTH CERTIFICATE OF MINOR.jpg"
+  if (n.includes("gov") || n.includes("valid id") || n.includes("government")) return "/samples/sample_valid_id.png"
+  return "/samples/sample_valid_id.png"
+}
+
 function getDocImageUrl(doc: ApplicationDocument | null): string {
   if (!doc) return ""
-  const candidate = doc.fileUrl || (doc as any).url || (doc as any).previewUrl || (doc as any).path || (doc as any).filePath
+  const candidate = doc.fileUrl || (doc as any).url || (doc as any).previewUrl || (doc as any).path || (doc as any).filePath || (doc as any).dataUrl || (doc as any).base64
   if (candidate && typeof candidate === "string") {
-    if (candidate.startsWith("data:") || candidate.startsWith("http") || candidate.startsWith("/") || candidate.startsWith("blob:")) {
+    if (candidate.startsWith("data:") || candidate.startsWith("http")) {
+      return candidate
+    }
+    if (candidate.startsWith("blob:")) {
+      const alt = (doc as any).dataUrl || (doc as any).base64
+      if (alt && typeof alt === "string" && (alt.startsWith("data:") || alt.startsWith("http"))) {
+        return alt
+      }
+      return candidate
+    }
+    if (candidate.startsWith("/")) {
       return candidate
     }
     if (candidate.startsWith("uploads/")) {
@@ -636,21 +660,13 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
     return `${API_BASE}/uploads/${doc.filename}`
   }
 
-  const name = (doc.name || doc.filename || "").toLowerCase()
-  if (name.includes("loss") || name.includes("affidavit")) return "/samples/AFFIDAVIT OF LOSS.webp"
-  if (name.includes("2x2") || name.includes("picture (2x2)") || name.includes("id picture") || name.includes("id photo") || name.includes("idphoto") || name.includes("1x1") || name.includes("photo") || name.includes("picture")) return "/samples/ID PICTURE (2X2).webp"
-  if (name.includes("whole body") || name.includes("body")) return "/samples/WHOLE BODY.jpg"
-  if (name.includes("signature") || name.includes("pirma")) return "/samples/SIGNATURE.avif"
-  if (name.includes("disability") || name.includes("medical") || name.includes("certificate of disability")) return "/samples/CERTIFICATE OF DISABILITY.jpg"
-  if (name.includes("residence") || name.includes("residency")) return "/samples/PROOF OF RESIDENCE.webp"
-  if (name.includes("barangay")) return "/samples/BARANGAY CERTIFICATE.webp"
-  if (name.includes("birth") || name.includes("psa")) return "/samples/BIRTH CERTIFICATE OF MINOR.jpg"
-  if (name.includes("gov") || name.includes("valid id") || name.includes("government")) return "/samples/sample_valid_id.png"
-  return "/samples/sample_valid_id.png"
+  return getSampleFallbackDoc(doc.name || doc.filename || "")
 }
 
 export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): string {
   if (!app) return ""
+
+  let fallbackBlob = ""
 
   // 1. Direct properties on the application (check all possible variants)
   const direct =
@@ -687,29 +703,36 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     (app as any).extraData?.photoUrl ||
     (app as any).extraData?.idPhoto
   if (direct && typeof direct === "string" && !direct.toLowerCase().includes("sample")) {
-    if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://") || direct.startsWith("blob:")) {
+    if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://")) {
       return direct
     }
-    if (direct.startsWith("/")) {
+    if (direct.startsWith("blob:")) {
+      fallbackBlob = direct
+    } else if (direct.startsWith("/")) {
       return `${API_BASE}${direct}`
-    }
-    if (direct.startsWith("uploads/")) {
+    } else if (direct.startsWith("uploads/")) {
       return `${API_BASE}/${direct}`
+    } else {
+      return `${API_BASE}/uploads/${direct}`
     }
-    return `${API_BASE}/uploads/${direct}`
   }
 
   const resolveDocSrc = (d: any): string => {
     if (!d) return ""
     if (typeof d === "string") {
-      if (d.startsWith("data:") || d.startsWith("http://") || d.startsWith("https://") || d.startsWith("blob:")) return d
+      if (d.startsWith("data:") || d.startsWith("http://") || d.startsWith("https://")) return d
+      if (d.startsWith("blob:")) return d
       if (d.startsWith("/")) return `${API_BASE}${d}`
       if (d.startsWith("uploads/")) return `${API_BASE}/${d}`
       return `${API_BASE}/uploads/${d}`
     }
-    const rawUrl = d.dataUrl || d.previewUrl || d.data_url || d.fileUrl || d.url || d.path || d.filePath || d.src || d.file_path || d.base64
+    const primaryData = d.dataUrl || d.base64 || d.data_url
+    if (primaryData && typeof primaryData === "string" && primaryData.startsWith("data:")) return primaryData
+
+    const rawUrl = d.previewUrl || d.fileUrl || d.url || d.path || d.filePath || d.src || d.file_path
     if (rawUrl && typeof rawUrl === "string") {
-      if (rawUrl.startsWith("data:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("blob:")) return rawUrl
+      if (rawUrl.startsWith("data:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) return rawUrl
+      if (rawUrl.startsWith("blob:")) return rawUrl
       if (rawUrl.startsWith("/")) return `${API_BASE}${rawUrl}`
       if (rawUrl.startsWith("uploads/")) return `${API_BASE}/${rawUrl}`
       return `${API_BASE}/uploads/${rawUrl}`
@@ -774,7 +797,8 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
 
   if (photoDoc) {
     const src = resolveDocSrc(photoDoc)
-    if (src) return src
+    if (src && !src.startsWith("blob:")) return src
+    if (src.startsWith("blob:")) fallbackBlob = fallbackBlob || src
   }
 
   // 4. Any image document from flatDocs
@@ -783,14 +807,14 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     const fn = String(d.filename || d.name || "").toLowerCase()
     return (
       src.startsWith("data:image") ||
-      src.startsWith("blob:") ||
       /\.(jpe?g|png|webp|avif|gif)$/i.test(fn) ||
       /\.(jpe?g|png|webp|avif|gif)$/i.test(src)
     )
   })
   if (anyImageDoc) {
     const src = resolveDocSrc(anyImageDoc)
-    if (src) return src
+    if (src && !src.startsWith("blob:")) return src
+    if (src.startsWith("blob:")) fallbackBlob = fallbackBlob || src
   }
 
   // 5. Look across localStorage
@@ -828,7 +852,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
           })
           if (match && match !== app) {
             const mPhoto = getApplicantPhotoUrl(match)
-            if (mPhoto && !mPhoto.includes("sample")) return mPhoto
+            if (mPhoto && !mPhoto.includes("sample") && !mPhoto.startsWith("blob:")) return mPhoto
           }
         } else if (parsed && typeof parsed === "object") {
           const pRef = String(parsed.qcidNumber || parsed.qcid_number || parsed.qcidNo || parsed.qcid || parsed.reference_number || "").trim().toLowerCase()
@@ -838,7 +862,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
           if ((appRef && pRef && (pRef === appRef || appRef.includes(pRef))) || (appEmail && pEmail && pEmail === appEmail)) {
             const userPhoto = parsed.photoUrl || parsed.profilePhotoUrl || parsed.avatar || parsed.photo || parsed.idPhoto || parsed.applicantPhoto
             if (userPhoto && typeof userPhoto === "string" && !userPhoto.includes("sample")) {
-              if (userPhoto.startsWith("data:") || userPhoto.startsWith("http://") || userPhoto.startsWith("https://") || userPhoto.startsWith("blob:")) return userPhoto
+              if (userPhoto.startsWith("data:") || userPhoto.startsWith("http://") || userPhoto.startsWith("https://")) return userPhoto
               if (userPhoto.startsWith("/")) return `${API_BASE}${userPhoto}`
               return `${API_BASE}/uploads/${userPhoto}`
             }
@@ -848,7 +872,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     }
   } catch {}
 
-  return ""
+  return fallbackBlob || ""
 }
 
 export function ApplicantPhotoDisplay({
@@ -870,13 +894,33 @@ export function ApplicantPhotoDisplay({
       setRetryStep(0)
       setHasFailed(false)
     } else {
+      try {
+        const storedProfile = JSON.parse(localStorage.getItem("userProfile") || "null")
+        const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null")
+        const backupPhoto = storedProfile?.profilePhotoUrl || storedProfile?.photoUrl || storedProfile?.avatar || storedUser?.profilePhotoUrl || storedUser?.photoUrl || storedUser?.avatar
+        if (backupPhoto && typeof backupPhoto === "string" && backupPhoto.startsWith("data:")) {
+          setImgSrc(backupPhoto)
+          setHasFailed(false)
+          return
+        }
+      } catch {}
       setImgSrc("")
       setHasFailed(true)
     }
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (!photoUrl || photoUrl.includes("sample")) {
+    if (!photoUrl || photoUrl.includes("sample") || photoUrl.startsWith("blob:")) {
+      try {
+        const storedProfile = JSON.parse(localStorage.getItem("userProfile") || "null")
+        const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null")
+        const backupPhoto = storedProfile?.profilePhotoUrl || storedProfile?.photoUrl || storedProfile?.avatar || storedUser?.profilePhotoUrl || storedUser?.photoUrl || storedUser?.avatar
+        if (backupPhoto && typeof backupPhoto === "string" && backupPhoto.startsWith("data:") && imgSrc !== backupPhoto) {
+          setImgSrc(backupPhoto)
+          setHasFailed(false)
+          return
+        }
+      } catch {}
       setHasFailed(true)
       return
     }
@@ -892,7 +936,6 @@ export function ApplicantPhotoDisplay({
       setRetryStep(3)
       setImgSrc(`${API_BASE}/uploads/aics/${filename}`)
     } else {
-      // Avoid loading sample fake pictures of someone else
       setHasFailed(true)
     }
   }
@@ -966,10 +1009,23 @@ function DocumentViewerModal({
                 alt={doc.name}
                 className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
                 onError={(e) => {
-                  ;(e.target as HTMLElement).style.display = "none"
-                  const parent = (e.target as HTMLElement).parentElement
+                  const target = e.target as HTMLElement
+                  target.style.display = "none"
+                  const parent = target.parentElement
                   if (parent) {
-                    parent.innerHTML = `<div class="text-center p-8 text-gray-400"><p class="font-semibold">Unable to load image</p><p class="text-xs mt-1">The file may not exist on the server</p></div>`
+                    const fallbackSrc = getSampleFallbackDoc(doc.name || doc.filename || "")
+                    if (fallbackSrc) {
+                      parent.innerHTML = `
+                        <div class="flex flex-col items-center justify-center p-4">
+                          <img src="${fallbackSrc}" alt="${doc.name}" class="max-h-[55vh] max-w-full object-contain rounded-lg shadow-sm border border-slate-200" />
+                          <div class="mt-3 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center font-medium">
+                            Uploaded session image unavailable. Displaying standard official requirement template.
+                          </div>
+                        </div>
+                      `
+                    } else {
+                      parent.innerHTML = `<div class="text-center p-8 text-gray-400"><p class="font-semibold">Unable to load image</p><p class="text-xs mt-1">The file may not exist on the server</p></div>`
+                    }
                   }
                 }}
               />
@@ -998,9 +1054,9 @@ function DocumentViewerModal({
         <div className="flex justify-end pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-xs rounded-xl hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
           >
-            Close
+            Close Preview
           </button>
         </div>
       </div>

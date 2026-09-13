@@ -204,6 +204,15 @@ exports.getAllApplications = async (req, res) => {
         reasonForRequest: extra.reasonForRequest || '',
         livingArrangement: extra.livingArrangement || '',
         pensionSource: extra.pensionSource || '',
+        documents: parsedDocs.length > 0 ? parsedDocs : (extra.documents || []),
+        applicantPhoto: extra.applicantPhoto || extra.photoUrl || row.applicant_photo || (() => {
+          const p = parsedDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
+          return p ? (p.dataUrl || p.fileUrl || p.previewUrl || '') : '';
+        })(),
+        photoUrl: extra.photoUrl || extra.applicantPhoto || row.photo_url || row.applicant_photo || (() => {
+          const p = parsedDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
+          return p ? (p.dataUrl || p.fileUrl || p.previewUrl || '') : '';
+        })(),
         isArchived: row.is_archived || false,
       };
     });
@@ -231,6 +240,9 @@ exports.createApplication = async (req, res) => {
     const emRel = body.emergencyRelationship || body.relationshipToApplicant || '';
     const emAddr = body.emergencyAddress || body.emergencyResidentialAddress || '';
 
+    const photoDoc = (body.documents || []).find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
+    const resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
+
     const newApp = {
       ...body,
       id: appId,
@@ -238,6 +250,8 @@ exports.createApplication = async (req, res) => {
       referenceNumber: refNum,
       category: body.category || 'PWD',
       type: body.type || 'new',
+      applicantPhoto: resolvedPhoto,
+      photoUrl: resolvedPhoto,
       firstName: body.firstName || '',
       middleName: body.middleName || '',
       lastName: body.lastName || '',

@@ -912,13 +912,33 @@ function ApplicantPhotoDisplay({
       setRetryStep(0)
       setHasFailed(false)
     } else {
+      try {
+        const storedProfile = JSON.parse(localStorage.getItem("userProfile") || "null")
+        const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null")
+        const backupPhoto = storedProfile?.profilePhotoUrl || storedProfile?.photoUrl || storedProfile?.avatar || storedUser?.profilePhotoUrl || storedUser?.photoUrl || storedUser?.avatar
+        if (backupPhoto && typeof backupPhoto === "string" && backupPhoto.startsWith("data:")) {
+          setImgSrc(backupPhoto)
+          setHasFailed(false)
+          return
+        }
+      } catch {}
       setImgSrc("")
       setHasFailed(true)
     }
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (!photoUrl || photoUrl.includes("sample")) {
+    if (!photoUrl || photoUrl.includes("sample") || photoUrl.startsWith("blob:")) {
+      try {
+        const storedProfile = JSON.parse(localStorage.getItem("userProfile") || "null")
+        const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null")
+        const backupPhoto = storedProfile?.profilePhotoUrl || storedProfile?.photoUrl || storedProfile?.avatar || storedUser?.profilePhotoUrl || storedUser?.photoUrl || storedUser?.avatar
+        if (backupPhoto && typeof backupPhoto === "string" && backupPhoto.startsWith("data:") && imgSrc !== backupPhoto) {
+          setImgSrc(backupPhoto)
+          setHasFailed(false)
+          return
+        }
+      } catch {}
       setHasFailed(true)
       return
     }
