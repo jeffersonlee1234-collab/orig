@@ -519,7 +519,7 @@ export default function ApplySoloParent() {
   const activeProfile = getCurrentUserProfile()
 
   // Render blocked active application UI directly (matches ApplyPWDSenior)
-  if (isBlocked && !bypassedBlock && !isChildWelfare) {
+  if (isBlocked && !bypassedBlock && !isChildWelfare && (typeParam === "new" || !typeParam)) {
     const isAppApproved =
       String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "approved" ||
       String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "completed" ||

@@ -1336,6 +1336,10 @@ export default function SoloParentApplicationWizard({
     let isMounted = true
 
     const checkEligibility = async (isInitial = false) => {
+      // If user is actively filling out the form (step > 1 or is in active form submission), do not interrupt with blocking screen
+      if (step > 1 || (window as any).__isFormDirty || submissionStage !== "form") {
+        return
+      }
       if (isInitial && !isBlocked) setCheckingEligibility(true)
       try {
         const typeToCheck = idStatus || "new"
@@ -1948,7 +1952,7 @@ export default function SoloParentApplicationWizard({
 
 
 
-  if (isBlocked && (blockReason === "pending" || blockReason === "draft" || blockReason === "approved")) {
+  if (isBlocked && step === 1 && !isReapply && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
     const isAppApproved = blockReason === "approved" || blockedApp?.application_status === "approved" || blockedApp?.status === "approved"
     const displayRef = blockedReference || blockedApp?.reference_number || blockedApp?.referenceNumber || "REF-SP-2026-001"
     const assignedIdNo = blockedApp?.assigned_id_number || blockedApp?.assignedIdNumber || blockedApp?.solo_parent_id_number || blockedApp?.soloParentIdNumber
