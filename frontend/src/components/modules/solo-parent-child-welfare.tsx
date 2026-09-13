@@ -2423,44 +2423,58 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allSubmis
 // =====================================================================================
 
 export default function SoloParentChildWelfareAdmin() {
-  const [applications, setApplications] = useState<WelfareSubmission[]>([])
-const [isLoading, setIsLoading] = useState(true)
-const [loadError, setLoadError] = useState("")
-
-const loadApplications = async (silent = false) => {
-  if (!silent) setIsLoading(true)
-  setLoadError("")
-  try {
-    const apps = await fetchAllSubmissions()
-    setApplications(apps)
-  } catch (err) {
-    console.error("Failed to load applications:", err)
-    if (!silent) setLoadError("Hindi makuha ang mga application. Subukan ulit.")
-  } finally {
-    if (!silent) setIsLoading(false)
-  }
-}
-
-useEffect(() => {
-  loadApplications(false)
-
-  const interval = setInterval(() => {
-    loadApplications(true)
-  }, 1500)
-
-  const unsubscribe = subscribeToRealtimeChanges(() => {
-    loadApplications(true)
+  const [applications, setApplications] = useState<WelfareSubmission[]>(() => {
+    try {
+      const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+      const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+      const solo = (Array.isArray(localSolo) ? localSolo : []).map(mapSoloParentRow)
+      const child = (Array.isArray(localChild) ? localChild : []).map(mapChildWelfareRow)
+      return [...solo, ...child].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    } catch {
+      return []
+    }
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState("")
+  const isFetchingRef = useRef(false)
 
-  const handleSync = () => loadApplications(true)
-  window.addEventListener("focus", handleSync)
-
-  return () => {
-    clearInterval(interval)
-    unsubscribe()
-    window.removeEventListener("focus", handleSync)
+  const loadApplications = async (silent = true) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+    if (!silent && applications.length === 0) setIsLoading(true)
+    setLoadError("")
+    try {
+      const apps = await fetchAllSubmissions()
+      setApplications(apps)
+    } catch (err) {
+      console.error("Failed to load applications:", err)
+      if (!silent && applications.length === 0) setLoadError("Hindi makuha ang mga application. Subukan ulit.")
+    } finally {
+      isFetchingRef.current = false
+      setIsLoading(false)
+    }
   }
-}, [])
+
+  useEffect(() => {
+    loadApplications(applications.length === 0 ? false : true)
+
+    const interval = setInterval(() => {
+      loadApplications(true)
+    }, 8000)
+
+    const unsubscribe = subscribeToRealtimeChanges(() => {
+      loadApplications(true)
+    })
+
+    const handleSync = () => loadApplications(true)
+    window.addEventListener("focus", handleSync)
+
+    return () => {
+      clearInterval(interval)
+      unsubscribe()
+      window.removeEventListener("focus", handleSync)
+    }
+  }, [])
   const [selectedApp, setSelectedApp] = useState<WelfareSubmission | null>(null)
   const [cardApp, setCardApp] = useState<WelfareSubmission | null>(null)
   const [filterCategory, setFilterCategory] = useState<"all" | "Solo Parent" | "Child Welfare">("all")
@@ -2778,11 +2792,11 @@ useEffect(() => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && applications.length === 0 ? (
             <div className="text-center py-16 gw-card">
               <p className="text-sm" style={{ color: "var(--ink-soft)" }}>Naglo-load ng mga application...</p>
             </div>
-          ) : loadError ? (
+          ) : loadError && applications.length === 0 ? (
             <div className="text-center py-16 gw-card">
               <p className="text-sm" style={{ color: "var(--redwood-ink)" }}>{loadError}</p>
               <button onClick={() => loadApplications(false)} className="gw-btn-ghost px-4 py-2 mt-3">Subukan Ulit</button>
