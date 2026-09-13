@@ -383,18 +383,18 @@ exports.getUserApplications = async (req, res) => {
     }
     if (cleanQcid) {
       params.push(cleanQcid);
-      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%')`);
+      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%' OR form_data->>'qcidNumber' = $${params.length})`);
     }
     if (cleanEmail) {
       params.push(cleanEmail);
-      orClauses.push(`LOWER(email) = LOWER($${params.length})`);
+      orClauses.push(`(LOWER(email) = LOWER($${params.length}) OR LOWER(form_data->>'email') = LOWER($${params.length}))`);
     }
     if (cleanFirstName && cleanLastName) {
       params.push(cleanFirstName);
       const fnIdx = params.length;
       params.push(cleanLastName);
       const lnIdx = params.length;
-      orClauses.push(`(LOWER(first_name) = $${fnIdx} AND LOWER(last_name) = $${lnIdx})`);
+      orClauses.push(`((LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx}) AND (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx}))`);
     }
 
     const result = await db.query(
@@ -568,18 +568,18 @@ exports.checkEligibility = async (req, res) => {
     }
     if (cleanQcid) {
       params.push(cleanQcid);
-      orClauses.push(`qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%'`);
+      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%' OR form_data->>'qcidNumber' = $${params.length})`);
     }
     if (cleanEmail) {
       params.push(cleanEmail);
-      orClauses.push(`LOWER(email) = LOWER($${params.length})`);
+      orClauses.push(`(LOWER(email) = LOWER($${params.length}) OR LOWER(form_data->>'email') = LOWER($${params.length}))`);
     }
     if (cleanFirstName && cleanLastName) {
       params.push(cleanFirstName);
       const fnIdx = params.length;
       params.push(cleanLastName);
       const lnIdx = params.length;
-      orClauses.push(`(LOWER(first_name) = $${fnIdx} AND LOWER(last_name) = $${lnIdx})`);
+      orClauses.push(`((LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx}) AND (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx}))`);
     }
 
     // 1. Check if user has a pending application for this specific type

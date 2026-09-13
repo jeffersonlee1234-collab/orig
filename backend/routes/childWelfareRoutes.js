@@ -21,7 +21,7 @@ router.delete(
 
 router.post('/:applicationId/submit', childWelfareController.submitApplication);
 
-router.get('/user/:userId', auth, childWelfareController.getUserApplications);
+router.get('/user/:userId', childWelfareController.getUserApplications);
 
 router.get('/reference/:referenceNumber', childWelfareController.getApplicationByReference);
 

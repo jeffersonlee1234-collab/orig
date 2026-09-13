@@ -939,16 +939,16 @@ export default function SoloParentApplicationWizard({
 
     const prof = getCurrentUserProfile()
     const uid = userId || prof.id || ""
-    const qcid = (prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").trim()
-    const email = (prof.email || userProfile?.email || "").trim()
-    const fn = (prof.firstName || userProfile?.firstName || "").trim()
-    const ln = (prof.lastName || userProfile?.lastName || "").trim()
+    const qcid = (formData?.qcidNumber || prof.qcidNo || prof.qcidNumber || userProfile?.qcidNo || "").trim()
+    const email = (formData?.email || prof.email || userProfile?.email || "").trim()
+    const fn = (formData?.firstName || prof.firstName || userProfile?.firstName || "").trim()
+    const ln = (formData?.lastName || prof.lastName || userProfile?.lastName || "").trim()
 
     // 1. Fetch user-specific applications from backend
     try {
       const res = await fetch(
         `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
-        { cache: "no-store" }
+        { headers: getAuthHeaders(), cache: "no-store" }
       )
       if (res.ok) {
         const data = await res.json()
@@ -966,10 +966,30 @@ export default function SoloParentApplicationWizard({
       }
     } catch {}
 
-    // 2. Fetch admin all applications as fallback
+    // 2. Fetch by active reference if available
+    const activeRef = reference || blockedReference || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : "")
+    if (activeRef) {
+      try {
+        const resRef = await fetch(`${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}?_t=${Date.now()}`, { headers: getAuthHeaders(), cache: "no-store" })
+        if (resRef.ok) {
+          const dataRef = await resRef.json()
+          const a = dataRef.application || dataRef
+          if (a && (a.id || a.reference_number)) {
+            const key = a.id || a.reference_number || a.referenceNumber
+            if (!seenIds.has(String(key))) {
+              seenIds.add(String(key))
+              allApps.unshift(a)
+              backendFetched = true
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Fetch admin all applications as fallback if user has permissions
     if (allApps.length === 0) {
       try {
-        const resAdmin = await fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { cache: "no-store" })
+        const resAdmin = await fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: getAuthHeaders(), cache: "no-store" })
         if (resAdmin.ok) {
           const dataAdmin = await resAdmin.json()
           const backendApps = dataAdmin.applications || []
@@ -994,7 +1014,7 @@ export default function SoloParentApplicationWizard({
       return allApps
     }
 
-    // 3. Fallback to localStorage only when backend is completely offline
+    // 4. Fallback to localStorage only when backend is completely offline
     try {
       const raw = localStorage.getItem("solo_parent_applications")
       if (raw) {
@@ -1232,7 +1252,7 @@ export default function SoloParentApplicationWizard({
         try {
           const res = await fetch(
             `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&reapply=${isReapply ? "true" : "false"}&_t=${Date.now()}`,
-            { cache: "no-store" }
+            { headers: getAuthHeaders(), cache: "no-store" }
           )
           if (res.ok) {
             const data = await res.json()
@@ -1245,7 +1265,7 @@ export default function SoloParentApplicationWizard({
           }
         } catch {}
 
-        // 2. Local fallback verification & auto-population
+        // 2. Local & Real-time fetch verification & auto-population
         const allApps = await fetchAllSoloParentApps()
         const userQcidClean = qcid.replace(/\D/g, "")
         const userEmailClean = email.toLowerCase()
@@ -1257,9 +1277,10 @@ export default function SoloParentApplicationWizard({
           const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
           const aRef = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
           const aEmail = String(a.email || "").toLowerCase().trim()
-          const aFn = String(a.first_name || a.firstName || "").toLowerCase().trim()
-          const aLn = String(a.last_name || a.lastName || "").toLowerCase().trim()
+          const aFn = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
+          const aLn = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
           const aAssigned = String(a.assigned_id_number || a.assignedIdNumber || a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
+          const aUid = String(a.user_id || a.userId || "").trim()
 
           const isSoloCategory =
             String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase().includes("solo") ||
@@ -1268,9 +1289,10 @@ export default function SoloParentApplicationWizard({
             Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
 
           const isUserMatch =
+            (uid && aUid && aUid === String(uid)) ||
             (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid) || aRef.includes(userQcidClean) || userQcidClean.includes(aRef) || (aAssigned && aAssigned.includes(userQcidClean)))) ||
             (userEmailClean && aEmail && userEmailClean === aEmail) ||
-            (userLnClean && aLn && (userLnClean === aLn || (userFnClean && aFn && userLnClean.includes(aLn))))
+            (userLnClean && aLn && (userLnClean === aLn || aLn.includes(userLnClean) || userLnClean.includes(aLn) || (userFnClean && aFn && (userFnClean.includes(aFn) || aFn.includes(userFnClean)))))
 
           return isSoloCategory && isUserMatch
         })
@@ -1290,25 +1312,17 @@ export default function SoloParentApplicationWizard({
           return (st === "pending" || st === "draft" || st === "under_review") && isMatchPendingType
         })
 
-        if (!isBlockedFound) {
+        if (!isReapply && approvedApp) {
+          isBlockedFound = true
+          reasonFound = "approved"
+          refFound = approvedApp.reference_number || approvedApp.referenceNumber || refFound
+          appFound = approvedApp
+        } else if (!isBlockedFound) {
           if (pendingApp) {
             isBlockedFound = true
             reasonFound = "pending"
             refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
             appFound = pendingApp
-          } else if (!isReapply && approvedApp) {
-            const appType = String(approvedApp.application_type || approvedApp.applicationType || "new").toLowerCase()
-            const isMatchApprovedType =
-              typeToCheck === "new" ||
-              (typeToCheck === "renewal" && appType === "renewal") ||
-              (typeToCheck === "loss" && (appType === "loss" || appType === "replacement"))
-
-            if (isMatchApprovedType) {
-              isBlockedFound = true
-              reasonFound = "approved"
-              refFound = approvedApp.reference_number || approvedApp.referenceNumber || ""
-              appFound = approvedApp
-            }
           }
         }
 

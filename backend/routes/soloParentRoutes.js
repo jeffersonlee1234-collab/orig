@@ -37,7 +37,6 @@ router.get(
 
 router.get(
   '/eligibility/:userId',
-  auth,
   soloParentController.checkEligibility
 );
 
@@ -49,7 +48,6 @@ router.patch(
 
 router.get(
   '/user/:userId',
-  auth,
   soloParentController.getUserApplications
 );
 
