@@ -1064,47 +1064,23 @@ export default function SoloParentApplicationWizard({
         return isApproved && isSolo
       })
 
-      // Match against approved records
-      let matchedApp = approvedApps.find((a) => {
+      // Match strictly against approved records
+      const matchedApp = approvedApps.find((a) => {
         const aAssignedDigits = String(a.assigned_id_number || a.assignedIdNumber || "").replace(/\D/g, "")
         const aSoloIdDigits = String(a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
         const aRefDigits = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
-        const aQcidDigits = String(a.qcid_number || a.qcidNumber || a.qcid || "").replace(/\D/g, "")
+        const aAssignedClean = String(a.assigned_id_number || a.assignedIdNumber || "").toUpperCase().trim()
+        const typedClean = typed.toUpperCase().trim()
 
-        const aEmail = String(a.email || "").trim().toLowerCase()
-        const aFirstName = String(a.first_name || a.firstName || "").trim().toLowerCase()
-        const aLastName = String(a.last_name || a.lastName || "").trim().toLowerCase()
-
-        const isUserMatch =
-          (userQcidDigits && aQcidDigits && userQcidDigits === aQcidDigits) ||
-          (userEmail && aEmail && userEmail === aEmail) ||
-          (userLastName && aLastName && (userLastName === aLastName || aLastName.includes(userLastName)))
-
-        const matchExactDigits =
+        const matchDigits =
           (aAssignedDigits && (aAssignedDigits === cleanDigits || cleanDigits.includes(aAssignedDigits) || aAssignedDigits.includes(cleanDigits))) ||
           (aSoloIdDigits && (aSoloIdDigits === cleanDigits || cleanDigits.includes(aSoloIdDigits) || aSoloIdDigits.includes(cleanDigits))) ||
           (aRefDigits && (aRefDigits === cleanDigits || cleanDigits.includes(aRefDigits) || aRefDigits.includes(cleanDigits)))
 
-        return Boolean((isUserMatch && matchExactDigits) || matchExactDigits || (isUserMatch && approvedApps.length === 1))
+        const matchExactString = aAssignedClean && (aAssignedClean === typedClean || aAssignedClean.includes(typedClean) || typedClean.includes(aAssignedClean))
+
+        return Boolean(matchDigits || matchExactString)
       })
-
-      // Fallback: If user has an approved record and entered a valid formatted ID
-      if (!matchedApp && approvedApps.length > 0) {
-        matchedApp = approvedApps[0]
-      }
-
-      // Fallback 2: If valid digits format >= 6, generate verified mock record
-      if (!matchedApp && cleanDigits.length >= 6) {
-        matchedApp = {
-          id: `sp-auto-${Date.now()}`,
-          assigned_id_number: formatSoloParentIdInput(typed),
-          reference_number: `REF-SP-${cleanDigits.slice(-6)}`,
-          first_name: prof.firstName || userProfile?.firstName || "Resident",
-          last_name: prof.lastName || userProfile?.lastName || "Beneficiary",
-          address_barangay: prof.addressBarangay || userProfile?.addressBarangay || "SAUYO",
-          status: "approved",
-        }
-      }
 
       if (matchedApp) {
         setIsIdVerified(true)
@@ -1125,10 +1101,6 @@ export default function SoloParentApplicationWizard({
           barangay: matchedApp.address_barangay || matchedApp.addressBarangay || prof.addressBarangay || "SAUYO",
           status: idStatus === "renewal" ? "Active / Expired" : "Replacement / Lost ID",
         })
-        setIsResident(true)
-        setHasSoleParentalCare(true)
-        if (idStatus === "renewal") setRenewalReason((prev) => prev || "Expired ID")
-        if (idStatus === "loss") setReplacementReason((prev) => prev || "Lost ID")
 
         const emergencyData = extractEmergencyContact(matchedApp, userProfile)
 
@@ -1157,11 +1129,12 @@ export default function SoloParentApplicationWizard({
         }))
       } else {
         setIsIdVerified(false)
+        setVerifiedRecord(null)
         setVerifyError(
           language === "en"
-            ? "No approved Solo Parent ID record found matching this ID number. Please enter your valid approved Solo Parent ID."
+            ? "No approved Solo Parent ID record found matching this ID number. Please check and enter your valid approved Solo Parent ID."
             : language === "bis"
-            ? "Walay nakit-an nga naaprobahan nga rekord sa Solo Parent ID. Palihug ibutang ang imong balido nga approved ID number."
+            ? "Walay nakit-an nga naaprobahan nga rekord sa Solo Parent ID. Palihug siguroha ang imong balido nga approved ID number."
             : "Walang nahanap na aprubadong rekord ng Solo Parent ID para sa numerong ito. Tiyaking tama ang inyong aprubadong Solo Parent ID number."
         )
       }
@@ -1475,36 +1448,12 @@ export default function SoloParentApplicationWizard({
           }
         }
 
-        // Pre-fill formData & Auto-Verify existing ID instantly on Renewal / Loss
+        // Pre-fill formData behind the scenes on Renewal / Loss (without auto-filling or auto-verifying Step 1)
         const appToPreFill = approvedAnyApp || approvedAppForType
         if (appToPreFill && (typeToCheck === "renewal" || typeToCheck === "loss") && !isBlockedFound) {
           const emergencyData = extractEmergencyContact(appToPreFill, prof)
-          const rawOfficialId =
-            appToPreFill.assigned_id_number ||
-            appToPreFill.assignedIdNumber ||
-            appToPreFill.solo_parent_id_number ||
-            appToPreFill.soloParentIdNumber ||
-            appToPreFill.reference_number ||
-            ""
-          const officialId = formatSoloParentIdInput(rawOfficialId)
 
           if (isMounted) {
-            if (officialId) {
-              setExistingIdNumber((prev) => prev || officialId)
-              setIsIdVerified(true)
-              setVerifyError("")
-              setVerifiedRecord({
-                name: `${appToPreFill.first_name || appToPreFill.firstName || prof.firstName || ""} ${appToPreFill.last_name || appToPreFill.lastName || prof.lastName || ""}`.trim(),
-                idNumber: officialId,
-                barangay: appToPreFill.address_barangay || appToPreFill.addressBarangay || prof.addressBarangay || "SAUYO",
-                status: typeToCheck === "renewal" ? "Active / Expired" : "Replacement / Lost ID",
-              })
-              setIsResident(true)
-              setHasSoleParentalCare(true)
-              if (typeToCheck === "renewal") setRenewalReason((prev) => prev || "Expired ID")
-              if (typeToCheck === "loss") setReplacementReason((prev) => prev || "Lost ID")
-            }
-
             setFormData((prev) => ({
               ...prev,
               firstName: appToPreFill.first_name || appToPreFill.firstName || prof.firstName || prev.firstName,
