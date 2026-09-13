@@ -260,11 +260,21 @@ function getSampleDocumentFallback(docName?: string, filename?: string): string 
 
 function resolveFileUrl(fileUrl?: string, filename?: string, isChildWelfare: boolean = false): string {
   if (fileUrl) {
-    if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:") || fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:")) {
+      return fileUrl
+    }
+    if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+      if (fileUrl.includes("/uploads/")) {
+        const pathPart = fileUrl.substring(fileUrl.indexOf("/uploads/"))
+        return `${API_BASE}${pathPart}`
+      }
       return fileUrl
     }
     const clean = fileUrl.startsWith("/") ? fileUrl : `/${fileUrl}`
-    return `${API_BASE}${clean}`
+    if (clean.startsWith("/samples/")) return clean
+    if (clean.startsWith("/uploads/")) return `${API_BASE}${clean}`
+    const folder = isChildWelfare ? "child-welfare" : "solo-parent"
+    return `${API_BASE}/uploads/${folder}${clean}`
   }
   if (filename) {
     const folder = isChildWelfare ? "child-welfare" : "solo-parent"
@@ -952,6 +962,55 @@ function isImageFile(filename?: string, fileUrl?: string) {
   return /\.(jpe?g|png|webp|gif|svg|avif|bmp)($|\?)/i.test(target) || !target.includes(".")
 }
 
+function getDocumentCandidateUrls(doc: ApplicationDocument, app?: WelfareSubmission | null): string[] {
+  const isChild = app?.category === "Child Welfare" || (app as any)?.type === "child"
+  const urls: string[] = []
+
+  const add = (u?: string) => {
+    if (!u || typeof u !== "string") return
+    const resolved = resolveFileUrl(u, doc.filename, isChild)
+    if (resolved && !urls.includes(resolved)) {
+      urls.push(resolved)
+    }
+  }
+
+  const isPhotoDoc = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
+
+  // 1. Direct fileUrl / previewUrl / dataUrl from doc
+  if (doc.dataUrl && !doc.dataUrl.includes("/samples/")) add(doc.dataUrl)
+  if (doc.previewUrl && !doc.previewUrl.includes("/samples/")) add(doc.previewUrl)
+  if (doc.fileUrl && !doc.fileUrl.includes("/samples/")) add(doc.fileUrl)
+
+  // 2. Specific filename variations across backend uploads directories
+  if (doc.filename && !doc.filename.toLowerCase().startsWith("sample")) {
+    const fn = doc.filename.replace(/^.*[\\\/]/, "").trim()
+    if (fn) {
+      add(`${API_BASE}/uploads/solo-parent/${fn}`)
+      add(`${API_BASE}/uploads/child-welfare/${fn}`)
+      add(`${API_BASE}/uploads/${fn}`)
+    }
+  }
+
+  // 3. If photo doc, try applicant photo from app object
+  if (isPhotoDoc && app) {
+    const appPhoto = getApplicantPhotoUrl(app)
+    if (appPhoto && !appPhoto.includes("/samples/")) add(appPhoto)
+    if (app.applicantPhoto && !app.applicantPhoto.includes("/samples/")) add(app.applicantPhoto)
+    if (app.photoUrl && !app.photoUrl.includes("/samples/")) add(app.photoUrl)
+  }
+
+  // 4. Sample fallback
+  if (!isPhotoDoc) {
+    const sample = getSampleDocumentFallback(doc.name, doc.filename)
+    if (sample) add(sample)
+  } else {
+    const sample = getSampleDocumentFallback(doc.name, doc.filename) || "/samples/ID PICTURE (2X2).webp"
+    if (sample) add(sample)
+  }
+
+  return urls
+}
+
 function DocumentPreviewModal({
   doc,
   app,
@@ -963,42 +1022,12 @@ function DocumentPreviewModal({
 }) {
   if (!doc) return null
 
-  const isPhotoDoc = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
-  const realUserPhoto = isPhotoDoc
-    ? ((doc.dataUrl && !doc.dataUrl.includes("samples"))
-        ? doc.dataUrl
-        : (doc.previewUrl && !doc.previewUrl.includes("samples"))
-        ? doc.previewUrl
-        : (doc.fileUrl && !doc.fileUrl.includes("samples"))
-        ? doc.fileUrl
-        : (app?.applicantPhoto && !app.applicantPhoto.includes("samples"))
-        ? app.applicantPhoto
-        : "")
-    : ""
-
-  const fallback = !isPhotoDoc ? getSampleDocumentFallback(doc.name, doc.filename) : ""
-  const initialSrc = realUserPhoto || (doc.dataUrl && !doc.dataUrl.includes("samples") ? doc.dataUrl : "") || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || fallback
-
-  const [currentSrc, setCurrentSrc] = useState<string>(initialSrc)
-  const [hasError, setHasError] = useState(!initialSrc)
+  const candidates = React.useMemo(() => getDocumentCandidateUrls(doc, app), [doc, app])
+  const [candidateIndex, setCandidateIndex] = useState(0)
   const [isZoomed, setIsZoomed] = useState(false)
 
   useEffect(() => {
-    const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
-    const realPhoto = isPhoto
-      ? ((doc.dataUrl && !doc.dataUrl.includes("samples"))
-          ? doc.dataUrl
-          : (doc.previewUrl && !doc.previewUrl.includes("samples"))
-          ? doc.previewUrl
-          : (doc.fileUrl && !doc.fileUrl.includes("samples"))
-          ? doc.fileUrl
-          : (app?.applicantPhoto && !app.applicantPhoto.includes("samples"))
-          ? app.applicantPhoto
-          : "")
-      : ""
-    const targetSrc = realPhoto || (doc.dataUrl && !doc.dataUrl.includes("samples") ? doc.dataUrl : "") || (doc.fileUrl && !doc.fileUrl.includes("samples") ? doc.fileUrl : "") || (!isPhoto ? getSampleDocumentFallback(doc.name, doc.filename) : "")
-    setCurrentSrc(targetSrc)
-    setHasError(!targetSrc)
+    setCandidateIndex(0)
     setIsZoomed(false)
   }, [doc, app])
 
@@ -1010,17 +1039,17 @@ function DocumentPreviewModal({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onClose])
 
+  const currentSrc = candidates[candidateIndex] || ""
+  const hasError = !currentSrc || candidateIndex >= candidates.length
+
   const isPdf = isPdfFile(doc.filename, currentSrc)
   const isImg = isImageFile(doc.filename, currentSrc)
 
   const handleImageError = () => {
-    const isPhoto = Boolean(/2x2|photo|picture|1x1|id_pic|avatar/i.test(`${doc.name} ${doc.filename || ""}`))
-    if (isPhoto && app?.applicantPhoto && !app.applicantPhoto.includes("samples") && currentSrc !== app.applicantPhoto) {
-      setCurrentSrc(app.applicantPhoto)
-    } else if (doc.dataUrl && currentSrc !== doc.dataUrl && !doc.dataUrl.includes("samples")) {
-      setCurrentSrc(doc.dataUrl)
+    if (candidateIndex + 1 < candidates.length) {
+      setCandidateIndex((prev) => prev + 1)
     } else {
-      setHasError(true)
+      setCandidateIndex(candidates.length)
     }
   }
 

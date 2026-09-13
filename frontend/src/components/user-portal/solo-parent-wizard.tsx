@@ -1719,7 +1719,9 @@ export default function SoloParentApplicationWizard({
       documentLabel: d.label,
       files: (uploadedDocs[d.id] || []).map((f) => ({
         filename: f.name,
-        fileUrl: `/uploads/solo-parent/${f.name}`,
+        fileUrl: `${API_BASE}/uploads/solo-parent/${f.name}`,
+        previewUrl: `${API_BASE}/uploads/solo-parent/${f.name}`,
+        dataUrl: uploadedDocsBase64[d.id] || undefined,
         fileSize: f.size,
         uploadedAt: new Date().toISOString(),
       })),
