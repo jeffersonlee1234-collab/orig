@@ -309,8 +309,18 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
     }
   }
 
+  const seenKeys = new Set<string>()
+  const uniqueDocs: ApplicationDocument[] = []
+  for (const d of docs) {
+    const key = (d.name || d.filename || "").trim().toLowerCase()
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key)
+      uniqueDocs.push(d)
+    }
+  }
+
   // Fallback standard documents for sample/seeded applications
-  if (docs.length === 0) {
+  if (uniqueDocs.length === 0) {
     if (isChildWelfare) {
       docs.push(
         {
@@ -384,7 +394,7 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
     }
   }
 
-  return docs
+  return uniqueDocs.length > 0 ? uniqueDocs : docs
 }
 
 function mapSoloParentRow(row: any): SoloParentSubmission {

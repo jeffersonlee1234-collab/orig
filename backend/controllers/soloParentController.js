@@ -225,7 +225,11 @@ exports.uploadDocuments = async (req, res) => {
     const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
 
     if (existingDocIndex > -1) {
-      uploadedDocuments[existingDocIndex].files.push(...uploadedFiles);
+      uploadedDocuments[existingDocIndex] = {
+        documentId,
+        documentLabel: documentLabel || uploadedDocuments[existingDocIndex].documentLabel,
+        files: uploadedFiles,
+      };
     } else {
       uploadedDocuments.push({
         documentId,
