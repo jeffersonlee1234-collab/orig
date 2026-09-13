@@ -475,13 +475,14 @@ exports.getApplicationById = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    const { status, adminNotes, rejectionReason, assignedIdNumber, soloParentIdNumber } = req.body;
+    const { status, adminNotes, rejectionReason, assignedIdNumber, soloParentIdNumber, referenceNumber, reference_number } = req.body;
 
     if (!['pending', 'approved', 'rejected', 'cancelled'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
     const assignedId = assignedIdNumber || soloParentIdNumber || null;
+    const targetRef = referenceNumber || reference_number || applicationId;
 
     const result = await db.query(
       `UPDATE solo_parent_applications
@@ -492,14 +493,15 @@ exports.updateApplicationStatus = async (req, res) => {
            solo_parent_id_number = COALESCE($5, solo_parent_id_number),
            assigned_id_number = COALESCE($5, assigned_id_number),
            updated_at = NOW()
-       WHERE id::text = $6 OR reference_number = $6 RETURNING *`,
+       WHERE id::text = $6 OR reference_number = $6 OR reference_number = $7 RETURNING *`,
       [
         status,
         adminNotes || null,
         status === 'rejected' ? rejectionReason : null,
-        status === 'approved' ? req.user?.id || null : null,
+        status === 'approved' ? (req.user?.id || 'admin') : null,
         status === 'approved' ? assignedId : null,
         applicationId,
+        targetRef,
       ]
     );
 
