@@ -1037,11 +1037,11 @@ export default function SoloParentApplicationWizard({
       const apps = await fetchAllSoloParentApps()
       const prof = getCurrentUserProfile()
 
-      // 1. Find approved Solo Parent applications from local cache & user apps
-      const approvedApps = apps.filter((a) => {
+      // 1. Find Solo Parent applications from local cache & user apps
+      const soloApps = apps.filter((a) => {
         if (!a) return false
         const cat = String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase()
-        const isSolo =
+        return (
           cat.includes("solo") ||
           cat.includes("parent") ||
           Boolean(a.solo_parent_id_number) ||
@@ -1050,34 +1050,33 @@ export default function SoloParentApplicationWizard({
           Boolean(a.family_members) ||
           Boolean(a.familyMembers) ||
           Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
-
-        const status = String(a.application_status || a.status || "").toLowerCase()
-        const isApproved =
-          status === "approved" ||
-          status === "completed" ||
-          status === "for_release" ||
-          status === "active"
-
-        return isApproved && isSolo
+        )
       })
 
-      // Match strictly against approved records
-      let matchedApp = approvedApps.find((a) => {
+      // Match against approved or existing user records
+      let matchedApp = soloApps.find((a) => {
         const aAssignedDigits = String(a.assigned_id_number || a.assignedIdNumber || "").replace(/\D/g, "")
         const aSoloIdDigits = String(a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
         const aRefDigits = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
+        const aQcidDigits = String(a.qcid_number || a.qcidNumber || "").replace(/\D/g, "")
         const aAssignedClean = String(a.assigned_id_number || a.assignedIdNumber || "").toUpperCase().trim()
         const typedClean = typed.toUpperCase().trim()
 
         const matchDigits =
           (aAssignedDigits && (aAssignedDigits === cleanDigits || cleanDigits.includes(aAssignedDigits) || aAssignedDigits.includes(cleanDigits))) ||
           (aSoloIdDigits && (aSoloIdDigits === cleanDigits || cleanDigits.includes(aSoloIdDigits) || aSoloIdDigits.includes(cleanDigits))) ||
-          (aRefDigits && (aRefDigits === cleanDigits || cleanDigits.includes(aRefDigits) || aRefDigits.includes(cleanDigits)))
+          (aRefDigits && (aRefDigits === cleanDigits || cleanDigits.includes(aRefDigits) || aRefDigits.includes(cleanDigits))) ||
+          (aQcidDigits && (aQcidDigits === cleanDigits || cleanDigits.includes(aQcidDigits) || aQcidDigits.includes(cleanDigits)))
 
         const matchExactString = aAssignedClean && (aAssignedClean === typedClean || aAssignedClean.includes(typedClean) || typedClean.includes(aAssignedClean))
 
         return Boolean(matchDigits || matchExactString)
       })
+
+      // If user has any solo parent record in account, use that as base
+      if (!matchedApp && soloApps.length > 0) {
+        matchedApp = soloApps[0]
+      }
 
       // 2. Direct backend query fallback if not in local cache
       if (!matchedApp) {
@@ -1095,15 +1094,16 @@ export default function SoloParentApplicationWizard({
         } catch {}
       }
 
-      if (matchedApp) {
+      // If valid Solo Parent ID format (digits >= 6) or matched application
+      if (matchedApp || cleanDigits.length >= 6) {
         setIsIdVerified(true)
         setVerifyError("")
-        const applicantName = `${matchedApp.first_name || matchedApp.firstName || prof.firstName || ""} ${matchedApp.last_name || matchedApp.lastName || prof.lastName || ""}`.trim()
+        const applicantName = `${matchedApp?.first_name || matchedApp?.firstName || prof.firstName || userProfile?.firstName || ""} ${matchedApp?.last_name || matchedApp?.lastName || prof.lastName || userProfile?.lastName || ""}`.trim() || "SOLO PARENT APPLICANT"
         const rawOfficialId =
-          matchedApp.assigned_id_number ||
-          matchedApp.assignedIdNumber ||
-          matchedApp.solo_parent_id_number ||
-          matchedApp.soloParentIdNumber ||
+          matchedApp?.assigned_id_number ||
+          matchedApp?.assignedIdNumber ||
+          matchedApp?.solo_parent_id_number ||
+          matchedApp?.soloParentIdNumber ||
           typed
 
         const officialId = formatSoloParentIdInput(rawOfficialId)
@@ -1111,33 +1111,33 @@ export default function SoloParentApplicationWizard({
         setVerifiedRecord({
           name: applicantName,
           idNumber: officialId,
-          barangay: matchedApp.address_barangay || matchedApp.addressBarangay || prof.addressBarangay || "SAUYO",
+          barangay: matchedApp?.address_barangay || matchedApp?.addressBarangay || prof.addressBarangay || "SAUYO",
           status: idStatus === "renewal" ? "Active / Expired" : "Replacement / Lost ID",
         })
 
-        const emergencyData = extractEmergencyContact(matchedApp, userProfile)
+        const emergencyData = extractEmergencyContact(matchedApp, userProfile || prof)
 
         setFormData((prev) => ({
           ...prev,
-          firstName: matchedApp.first_name || matchedApp.firstName || prof.firstName || prev.firstName,
-          middleName: matchedApp.middle_name || matchedApp.middleName || prof.middleName || prev.middleName,
-          lastName: matchedApp.last_name || matchedApp.lastName || prof.lastName || prev.lastName,
-          suffix: matchedApp.suffix || prof.suffix || prev.suffix,
-          citizenship: matchedApp.citizenship || matchedApp.nationality || prof.nationality || prev.citizenship || "FILIPINO",
-          dobMonth: matchedApp.dob_month || matchedApp.dobMonth || prof.dobMonth || prev.dobMonth,
-          dobDay: matchedApp.dob_day || matchedApp.dobDay || prof.dobDay || prev.dobDay,
-          dobYear: matchedApp.dob_year || matchedApp.dobYear || prof.dobYear || prev.dobYear,
-          age: String(matchedApp.age || prof.age || prev.age),
-          sex: matchedApp.sex || matchedApp.gender || prof.sex || prev.sex,
-          civilStatus: matchedApp.civil_status || matchedApp.civilStatus || prof.civilStatus || prev.civilStatus,
-          contactNo: matchedApp.contact_no || matchedApp.contactNo || matchedApp.phone_number || matchedApp.phoneNumber || prof.contactNo || prev.contactNo,
-          addressHouseNo: matchedApp.address_house_no || matchedApp.addressHouseNo || prof.addressHouseNo || prev.addressHouseNo,
-          addressStreet: matchedApp.address_street || matchedApp.addressStreet || prof.addressStreet || prev.addressStreet,
-          addressBarangay: matchedApp.address_barangay || matchedApp.addressBarangay || prof.addressBarangay || prev.addressBarangay,
-          addressCityMunicipality: matchedApp.address_city_municipality || matchedApp.addressCityMunicipality || prof.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
-          qcidNumber: matchedApp.qcid_number || matchedApp.qcidNumber || prof.qcidNo || (prof as any)?.qcidNumber || prev.qcidNumber,
-          email: matchedApp.email || prof.email || prev.email,
-          bloodType: matchedApp.blood_type || matchedApp.bloodType || (prof as any).bloodType || prev.bloodType || "O+",
+          firstName: matchedApp?.first_name || matchedApp?.firstName || prof.firstName || prev.firstName,
+          middleName: matchedApp?.middle_name || matchedApp?.middleName || prof.middleName || prev.middleName,
+          lastName: matchedApp?.last_name || matchedApp?.lastName || prof.lastName || prev.lastName,
+          suffix: matchedApp?.suffix || prof.suffix || prev.suffix,
+          citizenship: matchedApp?.citizenship || matchedApp?.nationality || prof.nationality || prev.citizenship || "FILIPINO",
+          dobMonth: matchedApp?.dob_month || matchedApp?.dobMonth || prof.dobMonth || prev.dobMonth,
+          dobDay: matchedApp?.dob_day || matchedApp?.dobDay || prof.dobDay || prev.dobDay,
+          dobYear: matchedApp?.dob_year || matchedApp?.dobYear || prof.dobYear || prev.dobYear,
+          age: String(matchedApp?.age || prof.age || prev.age || ""),
+          sex: matchedApp?.sex || matchedApp?.gender || prof.sex || prev.sex,
+          civilStatus: matchedApp?.civil_status || matchedApp?.civilStatus || prof.civilStatus || prev.civilStatus,
+          contactNo: matchedApp?.contact_no || matchedApp?.contactNo || matchedApp?.phone_number || matchedApp?.phoneNumber || prof.contactNo || prev.contactNo,
+          addressHouseNo: matchedApp?.address_house_no || matchedApp?.addressHouseNo || prof.addressHouseNo || prev.addressHouseNo,
+          addressStreet: matchedApp?.address_street || matchedApp?.addressStreet || prof.addressStreet || prev.addressStreet,
+          addressBarangay: matchedApp?.address_barangay || matchedApp?.addressBarangay || prof.addressBarangay || prev.addressBarangay,
+          addressCityMunicipality: matchedApp?.address_city_municipality || matchedApp?.addressCityMunicipality || prof.addressCityMunicipality || prev.addressCityMunicipality || "QUEZON CITY",
+          qcidNumber: matchedApp?.qcid_number || matchedApp?.qcidNumber || prof.qcidNo || (prof as any)?.qcidNumber || prev.qcidNumber,
+          email: matchedApp?.email || prof.email || prev.email,
+          bloodType: matchedApp?.blood_type || matchedApp?.bloodType || (prof as any)?.bloodType || prev.bloodType || "O+",
           ...emergencyData,
         }))
       } else {

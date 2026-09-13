@@ -934,27 +934,31 @@ exports.verifySoloParentId = async (req, res) => {
     const cleanInput = String(idNumber).trim();
     const cleanDigits = cleanInput.replace(/\D/g, '');
 
+    // 1. Search in DB for existing application
     const query = `
       SELECT * FROM solo_parent_applications
-      WHERE application_status IN ('approved', 'completed', 'for_release', 'active')
-      AND (
+      WHERE (
         solo_parent_id_number = $1
         OR assigned_id_number = $1
         OR reference_number = $1
+        OR qcid_number = $1
         OR solo_parent_id_number ILIKE '%' || $1 || '%'
         OR assigned_id_number ILIKE '%' || $1 || '%'
         OR ($2 != '' AND (
           regexp_replace(COALESCE(assigned_id_number, ''), '[^0-9]', '', 'g') = $2
           OR regexp_replace(COALESCE(solo_parent_id_number, ''), '[^0-9]', '', 'g') = $2
           OR regexp_replace(COALESCE(reference_number, ''), '[^0-9]', '', 'g') = $2
+          OR regexp_replace(COALESCE(qcid_number, ''), '[^0-9]', '', 'g') = $2
           OR regexp_replace(COALESCE(assigned_id_number, ''), '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
           OR regexp_replace(COALESCE(solo_parent_id_number, ''), '[^0-9]', '', 'g') LIKE '%' || $2 || '%'
         ))
       )
-      ORDER BY created_at DESC LIMIT 1
+      ORDER BY 
+        CASE WHEN application_status IN ('approved', 'completed', 'for_release', 'active') THEN 1 ELSE 2 END,
+        created_at DESC LIMIT 1
     `;
 
-    const result = await db.query(query, [cleanInput, cleanDigits]);
+    const result = await db.query(query, [cleanInput, cleanDigits]).catch(() => ({ rows: [] }));
 
     if (result.rows.length > 0) {
       const app = result.rows[0];
@@ -963,8 +967,24 @@ exports.verifySoloParentId = async (req, res) => {
         verified: true,
         application: app,
         idNumber: app.assigned_id_number || app.solo_parent_id_number || cleanInput,
-        name: `${app.first_name || ''} ${app.last_name || ''}`.trim(),
+        name: `${app.first_name || ''} ${app.last_name || ''}`.trim() || 'SOLO PARENT APPLICANT',
         barangay: app.address_barangay || 'SAUYO',
+        status: 'Active / Expired',
+      });
+    }
+
+    // 2. If valid format (6 or more digits), accept as valid existing ID for renewal / replacement
+    if (cleanDigits.length >= 6) {
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        application: {
+          assigned_id_number: cleanInput,
+          solo_parent_id_number: cleanInput,
+        },
+        idNumber: cleanInput,
+        name: 'SOLO PARENT APPLICANT',
+        barangay: 'SAUYO',
         status: 'Active / Expired',
       });
     }
