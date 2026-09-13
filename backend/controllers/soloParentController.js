@@ -360,19 +360,23 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const uploadedFiles = req.files.map((file) => {
+    let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
+    const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
+    const existingFiles = existingDocIndex > -1 ? (uploadedDocuments[existingDocIndex].files || []) : [];
+
+    const uploadedFiles = req.files.map((file, idx) => {
       const fileUrl = `/uploads/solo-parent/${file.filename}`;
+      const matchExisting = existingFiles.find((ef) => ef.filename === file.originalname || ef.filename === file.filename) || existingFiles[idx] || existingFiles[0];
       return {
         filename: file.filename,
+        originalName: file.originalname,
         fileUrl,
-        previewUrl: fileUrl,
+        previewUrl: matchExisting?.dataUrl || matchExisting?.previewUrl || fileUrl,
+        dataUrl: matchExisting?.dataUrl || (matchExisting?.previewUrl && matchExisting.previewUrl.startsWith('data:') ? matchExisting.previewUrl : undefined),
         fileSize: file.size,
         uploadedAt: new Date(),
       };
     });
-
-    let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
-    const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
 
     if (existingDocIndex > -1) {
       uploadedDocuments[existingDocIndex] = {

@@ -1736,14 +1736,14 @@ export default function SoloParentApplicationWizard({
       bloodType: formData.bloodType || "O+",
     }
 
-    // Lightweight document records without huge duplicate Base64 blobs
+    // High-fidelity document records with real user upload preview & dataUrl
     const newDocItems = requiredDocs.map((d) => ({
       documentId: d.id,
       documentLabel: d.label,
       files: (uploadedDocs[d.id] || []).map((f) => ({
         filename: f.name,
-        fileUrl: `${API_BASE}/uploads/solo-parent/${f.name}`,
-        previewUrl: `${API_BASE}/uploads/solo-parent/${f.name}`,
+        fileUrl: uploadedDocsBase64[d.id] || `${API_BASE}/uploads/solo-parent/${f.name}`,
+        previewUrl: uploadedDocsBase64[d.id] || `${API_BASE}/uploads/solo-parent/${f.name}`,
         dataUrl: uploadedDocsBase64[d.id] || undefined,
         fileSize: f.size,
         uploadedAt: new Date().toISOString(),

@@ -936,7 +936,16 @@ function getDocumentCandidateUrls(doc: ApplicationDocument, app?: WelfareSubmiss
 
   const add = (u?: string) => {
     if (!u || typeof u !== "string") return
-    const resolved = resolveFileUrl(u, doc.filename, isChild)
+    let resolved = u.trim()
+    if (!resolved || resolved.includes("/samples/")) return
+    if (resolved.startsWith("data:") || resolved.startsWith("blob:")) {
+      if (!urls.includes(resolved)) {
+        // Prioritize instant Base64 data URLs at the beginning
+        urls.unshift(resolved)
+      }
+      return
+    }
+    resolved = resolveFileUrl(resolved, doc.filename, isChild)
     if (resolved && !urls.includes(resolved)) {
       urls.push(resolved)
     }
@@ -949,17 +958,97 @@ function getDocumentCandidateUrls(doc: ApplicationDocument, app?: WelfareSubmiss
   if (doc.previewUrl && !doc.previewUrl.includes("/samples/")) add(doc.previewUrl)
   if (doc.fileUrl && !doc.fileUrl.includes("/samples/")) add(doc.fileUrl)
 
-  // 2. Specific filename variations across backend uploads directories
+  // 2. Search app object (formData, extraData, uploaded_documents, documents)
+  if (app) {
+    const rawDocs: any[] = []
+    if (Array.isArray(app.documents)) rawDocs.push(...app.documents)
+    if (Array.isArray((app as any).uploaded_documents)) rawDocs.push(...(app as any).uploaded_documents)
+    if (Array.isArray((app as any).form_data?.uploaded_documents)) rawDocs.push(...(app as any).form_data.uploaded_documents)
+    if (Array.isArray((app as any).form_data?.documents)) rawDocs.push(...(app as any).form_data.documents)
+    if (Array.isArray((app as any).extraData?.documents)) rawDocs.push(...(app as any).extraData.documents)
+
+    const targetDocName = (doc.name || doc.filename || "").toLowerCase()
+    for (const d of rawDocs) {
+      if (!d) continue
+      const dName = String(d.name || d.documentLabel || d.documentId || d.filename || "").toLowerCase()
+      if (dName && targetDocName && (dName === targetDocName || dName.includes(targetDocName) || targetDocName.includes(dName))) {
+        if (d.dataUrl) add(d.dataUrl)
+        if (d.previewUrl) add(d.previewUrl)
+        if (d.fileUrl) add(d.fileUrl)
+        if (Array.isArray(d.files)) {
+          for (const f of d.files) {
+            if (f.dataUrl) add(f.dataUrl)
+            if (f.previewUrl) add(f.previewUrl)
+            if (f.fileUrl) add(f.fileUrl)
+          }
+        }
+      }
+    }
+  }
+
+  // 3. PWD Logic: Check localStorage for real user upload records across all application stores
+  try {
+    const localKeys = [
+      "solo_parent_applications",
+      "child_welfare_applications",
+      "pwd_senior_applications",
+      "applications",
+      "all_user_applications",
+      "active_applications",
+    ]
+    const targetRef = String(app?.referenceNumber || (app as any)?.reference_number || app?.id || "").trim().toLowerCase()
+    const targetDocName = String(doc.name || doc.filename || "").trim().toLowerCase()
+
+    for (const key of localKeys) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          const match = parsed.find((a: any) => {
+            if (!a) return false
+            const aRef = String(a.referenceNumber || a.reference_number || a.id || a.qcid || "").trim().toLowerCase()
+            return targetRef && aRef && (aRef === targetRef || aRef.includes(targetRef) || targetRef.includes(aRef))
+          })
+          if (match) {
+            const matchDocs = match.documents || match.uploaded_documents || match.form_data?.documents || []
+            for (const md of matchDocs) {
+              if (!md) continue
+              const mdName = String(md.name || md.documentLabel || md.documentId || md.filename || "").toLowerCase()
+              if (mdName && targetDocName && (mdName === targetDocName || mdName.includes(targetDocName) || targetDocName.includes(mdName))) {
+                if (md.dataUrl) add(md.dataUrl)
+                if (md.previewUrl) add(md.previewUrl)
+                if (md.fileUrl) add(md.fileUrl)
+                if (Array.isArray(md.files)) {
+                  for (const f of md.files) {
+                    if (f.dataUrl) add(f.dataUrl)
+                    if (f.previewUrl) add(f.previewUrl)
+                    if (f.fileUrl) add(f.fileUrl)
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+
+  // 4. Server filename variations across backend uploads directories
   if (doc.filename && !doc.filename.toLowerCase().startsWith("sample")) {
     const fn = doc.filename.replace(/^.*[\\\/]/, "").trim()
     if (fn) {
       add(`${API_BASE}/uploads/solo-parent/${fn}`)
+      add(`${API_BASE}/uploads/solo-parent/${encodeURIComponent(fn)}`)
+      add(`${API_BASE}/uploads/solo-parent/${fn.replace(/\s+/g, '_')}`)
+      add(`${API_BASE}/uploads/solo-parent/${fn.replace(/[^a-zA-Z0-9_.-]/g, '_')}`)
       add(`${API_BASE}/uploads/child-welfare/${fn}`)
       add(`${API_BASE}/uploads/${fn}`)
+      add(`${API_BASE}/uploads/${fn.replace(/[^a-zA-Z0-9_.-]/g, '_')}`)
     }
   }
 
-  // 3. If photo doc, try applicant photo from app object
+  // 5. If photo doc, try applicant photo from app object
   if (isPhotoDoc && app) {
     const appPhoto = getApplicantPhotoUrl(app)
     if (appPhoto && !appPhoto.includes("/samples/")) add(appPhoto)
