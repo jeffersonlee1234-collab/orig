@@ -171,6 +171,9 @@ exports.createApplication = async (req, res) => {
     const categoryTitle = selectedCategory?.title || applicationData?.programTitle || 'Child Welfare Assistance';
     const categoryId = selectedCategoryId || (selectedCategory?.id ? String(selectedCategory.id) : null);
 
+    const initialStatus = applicationData?.status || applicationData?.application_status || 'pending';
+    const initialDocs = applicationData?.documents || req.body.documents || applicationData?.uploadedDocuments || [];
+
     const result = await db.query(
       `INSERT INTO child_welfare_applications (
         reference_number, user_id, application_status, category_id, category_title, required_document_ids,
@@ -185,24 +188,24 @@ exports.createApplication = async (req, res) => {
         support_types, support_other,
         primary_reason_for_assistance, specific_needs, estimated_amount_needed, urgency,
         child_living_arrangement, other_children_needing_assistance, other_children_count,
-        other_govt_assistance_received, other_govt_program, additional_info, form_data
+        other_govt_assistance_received, other_govt_program, additional_info, form_data, uploaded_documents
       ) VALUES (
-        $1, $2, 'draft', $3, $4, $5,
-        $6, $7, $8, $9, $10,
-        $11, $12, $13, $14,
-        $15, $16,
-        $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26,
-        $27, $28, $29, $30, $31,
-        $32, $33, $34, $35,
-        $36, $37,
-        $38, $39,
-        $40, $41, $42, $43,
-        $44, $45, $46,
-        $47, $48, $49, $50
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11,
+        $12, $13, $14, $15,
+        $16, $17,
+        $18, $19, $20, $21,
+        $22, $23, $24, $25, $26, $27,
+        $28, $29, $30, $31, $32,
+        $33, $34, $35, $36,
+        $37, $38,
+        $39, $40,
+        $41, $42, $43, $44,
+        $45, $46, $47,
+        $48, $49, $50, $51, $52
       ) RETURNING id, reference_number`,
       [
-        referenceNumber, String(userId || '0'), categoryId, categoryTitle, JSON.stringify(requiredDocumentIds || []),
+        referenceNumber, String(userId || '0'), initialStatus, categoryId, categoryTitle, JSON.stringify(requiredDocumentIds || []),
         guardianFirstName || null, guardianMiddleName || null, guardianLastName || null, guardianSex || null, guardianDateOfBirth || null,
         guardianAge || null, guardianCivilStatus || null, guardianRelationship || null, guardianContactNo || null,
         guardianEmail || null, guardianValidId || null,
@@ -215,6 +218,7 @@ exports.createApplication = async (req, res) => {
         primaryReason || null, specificNeeds || null, estimatedAmountNeeded || null, urgency || null,
         childLivingArrangement || null, otherChildrenNeedingAssistance || null, otherChildrenCount || null,
         otherGovtAssistanceReceived || null, otherGovtProgram || null, additionalInfo || null, JSON.stringify(formData || {}),
+        JSON.stringify(initialDocs || [])
       ]
     );
 
@@ -269,17 +273,32 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
-    const appResult = await db.query('SELECT uploaded_documents FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT uploaded_documents, extra_data FROM child_welfare_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const uploadedFiles = req.files.map((file) => ({
-      filename: file.filename,
-      fileUrl: `/uploads/child-welfare/${file.filename}`,
-      fileSize: file.size,
-      uploadedAt: new Date(),
-    }));
+    const syncFs = require('fs');
+    const uploadedFiles = req.files.map((file) => {
+      let dataUrl = '';
+      try {
+        if (file.path && syncFs.existsSync(file.path)) {
+          const fileBuffer = syncFs.readFileSync(file.path);
+          const mime = file.mimetype || 'image/jpeg';
+          dataUrl = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+        }
+      } catch (e) {
+        console.warn('Could not generate base64 dataUrl for uploaded file:', e);
+      }
+      return {
+        filename: file.filename,
+        fileUrl: `/uploads/child-welfare/${file.filename}`,
+        dataUrl: dataUrl || undefined,
+        previewUrl: dataUrl || undefined,
+        fileSize: file.size,
+        uploadedAt: new Date(),
+      };
+    });
 
     let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
     const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
@@ -294,6 +313,19 @@ exports.uploadDocuments = async (req, res) => {
       'UPDATE child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(uploadedDocuments), applicationId]
     );
+
+    const isPhotoDoc = /photo|picture|2x2|id_pic|avatar/i.test(documentId || documentLabel || '');
+    const photoFile = uploadedFiles.find((f) => f.dataUrl);
+    if (isPhotoDoc && photoFile && photoFile.dataUrl) {
+      try {
+        await db.query(
+          `UPDATE child_welfare_applications 
+           SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
+           WHERE id = $2`,
+          [photoFile.dataUrl, applicationId]
+        );
+      } catch (e) {}
+    }
 
     res.status(200).json({ success: true, message: 'Documents uploaded successfully', files: uploadedFiles });
   } catch (error) {
@@ -358,18 +390,6 @@ exports.submitApplication = async (req, res) => {
     }
 
     const application = appResult.rows[0];
-    const requiredDocumentIds = application.required_document_ids || [];
-    const uploadedDocuments = application.uploaded_documents || [];
-    const uploadedIds = uploadedDocuments.map((d) => d.documentId);
-    const missing = requiredDocumentIds.filter((id) => !uploadedIds.includes(id));
-
-    if (missing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Not all required documents have been uploaded',
-        missingDocumentIds: missing,
-      });
-    }
 
     await db.query(
       `UPDATE child_welfare_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,

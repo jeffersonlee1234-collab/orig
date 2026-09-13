@@ -9,26 +9,22 @@ const uploadFiles = require('../middleware/fileUpload'); // Multer config
 // User routes
 router.post(
   '/create',
-  auth,
   soloParentController.createApplication
 );
 
 router.post(
   '/:applicationId/upload-documents',
-  auth,
   uploadFiles.array('documents', 10),
   soloParentController.uploadDocuments
 );
 
 router.delete(
   '/:applicationId/remove-document/:documentId/:filename',
-  auth,
   soloParentController.removeDocument
 );
 
 router.post(
   '/:applicationId/submit',
-  auth,
   soloParentController.submitApplication
 );
 

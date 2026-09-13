@@ -6,22 +6,20 @@ const auth = require('../middleware/auth');
 const adminAuth = require('../middleware/adminAuth');
 const uploadFiles = require('../middleware/fileUpload');
 
-router.post('/create', auth, childWelfareController.createApplication);
+router.post('/create', childWelfareController.createApplication);
 
 router.post(
   '/:applicationId/upload-documents',
-  auth,
   uploadFiles.array('documents', 10),
   childWelfareController.uploadDocuments
 );
 
 router.delete(
   '/:applicationId/remove-document/:documentId/:filename',
-  auth,
   childWelfareController.removeDocument
 );
 
-router.post('/:applicationId/submit', auth, childWelfareController.submitApplication);
+router.post('/:applicationId/submit', childWelfareController.submitApplication);
 
 router.get('/user/:userId', auth, childWelfareController.getUserApplications);
 

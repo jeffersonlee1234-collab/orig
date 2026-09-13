@@ -89,7 +89,7 @@ export function isIdOrDocumentApplication(app?: { assistance?: string; assistanc
 }
 
 export function getApplicantPhotoUrl(app: any): string {
-  if (!app) return "/samples/ID PICTURE (2X2).webp"
+  if (!app) return ""
 
   const direct =
     app.applicantPhoto ||
@@ -112,10 +112,13 @@ export function getApplicantPhotoUrl(app: any): string {
     app.formData?.applicantPhoto ||
     app.formData?.photoUrl ||
     app.formData?.idPhoto ||
+    app.form_data?.applicantPhoto ||
+    app.form_data?.photoUrl ||
+    app.form_data?.idPhoto ||
     app.extra_data?.applicantPhoto ||
     app.extra_data?.photoUrl ||
     app.extra_data?.idPhoto
-  if (direct && typeof direct === "string") {
+  if (direct && typeof direct === "string" && !direct.toLowerCase().includes("sample")) {
     if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://") || direct.startsWith("blob:")) {
       return direct
     }
@@ -124,7 +127,38 @@ export function getApplicantPhotoUrl(app: any): string {
     return `${API_BASE}/uploads/${direct}`
   }
 
-  // Search in local storage applications
+  // 1. Direct document list on app
+  let docsList: any[] = []
+  if (Array.isArray(app.documents)) docsList = app.documents
+  else if (Array.isArray(app.uploaded_documents)) docsList = app.uploaded_documents
+  else if (Array.isArray(app.form_data?.uploaded_documents)) docsList = app.form_data.uploaded_documents
+  else if (Array.isArray(app.formData?.uploaded_documents)) docsList = app.formData.uploaded_documents
+
+  const flatDocs: any[] = []
+  for (const item of docsList) {
+    if (!item) continue
+    if (Array.isArray(item.files)) {
+      for (const f of item.files) {
+        flatDocs.push({ ...f, name: f.name || item.name || item.documentLabel || item.documentId || "" })
+      }
+    } else {
+      flatDocs.push(item)
+    }
+  }
+
+  const photoDoc = flatDocs.find((d: any) =>
+    /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || d.documentLabel || d.documentId || "")
+  )
+  if (photoDoc) {
+    const raw = photoDoc.dataUrl || photoDoc.previewUrl || photoDoc.data_url || photoDoc.fileUrl || photoDoc.url || photoDoc.path || photoDoc.filename
+    if (raw && typeof raw === "string" && !raw.toLowerCase().includes("sample")) {
+      if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) return raw
+      if (raw.startsWith("/")) return `${API_BASE}${raw}`
+      return `${API_BASE}/uploads/${raw}`
+    }
+  }
+
+  // 2. Search in local storage applications
   try {
     const pwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
     const match = pwdApps.find(
@@ -134,12 +168,12 @@ export function getApplicantPhotoUrl(app: any): string {
         (p.firstName && app.applicantName && app.applicantName.toLowerCase().includes(p.firstName.toLowerCase()))
     )
     if (match?.documents && Array.isArray(match.documents)) {
-      const photoDoc = match.documents.find((d: any) =>
+      const pDoc = match.documents.find((d: any) =>
         /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || "")
       )
-      if (photoDoc) {
-        const raw = photoDoc.fileUrl || photoDoc.url || photoDoc.path || photoDoc.filename
-        if (raw) {
+      if (pDoc) {
+        const raw = pDoc.dataUrl || pDoc.previewUrl || pDoc.fileUrl || pDoc.url || pDoc.path || pDoc.filename
+        if (raw && !raw.toLowerCase().includes("sample")) {
           if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) return raw
           if (raw.startsWith("/")) return `${API_BASE}${raw}`
           return `${API_BASE}/uploads/${raw}`
@@ -153,16 +187,20 @@ export function getApplicantPhotoUrl(app: any): string {
     const match = spApps.find(
       (s: any) =>
         s.reference_number === app.applicationNo ||
+        s.referenceNumber === app.applicationNo ||
         s.assigned_id_number === app.applicationNo ||
         s.id === app.id
     )
+    if (match?.applicantPhoto && typeof match.applicantPhoto === "string") {
+      return match.applicantPhoto
+    }
     if (match?.documents && Array.isArray(match.documents)) {
-      const photoDoc = match.documents.find((d: any) =>
+      const pDoc = match.documents.find((d: any) =>
         /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || "")
       )
-      if (photoDoc) {
-        const raw = photoDoc.fileUrl || photoDoc.url || photoDoc.path || photoDoc.filename
-        if (raw) {
+      if (pDoc) {
+        const raw = pDoc.dataUrl || pDoc.previewUrl || pDoc.fileUrl || pDoc.url || pDoc.path || pDoc.filename
+        if (raw && !raw.toLowerCase().includes("sample")) {
           if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) return raw
           if (raw.startsWith("/")) return `${API_BASE}${raw}`
           return `${API_BASE}/uploads/solo-parent/${raw}`
@@ -173,13 +211,13 @@ export function getApplicantPhotoUrl(app: any): string {
 
   const profile = getCurrentUserProfile()
   const pPhoto = (profile as any)?.photo || (profile as any)?.photoUrl || (profile as any)?.avatar
-  if (pPhoto && typeof pPhoto === "string") {
+  if (pPhoto && typeof pPhoto === "string" && !pPhoto.toLowerCase().includes("sample")) {
     if (pPhoto.startsWith("data:") || pPhoto.startsWith("http://") || pPhoto.startsWith("https://") || pPhoto.startsWith("blob:")) return pPhoto
     if (pPhoto.startsWith("/")) return `${API_BASE}${pPhoto}`
     return `${API_BASE}/uploads/${pPhoto}`
   }
 
-  return "/samples/ID PICTURE (2X2).webp"
+  return ""
 }
 
 const loadImageSafely = (src: string): Promise<HTMLImageElement | null> => {
@@ -864,18 +902,23 @@ function ApplicantPhotoDisplay({
   tag: string
   isPwd?: boolean
 }) {
-  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "")
   const [retryStep, setRetryStep] = useState<number>(0)
-  const [hasFailed, setHasFailed] = useState(false)
+  const [hasFailed, setHasFailed] = useState(!photoUrl || photoUrl.includes("sample"))
 
   useEffect(() => {
-    setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
-    setRetryStep(0)
-    setHasFailed(false)
+    if (photoUrl && !photoUrl.includes("sample")) {
+      setImgSrc(photoUrl)
+      setRetryStep(0)
+      setHasFailed(false)
+    } else {
+      setImgSrc("")
+      setHasFailed(true)
+    }
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (!photoUrl || photoUrl === "/samples/ID PICTURE (2X2).webp") {
+    if (!photoUrl || photoUrl.includes("sample")) {
       setHasFailed(true)
       return
     }
@@ -890,9 +933,6 @@ function ApplicantPhotoDisplay({
     } else if (retryStep <= 2 && filename && !photoUrl.includes("/aics/")) {
       setRetryStep(3)
       setImgSrc(`${API_BASE}/uploads/aics/${filename}`)
-    } else if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
-      setRetryStep(4)
-      setImgSrc("/samples/ID PICTURE (2X2).webp")
     } else {
       setHasFailed(true)
     }
@@ -900,18 +940,18 @@ function ApplicantPhotoDisplay({
 
   return (
     <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-      {!hasFailed ? (
+      {!hasFailed && imgSrc ? (
         <img
           src={imgSrc}
-          alt=""
+          alt="Applicant 2x2 Photo"
           crossOrigin="anonymous"
           className="w-full h-full object-cover"
           onError={handleImageError}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full">
-          <User className="w-8 h-8 text-slate-300 mb-1" />
-          <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full bg-slate-100 w-full">
+          <User className="w-8 h-8 text-slate-400 mb-1" />
+          <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500">2x2 Photo</span>
         </div>
       )}
       <div

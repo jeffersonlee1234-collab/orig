@@ -37,6 +37,7 @@ async function initSoloParentColumns() {
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb;
     `);
   } catch (e) {
     console.warn('[Solo Parent DB init columns]:', e.message);
@@ -57,13 +58,16 @@ exports.createApplication = async (req, res) => {
     const selectedCategory = appData.selectedCategory || req.body.selectedCategory;
     const existingIdNumber = appData.existingIdNumber || req.body.existingIdNumber;
     const isIdVerified = appData.isIdVerified ?? req.body.isIdVerified;
+    const initialDocs = appData.documents || req.body.documents || appData.uploadedDocuments || [];
 
     // Clean up any unsubmitted draft records so they never block new attempts
-    await db.query(
-      `DELETE FROM solo_parent_applications
-       WHERE user_id = $1 AND application_status = 'draft'`,
-      [userId]
-    );
+    if (userId) {
+      await db.query(
+        `DELETE FROM solo_parent_applications
+         WHERE user_id::text = $1 AND application_status = 'draft'`,
+        [String(userId)]
+      ).catch(() => {});
+    }
 
     const baseRef = req.body.referenceNumber || req.body.reference_number || (fd && (fd.qcidNumber || fd.qcidNo || fd.qcId)) || generateReference();
     const referenceNumber = await getUniqueReferenceNumber(baseRef, idStatus);
@@ -93,6 +97,8 @@ exports.createApplication = async (req, res) => {
       bloodType,
     };
 
+    const initialStatus = appData.status || appData.application_status || 'pending';
+
     const result = await db.query(
       `INSERT INTO solo_parent_applications (
         reference_number, user_id, application_status, application_type,
@@ -104,21 +110,21 @@ exports.createApplication = async (req, res) => {
         qcid_number, email,
         emergency_first_name, emergency_last_name, emergency_name,
         emergency_contact_no, emergency_relationship, emergency_address,
-        blood_type, form_data, family_members, extra_data
+        blood_type, form_data, family_members, extra_data, uploaded_documents
       ) VALUES (
-        $1, $2, 'draft', $3,
-        $4, $5, $6, $7,
-        $8, $9,
-        $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20,
-        $21, $22, $23, $24,
-        $25, $26,
-        $27, $28, $29,
-        $30, $31, $32,
-        $33, $34, $35, $36
+        $1, $2, $3, $4,
+        $5, $6, $7, $8,
+        $9, $10,
+        $11, $12, $13, $14, $15, $16,
+        $17, $18, $19, $20, $21,
+        $22, $23, $24, $25,
+        $26, $27,
+        $28, $29, $30,
+        $31, $32, $33,
+        $34, $35, $36, $37, $38
       ) RETURNING id, reference_number`,
       [
-        referenceNumber, userId, idStatus,
+        referenceNumber, String(userId || '0'), initialStatus, idStatus,
         isResident, selectedCategoryId, selectedCategory?.title || null, JSON.stringify(requiredDocumentIds || []),
         soloParentIdNum, Boolean(isIdVerified),
         fd.firstName || null, fd.middleName || null, fd.lastName || null, fd.suffix || null, safeAge, fd.sex || null,
@@ -127,7 +133,8 @@ exports.createApplication = async (req, res) => {
         fd.qcidNumber || null, fd.email || null,
         emergencyFirstName, emergencyLastName, emergencyName,
         emergencyPhone, emergencyRel, emergencyAddr,
-        bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers })
+        bloodType, JSON.stringify(mergedFormData || {}), JSON.stringify(familyMembers || []), JSON.stringify({ formData: mergedFormData, familyMembers }),
+        JSON.stringify(initialDocs || [])
       ]
     );
 
@@ -187,17 +194,32 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
-    const appResult = await db.query('SELECT uploaded_documents FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT uploaded_documents, form_data, extra_data FROM solo_parent_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const uploadedFiles = req.files.map((file) => ({
-      filename: file.filename,
-      fileUrl: `/uploads/solo-parent/${file.filename}`,
-      fileSize: file.size,
-      uploadedAt: new Date(),
-    }));
+    const syncFs = require('fs');
+    const uploadedFiles = req.files.map((file) => {
+      let dataUrl = '';
+      try {
+        if (file.path && syncFs.existsSync(file.path)) {
+          const fileBuffer = syncFs.readFileSync(file.path);
+          const mime = file.mimetype || 'image/jpeg';
+          dataUrl = `data:${mime};base64,${fileBuffer.toString('base64')}`;
+        }
+      } catch (e) {
+        console.warn('Could not generate base64 dataUrl for uploaded file:', e);
+      }
+      return {
+        filename: file.filename,
+        fileUrl: `/uploads/solo-parent/${file.filename}`,
+        dataUrl: dataUrl || undefined,
+        previewUrl: dataUrl || undefined,
+        fileSize: file.size,
+        uploadedAt: new Date(),
+      };
+    });
 
     let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
     const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
@@ -216,6 +238,23 @@ exports.uploadDocuments = async (req, res) => {
       'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(uploadedDocuments), applicationId]
     );
+
+    // If this is a 2x2 photo or picture, also update applicantPhoto in form_data and extra_data
+    const isPhotoDoc = /photo|picture|2x2|id_pic|avatar/i.test(documentId || documentLabel || '');
+    const photoFile = uploadedFiles.find((f) => f.dataUrl);
+    if (isPhotoDoc && photoFile && photoFile.dataUrl) {
+      try {
+        await db.query(
+          `UPDATE solo_parent_applications 
+           SET form_data = jsonb_set(COALESCE(form_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true),
+               extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
+           WHERE id = $2`,
+          [photoFile.dataUrl, applicationId]
+        );
+      } catch (e) {
+        console.warn('Could not update applicantPhoto field:', e);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -285,18 +324,6 @@ exports.submitApplication = async (req, res) => {
     }
 
     const application = appResult.rows[0];
-    const requiredDocumentIds = application.required_document_ids || [];
-    const uploadedDocuments = application.uploaded_documents || [];
-    const uploadedIds = uploadedDocuments.map((d) => d.documentId);
-    const missing = requiredDocumentIds.filter((id) => !uploadedIds.includes(id));
-
-    if (missing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Not all required documents have been uploaded',
-        missingDocumentIds: missing,
-      });
-    }
 
     await db.query(
       `UPDATE solo_parent_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,

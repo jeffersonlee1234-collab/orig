@@ -200,15 +200,23 @@ function isSoloParent(app: WelfareSubmission): app is SoloParentSubmission {
 
 const API_BASE = `${APP_API_BASE}/api`
 
-function getAuthToken() {
-  // Iakma kung saan mo talaga sini-save ang admin token (localStorage, cookie, atbp.)
-  return localStorage.getItem("token") || ""
+function getAdminAuthToken() {
+  if (typeof window === "undefined") return ""
+  return (
+    sessionStorage.getItem("token") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("sessionToken") ||
+    localStorage.getItem("sessionToken") ||
+    ""
+  )
 }
 
-function authHeaders() {
+function authHeaders(custom: Record<string, string> = {}) {
+  const token = getAdminAuthToken()
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${getAuthToken()}`,
+    ...(token ? { Authorization: `Bearer ${token}`, "x-access-token": token, "x-session-token": token } : {}),
+    ...custom,
   }
 }
 
@@ -625,16 +633,61 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
 }
 
 async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
-  const [soloRes, childRes] = await Promise.all([
-    fetch(`${API_BASE}/solo-parent/admin/all?limit=100`, { headers: authHeaders() }),
-    fetch(`${API_BASE}/child-welfare/admin/all?limit=100`, { headers: authHeaders() }),
-  ])
+  let soloApps: SoloParentSubmission[] = []
+  let childApps: ChildWelfareSubmission[] = []
 
-  const soloData = soloRes.ok ? await soloRes.json() : { applications: [] }
-  const childData = childRes.ok ? await childRes.json() : { applications: [] }
+  try {
+    const [soloRes, childRes] = await Promise.all([
+      fetch(`${API_BASE}/solo-parent/admin/all?limit=100`, { headers: authHeaders() }).catch(() => null),
+      fetch(`${API_BASE}/child-welfare/admin/all?limit=100`, { headers: authHeaders() }).catch(() => null),
+    ])
 
-  const soloApps = (soloData.applications || []).map(mapSoloParentRow)
-  const childApps = (childData.applications || []).map(mapChildWelfareRow)
+    if (soloRes && soloRes.ok) {
+      const soloData = await soloRes.json()
+      soloApps = (soloData.applications || []).map(mapSoloParentRow)
+    }
+    if (childRes && childRes.ok) {
+      const childData = await childRes.json()
+      childApps = (childData.applications || []).map(mapChildWelfareRow)
+    }
+  } catch (e) {
+    console.warn("API fetch error in welfare admin:", e)
+  }
+
+  // Also sync / merge any locally stored offline/live submissions
+  try {
+    const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+    if (Array.isArray(localSolo) && localSolo.length > 0) {
+      for (const item of localSolo) {
+        const ref = item.reference_number || item.referenceNumber || item.ref
+        if (ref && !soloApps.some((a) => a.referenceNumber === ref || a.id === `SP-${item.id}` || a.id === item.id)) {
+          soloApps.unshift(mapSoloParentRow({
+            ...item,
+            id: item.id || Date.now(),
+            reference_number: ref,
+            created_at: item.created_at || item.submittedAt || new Date().toISOString(),
+            application_status: item.application_status || item.status || "pending",
+          }))
+        }
+      }
+    }
+
+    const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+    if (Array.isArray(localChild) && localChild.length > 0) {
+      for (const item of localChild) {
+        const ref = item.reference_number || item.referenceNumber || item.ref
+        if (ref && !childApps.some((a) => a.referenceNumber === ref || a.id === `CW-${item.id}` || a.id === item.id)) {
+          childApps.unshift(mapChildWelfareRow({
+            ...item,
+            id: item.id || Date.now(),
+            reference_number: ref,
+            created_at: item.created_at || item.submittedAt || new Date().toISOString(),
+            application_status: item.application_status || item.status || "pending",
+          }))
+        }
+      }
+    }
+  } catch {}
 
   return [...soloApps, ...childApps].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()

@@ -646,13 +646,11 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
   if (name.includes("barangay")) return "/samples/BARANGAY CERTIFICATE.webp"
   if (name.includes("birth") || name.includes("psa")) return "/samples/BIRTH CERTIFICATE OF MINOR.jpg"
   if (name.includes("gov") || name.includes("valid id") || name.includes("government")) return "/samples/sample_valid_id.png"
-  if (name.includes("qc id") || name.includes("pwd id")) return "/samples/QC ID NG PERSON WITH DISABILITY.jpg"
-
   return "/samples/sample_valid_id.png"
 }
 
 export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): string {
-  if (!app) return "/samples/ID PICTURE (2X2).webp"
+  if (!app) return ""
 
   // 1. Direct properties on the application (check all possible variants)
   const direct =
@@ -677,6 +675,10 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     (app as any).formData?.photoUrl ||
     (app as any).formData?.idPhoto ||
     (app as any).formData?.id_photo ||
+    (app as any).form_data?.applicantPhoto ||
+    (app as any).form_data?.photoUrl ||
+    (app as any).form_data?.idPhoto ||
+    (app as any).form_data?.id_photo ||
     (app as any).extra_data?.applicantPhoto ||
     (app as any).extra_data?.photoUrl ||
     (app as any).extra_data?.idPhoto ||
@@ -684,7 +686,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     (app as any).extra_data?.formData?.idPhoto ||
     (app as any).extraData?.photoUrl ||
     (app as any).extraData?.idPhoto
-  if (direct && typeof direct === "string") {
+  if (direct && typeof direct === "string" && !direct.toLowerCase().includes("sample")) {
     if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://") || direct.startsWith("blob:")) {
       return direct
     }
@@ -705,7 +707,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
       if (d.startsWith("uploads/")) return `${API_BASE}/${d}`
       return `${API_BASE}/uploads/${d}`
     }
-    const rawUrl = d.fileUrl || d.url || d.previewUrl || d.path || d.filePath || d.dataUrl || d.src || d.file_path
+    const rawUrl = d.dataUrl || d.previewUrl || d.data_url || d.fileUrl || d.url || d.path || d.filePath || d.src || d.file_path || d.base64
     if (rawUrl && typeof rawUrl === "string") {
       if (rawUrl.startsWith("data:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("blob:")) return rawUrl
       if (rawUrl.startsWith("/")) return `${API_BASE}${rawUrl}`
@@ -728,6 +730,10 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     docsList = app.extra_data.documents
   } else if (Array.isArray(app.uploaded_documents)) {
     docsList = app.uploaded_documents
+  } else if (Array.isArray((app as any).form_data?.uploaded_documents)) {
+    docsList = (app as any).form_data.uploaded_documents
+  } else if (Array.isArray((app as any).formData?.uploaded_documents)) {
+    docsList = (app as any).formData.uploaded_documents
   }
 
   // Flatten nested structures (e.g. { files: [...] })
@@ -790,8 +796,8 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
   // 5. Look across localStorage
   try {
     const localKeys = [
-      "pwd_senior_applications",
       "solo_parent_applications",
+      "pwd_senior_applications",
       "child_welfare_applications",
       "applications",
       "all_user_applications",
@@ -809,7 +815,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
           const match = parsed.find((a: any) => {
             if (!a) return false
             const aRef = String(a.referenceNumber || a.reference_number || a.id || a.qcid || "").trim().toLowerCase()
-            const appRef = String(app.referenceNumber || app.id || (app as any).qcid || "").trim().toLowerCase()
+            const appRef = String(app.referenceNumber || app.id || (app as any).qcid || (app as any).reference_number || "").trim().toLowerCase()
             const aEmail = String(a.email || "").trim().toLowerCase()
             const appEmail = String(app.email || "").trim().toLowerCase()
             const aName = `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase()
@@ -817,21 +823,21 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
             return (
               (appRef && aRef && (aRef === appRef || aRef.includes(appRef) || appRef.includes(aRef))) ||
               (appEmail && aEmail && aEmail === appEmail) ||
-              (appName && aName && aName === appName)
+              (appName && aName && appName === aName)
             )
           })
           if (match && match !== app) {
             const mPhoto = getApplicantPhotoUrl(match)
-            if (mPhoto && mPhoto !== "/samples/ID PICTURE (2X2).webp") return mPhoto
+            if (mPhoto && !mPhoto.includes("sample")) return mPhoto
           }
         } else if (parsed && typeof parsed === "object") {
           const pRef = String(parsed.qcidNumber || parsed.qcid_number || parsed.qcidNo || parsed.qcid || parsed.reference_number || "").trim().toLowerCase()
-          const appRef = String(app.referenceNumber || app.id || (app as any).qcid || "").trim().toLowerCase()
+          const appRef = String(app.referenceNumber || app.id || (app as any).qcid || (app as any).reference_number || "").trim().toLowerCase()
           const pEmail = String(parsed.email || "").trim().toLowerCase()
           const appEmail = String(app.email || "").trim().toLowerCase()
           if ((appRef && pRef && (pRef === appRef || appRef.includes(pRef))) || (appEmail && pEmail && pEmail === appEmail)) {
-            const userPhoto = parsed.photoUrl || parsed.profilePhotoUrl || parsed.avatar || parsed.photo || parsed.idPhoto
-            if (userPhoto && typeof userPhoto === "string") {
+            const userPhoto = parsed.photoUrl || parsed.profilePhotoUrl || parsed.avatar || parsed.photo || parsed.idPhoto || parsed.applicantPhoto
+            if (userPhoto && typeof userPhoto === "string" && !userPhoto.includes("sample")) {
               if (userPhoto.startsWith("data:") || userPhoto.startsWith("http://") || userPhoto.startsWith("https://") || userPhoto.startsWith("blob:")) return userPhoto
               if (userPhoto.startsWith("/")) return `${API_BASE}${userPhoto}`
               return `${API_BASE}/uploads/${userPhoto}`
@@ -842,8 +848,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     }
   } catch {}
 
-  // 6. Fallback sample image
-  return "/samples/ID PICTURE (2X2).webp"
+  return ""
 }
 
 export function ApplicantPhotoDisplay({
@@ -855,18 +860,23 @@ export function ApplicantPhotoDisplay({
   tag: string
   isPwd?: boolean
 }) {
-  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "/samples/ID PICTURE (2X2).webp")
+  const [imgSrc, setImgSrc] = useState<string>(photoUrl || "")
   const [retryStep, setRetryStep] = useState<number>(0)
-  const [hasFailed, setHasFailed] = useState(false)
+  const [hasFailed, setHasFailed] = useState(!photoUrl || photoUrl.includes("sample"))
 
   useEffect(() => {
-    setImgSrc(photoUrl || "/samples/ID PICTURE (2X2).webp")
-    setRetryStep(0)
-    setHasFailed(false)
+    if (photoUrl && !photoUrl.includes("sample")) {
+      setImgSrc(photoUrl)
+      setRetryStep(0)
+      setHasFailed(false)
+    } else {
+      setImgSrc("")
+      setHasFailed(true)
+    }
   }, [photoUrl])
 
   const handleImageError = () => {
-    if (!photoUrl || photoUrl === "/samples/ID PICTURE (2X2).webp") {
+    if (!photoUrl || photoUrl.includes("sample")) {
       setHasFailed(true)
       return
     }
@@ -881,28 +891,26 @@ export function ApplicantPhotoDisplay({
     } else if (retryStep <= 2 && filename && !photoUrl.includes("/aics/")) {
       setRetryStep(3)
       setImgSrc(`${API_BASE}/uploads/aics/${filename}`)
-    } else if (imgSrc !== "/samples/ID PICTURE (2X2).webp") {
-      setRetryStep(4)
-      setImgSrc("/samples/ID PICTURE (2X2).webp")
     } else {
+      // Avoid loading sample fake pictures of someone else
       setHasFailed(true)
     }
   }
 
   return (
     <div className="w-22 h-26 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-      {!hasFailed ? (
+      {!hasFailed && imgSrc ? (
         <img
           src={imgSrc}
-          alt=""
+          alt="Applicant 2x2 Photo"
           crossOrigin="anonymous"
           className="w-full h-full object-cover"
           onError={handleImageError}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full">
-          <User className="w-8 h-8 text-slate-300 mb-1" />
-          <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
+        <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center h-full bg-slate-100 w-full">
+          <User className="w-8 h-8 text-slate-400 mb-1" />
+          <span className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500">2x2 Photo</span>
         </div>
       )}
       <div

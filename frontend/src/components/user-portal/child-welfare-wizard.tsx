@@ -20,7 +20,7 @@ import {
 import { useLanguage } from "../ui/language-context"
 import { getCurrentUserProfile } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
-import { API_BASE } from "../../config/api"
+import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
 import DocumentCameraModal from "../ui/document-camera-modal"
 
 function generateReference(qcid?: string) {
@@ -1205,7 +1205,7 @@ export default function ChildWelfareApplicationWizard({
     try {
       const createRes = await fetch(`${API_BASE}/api/child-welfare/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload),
       })
 
@@ -1224,8 +1224,10 @@ export default function ChildWelfareApplicationWizard({
             files.forEach((f) => uploadData.append("documents", f))
             uploadData.append("documentId", doc.id)
             uploadData.append("documentLabel", doc.label)
+            const token = getAuthToken()
             await fetch(`${API_BASE}/api/child-welfare/${appId}/upload-documents`, {
               method: "POST",
+              headers: token ? { Authorization: `Bearer ${token}`, "x-access-token": token, "x-session-token": token } : undefined,
               body: uploadData,
             }).catch(() => {})
           }
@@ -1235,6 +1237,7 @@ export default function ChildWelfareApplicationWizard({
         if (appId) {
           await fetch(`${API_BASE}/api/child-welfare/${appId}/submit`, {
             method: "POST",
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
           }).catch(() => {})
         }
 

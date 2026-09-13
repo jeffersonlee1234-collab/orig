@@ -17,7 +17,7 @@ import {
 
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
-import { API_BASE } from "../../config/api"
+import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
@@ -1452,6 +1452,7 @@ export default function SoloParentApplicationWizard({
   // ---- Step 3: Sample Documents (dynamic base sa idStatus) ----
   const requiredDocs = getRequiredDocuments(idStatus, selectedCategoryId)
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, File[]>>({})
+  const [uploadedDocsBase64, setUploadedDocsBase64] = useState<Record<string, string>>({})
 
   // Reload / Navigation warning protection — active from Step 2 onwards when modal is closed and form is actively being filled
   const isFormDirty =
@@ -1506,10 +1507,19 @@ export default function SoloParentApplicationWizard({
 
     if (validFiles.length === 0) return
 
+    const fileToUpload = validFiles[0]
     setUploadedDocs((prev) => ({
       ...prev,
-      [docId]: [validFiles[0]],
+      [docId]: [fileToUpload],
     }))
+
+    // Read as Base64 Data URL for persistent instant preview & database fallback
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setUploadedDocsBase64((prev) => ({ ...prev, [docId]: dataUrl }))
+    }
+    reader.readAsDataURL(fileToUpload)
   }
 
   const handleRemoveFile = (docId: string, fileIndex: number) => {
@@ -1517,6 +1527,11 @@ export default function SoloParentApplicationWizard({
       const updated = [...(prev[docId] || [])]
       updated.splice(fileIndex, 1)
       return { ...prev, [docId]: updated }
+    })
+    setUploadedDocsBase64((prev) => {
+      const updated = { ...prev }
+      delete updated[docId]
+      return updated
     })
   }
 
@@ -1530,8 +1545,17 @@ export default function SoloParentApplicationWizard({
     const emLast = (formData.emergencyLastName || "").trim()
     const emCombined = [emFirst, emLast].filter(Boolean).join(" ")
 
+    // Extract uploaded 2x2 photo Base64
+    const photoKey = Object.keys(uploadedDocsBase64).find((k) =>
+      /photo|picture|2x2|id_pic|avatar/i.test(k)
+    )
+    const applicantPhoto = photoKey ? uploadedDocsBase64[photoKey] : (userProfile as any)?.photo || ""
+
     const finalFormData = {
       ...formData,
+      applicantPhoto: applicantPhoto || undefined,
+      idPhoto: applicantPhoto || undefined,
+      photoUrl: applicantPhoto || undefined,
       emergencyFirstName: emFirst,
       emergencyLastName: emLast,
       emergencyName: emCombined || (formData as any).emergencyName || "",
@@ -1543,13 +1567,25 @@ export default function SoloParentApplicationWizard({
       bloodType: formData.bloodType || "O+",
     }
 
+    // Pre-build document records with Base64 previews
+    const newDocItems = requiredDocs.map((d) => ({
+      documentId: d.id,
+      documentLabel: d.label,
+      files: (uploadedDocs[d.id] || []).map((f) => ({
+        filename: f.name,
+        fileUrl: uploadedDocsBase64[d.id] || `/uploads/solo-parent/${f.name}`,
+        dataUrl: uploadedDocsBase64[d.id],
+        uploadedAt: new Date().toISOString(),
+      })),
+    }))
+
     try {
       // 1. Create application record sa backend
       const res = await fetch(`${API_BASE}/api/solo-parent/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
-          userId,
+          userId: userId || userProfile?.id || "0",
           referenceNumber: fallbackRef,
           applicationData: {
             isResident,
@@ -1558,6 +1594,7 @@ export default function SoloParentApplicationWizard({
             selectedCategory,
             existingIdNumber,
             isIdVerified,
+            applicantPhoto: applicantPhoto || undefined,
             formData: finalFormData,
             familyMembers,
             emergencyFirstName: emFirst,
@@ -1569,7 +1606,11 @@ export default function SoloParentApplicationWizard({
             emergencyRelationship: (formData.emergencyRelationship || "").trim(),
             emergencyAddress: (formData.emergencyAddress || "").trim(),
             bloodType: formData.bloodType || "O+",
+            status: "pending",
+            application_status: "pending",
+            documents: newDocItems,
           },
+          documents: newDocItems,
           requiredDocumentIds: requiredDocs.map((d) => d.id),
         }),
       })
@@ -1581,7 +1622,7 @@ export default function SoloParentApplicationWizard({
           setReference(data.referenceNumber)
         }
 
-        // 2. I-upload ang lahat ng nakalakip na dokumento
+        // 2. I-upload ang lahat ng nakalakip na dokumento via multipart
         for (const doc of requiredDocs) {
           const files = uploadedDocs[doc.id] || []
           if (files.length > 0 && appId) {
@@ -1589,8 +1630,10 @@ export default function SoloParentApplicationWizard({
             files.forEach((f) => uploadFormData.append("documents", f))
             uploadFormData.append("documentId", doc.id)
             uploadFormData.append("documentLabel", doc.label)
+            const token = getAuthToken()
             await fetch(`${API_BASE}/api/solo-parent/${appId}/upload-documents`, {
               method: "POST",
+              headers: token ? { Authorization: `Bearer ${token}`, "x-access-token": token, "x-session-token": token } : undefined,
               body: uploadFormData,
             }).catch(() => {})
           }
@@ -1600,16 +1643,86 @@ export default function SoloParentApplicationWizard({
         if (appId) {
           await fetch(`${API_BASE}/api/solo-parent/${appId}/submit`, {
             method: "POST",
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
           }).catch(() => {})
         }
+
+        // Local cache sync for instant rendering across all portals
+        try {
+          const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+          const localRecord = {
+            id: appId || String(Date.now()),
+            reference_number: data.referenceNumber || fallbackRef,
+            referenceNumber: data.referenceNumber || fallbackRef,
+            category: "Solo Parent",
+            applicantPhoto: applicantPhoto,
+            photoUrl: applicantPhoto,
+            idPhoto: applicantPhoto,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            middleName: formData.middleName,
+            documents: newDocItems,
+            form_data: finalFormData,
+            extra_data: { formData: finalFormData, applicantPhoto },
+            application_status: "pending",
+            status: "pending",
+            created_at: new Date().toISOString(),
+          }
+          localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
+        } catch {}
 
         // 4. Dispatch real-time event to Admin dashboard
         notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", data.referenceNumber || fallbackRef)
       } else {
+        // Fallback local save if server error
+        try {
+          const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+          const localRecord = {
+            id: String(Date.now()),
+            reference_number: fallbackRef,
+            referenceNumber: fallbackRef,
+            category: "Solo Parent",
+            applicantPhoto: applicantPhoto,
+            photoUrl: applicantPhoto,
+            idPhoto: applicantPhoto,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            middleName: formData.middleName,
+            documents: newDocItems,
+            form_data: finalFormData,
+            extra_data: { formData: finalFormData, applicantPhoto },
+            application_status: "pending",
+            status: "pending",
+            created_at: new Date().toISOString(),
+          }
+          localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
+        } catch {}
         notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
       }
     } catch (err) {
       console.warn("Final submit error / offline fallback:", err)
+      try {
+        const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
+        const localRecord = {
+          id: String(Date.now()),
+          reference_number: fallbackRef,
+          referenceNumber: fallbackRef,
+          category: "Solo Parent",
+          applicantPhoto: applicantPhoto,
+          photoUrl: applicantPhoto,
+          idPhoto: applicantPhoto,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          middleName: formData.middleName,
+          documents: newDocItems,
+          form_data: finalFormData,
+          extra_data: { formData: finalFormData, applicantPhoto },
+          application_status: "pending",
+          status: "pending",
+          created_at: new Date().toISOString(),
+        }
+        localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored]))
+      } catch {}
       notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
     }
 
