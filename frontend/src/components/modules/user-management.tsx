@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import MaskedText from "../ui/masked-text"
 
 const authHeaders = (): Record<string, string> => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
@@ -183,15 +184,19 @@ function UserCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-1 gap-x-4 text-xs text-slate-600 mb-2.5">
             <p className="flex items-center gap-1.5 truncate">
               <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">{u.email}</span>
+              <MaskedText value={u.email} type="email" className="truncate" />
             </p>
             <p className="flex items-center gap-1.5 truncate">
               <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span>{u.contactNumber || "—"}</span>
+              <MaskedText value={u.contactNumber} type="phone" />
             </p>
             <p className="flex items-center gap-1.5 truncate">
               <span className="font-mono font-bold text-slate-500">{u.id}</span>
-              {u.qcidNumber && <span className="text-slate-400">· {u.qcidNumber}</span>}
+              {u.qcidNumber && (
+                <span className="text-slate-400">
+                  · <MaskedText value={u.qcidNumber} type="id" />
+                </span>
+              )}
             </p>
           </div>
 
@@ -360,11 +365,15 @@ function ManageUserModal({
               </div>
               <div>
                 <p className="text-slate-400 font-semibold uppercase">Email Address</p>
-                <p className="font-bold text-slate-900 mt-0.5">{detailedUser.email}</p>
+                <div className="font-bold text-slate-900 mt-0.5">
+                  <MaskedText value={detailedUser.email} type="email" />
+                </div>
               </div>
               <div>
                 <p className="text-slate-400 font-semibold uppercase">Contact Number</p>
-                <p className="font-bold text-slate-900 mt-0.5">{detailedUser.contactNumber || "—"}</p>
+                <div className="font-bold text-slate-900 mt-0.5">
+                  <MaskedText value={detailedUser.contactNumber} type="phone" />
+                </div>
               </div>
               <div>
                 <p className="text-slate-400 font-semibold uppercase">User ID</p>

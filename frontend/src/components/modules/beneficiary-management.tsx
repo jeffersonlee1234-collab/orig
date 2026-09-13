@@ -19,6 +19,7 @@ import {
 import { API_BASE } from "../../config/api"
 import { subscribeToRealtimeChanges, notifyApplicationChange } from "../../utils/realtimeSync"
 import { getApplicantPhotoUrl } from "./pwd-senior-citizen"
+import MaskedText from "../ui/masked-text"
 
 // =====================================================================================
 // Types
@@ -180,7 +181,9 @@ function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (id: string) =
               {vt?.label}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mb-2 font-mono">{b.beneficiaryNo}</p>
+            <p className="text-xs text-muted-foreground mb-2 font-mono">
+              <MaskedText value={b.beneficiaryNo} type="id" />
+            </p>
           <div className="flex items-center gap-2 flex-wrap mb-2">
             {b.enrolledPrograms.length > 0 ? (
               b.enrolledPrograms.map((p, i) => (
@@ -348,12 +351,12 @@ function BeneficiaryProfileModal({
                   value={
                     <span className="inline-flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      {b.contactNo}
+                      <MaskedText value={b.contactNo} type="phone" />
                     </span>
                   }
                 />
                 <Field label="Date Registered" value={formatDate(b.dateRegistered)} />
-                <Field label="Email Address" value={b.email || "—"} />
+                <Field label="Email Address" value={<MaskedText value={b.email} type="email" />} />
                 <Field label="Civil Status" value={b.civilStatus || "—"} />
                 <div className="col-span-2">
                   <Field
