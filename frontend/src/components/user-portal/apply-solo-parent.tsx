@@ -4,7 +4,7 @@ import { AlertCircle, FileText, X, RefreshCw, HeartHandshake, Info, CheckCircle2
 import SoloParentApplicationWizard from "./solo-parent-wizard"
 import ChildWelfareApplicationWizard, { getLocalizedChildWelfarePrograms } from "./child-welfare-wizard"
 import { useLanguage } from "../ui/language-context"
-import { API_BASE } from "../../config/api"
+import { API_BASE, getAuthHeaders } from "../../config/api"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
@@ -343,8 +343,18 @@ export default function ApplySoloParent() {
         let backendApps: any[] = []
         let backendFetched = false
 
+        const currentQcid = getLoggedInUserQcid() || "110000572516915"
+        const userProf = getCurrentUserProfile()
+        const currentEmail = (userProf?.email || "").toLowerCase().trim()
+        const currentLastName = (userProf?.lastName || "").toLowerCase().trim()
+        const currentFirstName = (userProf?.firstName || "").toLowerCase().trim()
+        const uid = userProf?.id || (userProf as any)?.userId || ""
+
         try {
-          const res = await fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`)
+          const res = await fetch(
+            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}&firstName=${encodeURIComponent(currentFirstName)}&lastName=${encodeURIComponent(currentLastName)}&_t=${Date.now()}`,
+            { headers: getAuthHeaders(), cache: "no-store" }
+          )
           if (res.ok) {
             const data = await res.json()
             const raw = Array.isArray(data) ? data : data.applications || []
@@ -353,8 +363,8 @@ export default function ApplySoloParent() {
               backendFetched = true
             }
           }
-        } catch (err) {
-          console.warn("Could not fetch solo parent applications from backend:", err)
+        } catch {
+          // silent fallback
         }
 
         let localApps: any[] = []
@@ -373,12 +383,6 @@ export default function ApplySoloParent() {
         } else {
           allApps = [...localApps]
         }
-
-        const currentQcid = getLoggedInUserQcid() || "110000572516915"
-        const userProf = getCurrentUserProfile()
-        const currentEmail = (userProf?.email || "").toLowerCase().trim()
-        const currentLastName = (userProf?.lastName || "").toLowerCase().trim()
-        const currentFirstName = (userProf?.firstName || "").toLowerCase().trim()
 
         const isMatchForSoloParent = (a: any) => {
           if (!a) return false
@@ -432,7 +436,7 @@ export default function ApplySoloParent() {
     }
 
     checkActiveApp()
-    const pollInterval = setInterval(checkActiveApp, 1500)
+    const pollInterval = setInterval(checkActiveApp, 5000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       checkActiveApp()
