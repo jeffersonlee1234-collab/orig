@@ -1952,7 +1952,7 @@ export default function SoloParentApplicationWizard({
 
 
 
-  if (isBlocked && step === 1 && !isReapply && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
+  if (isBlocked && step === 1 && !isReapplying && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
     const isAppApproved = blockReason === "approved" || blockedApp?.application_status === "approved" || blockedApp?.status === "approved"
     const displayRef = blockedReference || blockedApp?.reference_number || blockedApp?.referenceNumber || "REF-SP-2026-001"
     const assignedIdNo = blockedApp?.assigned_id_number || blockedApp?.assignedIdNumber || blockedApp?.solo_parent_id_number || blockedApp?.soloParentIdNumber
