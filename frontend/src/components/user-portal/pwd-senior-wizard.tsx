@@ -741,17 +741,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       addressHouseNo: prof.addressHouseNo || prof.houseNo || prof.house_no || "",
       addressStreet: prof.addressStreet || prof.street || "",
       bloodType: prof.bloodType || (prof as any).blood_type || "O+",
-      permanentAddress:
-        prof.permanentAddress ||
-        prof.address ||
-        [
-          prof.addressHouseNo || prof.houseNo || prof.house_no,
-          prof.addressStreet || prof.street,
-          prof.addressBarangay || prof.barangay || "Sauyo",
-          prof.addressCity || prof.city || "QUEZON CITY",
-        ]
-          .filter(Boolean)
-          .join(", "),
+      permanentAddress: "",
       emergencyFirstName: prof.emergencyFirstName || "",
       emergencyLastName: prof.emergencyLastName || "",
       emergencyContactNo: prof.emergencyContactNo || "",
@@ -1388,11 +1378,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       ? (formData.existingPwdIdNumber || "").trim() !== "" && isIdVerified && reasonForRenewal !== ""
       : (disabilityType || "").trim() !== "")
 
-  const resolvedPermanentAddr = (
-    formData.permanentAddress ||
-    [formData.addressHouseNo, formData.addressStreet, formData.addressBarangay, formData.addressCity].filter(Boolean).join(", ")
-  ).trim()
-
   const step2Valid =
     (formData.firstName || "").trim() !== "" &&
     (formData.lastName || "").trim() !== "" &&
@@ -1401,12 +1386,12 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     Boolean(formData.dobYear) &&
     (formData.addressBarangay || "").trim() !== "" &&
     (formData.contactNo || "").replace(/\D/g, "").length >= 10 &&
-    resolvedPermanentAddr !== "" &&
+    (formData.permanentAddress || "").trim() !== "" &&
     (formData.emergencyLastName || "").trim() !== "" &&
     (formData.emergencyFirstName || "").trim() !== "" &&
     (formData.emergencyContactNo || "").replace(/\D/g, "").length >= 10 &&
     (formData.emergencyRelationship || "").trim() !== "" &&
-    (formData.emergencyAddress || resolvedPermanentAddr).trim() !== "" &&
+    (formData.emergencyAddress || "").trim() !== "" &&
     (formData.heightCm || "").trim() !== "" &&
     (formData.weightKg || "").trim() !== "" &&
     (formData.colorOfHair || "").trim() !== "" &&
@@ -2711,14 +2696,14 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   <Field
                     label={t("pwdPermanentAddressLabel")}
                     required
-                    invalid={attemptedNext && resolvedPermanentAddr === ""}
+                    invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
                     invalidNote="Required"
                   >
                     <TextInput
-                      value={formData.permanentAddress || resolvedPermanentAddr}
+                      value={formData.permanentAddress}
                       onChange={(v) => updateField("permanentAddress", v)}
                       placeholder="Permanent Address"
-                      invalid={attemptedNext && resolvedPermanentAddr === ""}
+                      invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
                     />
                   </Field>
                   <Field label={t("pwdPresentAddressLabel")}>
