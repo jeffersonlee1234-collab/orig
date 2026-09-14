@@ -16,7 +16,6 @@ import {
   Baby,
   ClipboardList,
   IdCard,
-  Trash2,
   ShieldAlert,
   Download,
 } from "lucide-react"
@@ -1298,22 +1297,7 @@ function ApplicationCard({ app, onView, onShowCard, onDelete, allSubmissions }: 
           </div>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <StatusBadge status={app.status} />
-            {onDelete && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(app)
-                }}
-                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                title="Delete application record"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+          <StatusBadge status={app.status} />
           {onShowCard && app.status === "approved" && isSoloParent(app) && (
             <button
               type="button"
@@ -3015,28 +2999,6 @@ export default function SoloParentChildWelfareAdmin() {
             <div className="flex items-center gap-2">
               <h2 className="gw-serif text-lg font-semibold" style={{ color: "var(--ink)" }}>Applications</h2>
               <span className="gw-mono text-sm" style={{ color: "var(--ink-faint)" }}>({filteredApps.length})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {applications.some((a) => a.category === "Solo Parent") && (
-                <button
-                  type="button"
-                  onClick={handleClearSoloApplications}
-                  className="px-2.5 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md inline-flex items-center gap-1 border border-red-200 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Clear Solo Parent Records
-                </button>
-              )}
-              {applications.some((a) => a.category === "Child Welfare") && (
-                <button
-                  type="button"
-                  onClick={handleClearChildApplications}
-                  className="px-2.5 py-1 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-md inline-flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Clear Child Welfare Records
-                </button>
-              )}
             </div>
           </div>
 
