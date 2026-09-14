@@ -1,14 +1,15 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const connectionString = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+const connectionString = (process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL || '').trim();
 
 let poolConfig;
 
 if (connectionString) {
   // Railway internal: postgres.railway.internal — no SSL needed
-  // Railway public: *.railway.app or *.up.railway.app — SSL needed
   // Local: localhost / 127.0.0.1 — no SSL needed
+  // Remote/Public: *.proxy.rlwy.net, *.railway.app — SSL needed
   const isInternalOrLocal =
     connectionString.includes('localhost') ||
     connectionString.includes('127.0.0.1') ||
@@ -21,6 +22,7 @@ if (connectionString) {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   };
+} else {
   const dbPass = process.env.PGPASSWORD || process.env.DB_PASSWORD;
   poolConfig = {
     host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
@@ -52,4 +54,4 @@ pool.connect((err, client, release) => {
   }
 });
 
-module.exports = pool; 
+module.exports = pool;
