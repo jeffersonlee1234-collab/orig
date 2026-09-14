@@ -887,40 +887,39 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         (a) => a.status === "approved" || a.status === "completed" || a.status === "for_release"
       )
 
-      // PRIORITY 1: Pending Application for THIS current flow (e.g. Renewal under review)
-      if (pendingFlow) {
-        setBlockedApp(pendingFlow)
-        setLatestApprovedApp(null)
-        setIsBlocked(true)
-        setActiveAppStatus("pending")
+      // If user is on "new" application flow:
+      if (expectedType === "new") {
+        if (pendingFlow) {
+          setBlockedApp(pendingFlow)
+          setLatestApprovedApp(null)
+          setIsBlocked(true)
+          setActiveAppStatus("pending")
+        } else if (approvedAny) {
+          setBlockedApp(approvedAny)
+          setLatestApprovedApp(approvedAny)
+          setIsBlocked(true)
+          setActiveAppStatus("approved")
+        } else {
+          setBlockedApp(null)
+          setLatestApprovedApp(null)
+          setIsBlocked(false)
+          setActiveAppStatus(null)
+        }
       }
-      // PRIORITY 2: Any other pending PWD application under review
-      else if (pendingAny) {
-        setBlockedApp(pendingAny)
-        setLatestApprovedApp(null)
-        setIsBlocked(true)
-        setActiveAppStatus("pending")
-      }
-      // PRIORITY 3: Approved application for this specific flow
-      else if (approvedFlow) {
-        setBlockedApp(approvedFlow)
-        setLatestApprovedApp(approvedFlow)
-        setIsBlocked(true)
-        setActiveAppStatus("approved")
-      }
-      // PRIORITY 4: If flow is "new" and already has an approved PWD ID, block "new"
-      else if (expectedType === "new" && approvedAny) {
-        setBlockedApp(approvedAny)
-        setLatestApprovedApp(approvedAny)
-        setIsBlocked(true)
-        setActiveAppStatus("approved")
-      }
-      // OTHERWISE: Allow user to fill out Renewal or Replacement form!
+      // If user is on "renewal" or "replacement" flow:
       else {
-        setBlockedApp(null)
-        setLatestApprovedApp(null)
-        setIsBlocked(false)
-        setActiveAppStatus(null)
+        // Only block if there is currently an ongoing PENDING application for THIS exact flow
+        if (pendingFlow) {
+          setBlockedApp(pendingFlow)
+          setLatestApprovedApp(null)
+          setIsBlocked(true)
+          setActiveAppStatus("pending")
+        } else {
+          setBlockedApp(null)
+          setLatestApprovedApp(null)
+          setIsBlocked(false)
+          setActiveAppStatus(null)
+        }
       }
     }
 

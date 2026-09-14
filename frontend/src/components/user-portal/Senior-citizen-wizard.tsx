@@ -697,59 +697,34 @@ export default function SeniorCitizenApplicationWizard({
 
       if (!isMounted) return
 
-      // Prioritized Match Resolvers
-      const pendingFlow = allUserSeniorApps.find((a) => {
-        if (a.status !== "pending" && a.status !== "under_review") return false
-        if (expectedType === "replacement") return a.type === "replacement" || a.type === "loss"
-        if (expectedType === "renewal") return a.type === "renewal"
-        return a.type === "new" || !a.type
-      })
-
-      const pendingAny = allUserSeniorApps.find(
-        (a) => a.status === "pending" || a.status === "under_review"
-      )
-
-      const approvedFlow = allUserSeniorApps.find((a) => {
-        if (a.status !== "approved" && a.status !== "completed" && a.status !== "for_release")
-          return false
-        if (expectedType === "replacement") return a.type === "replacement" || a.type === "loss"
-        if (expectedType === "renewal") return a.type === "renewal"
-        return a.type === "new" || !a.type
-      })
-
-      const approvedAny = allUserSeniorApps.find(
-        (a) => a.status === "approved" || a.status === "completed" || a.status === "for_release"
-      )
-
-      // PRIORITY 1: Pending application for this specific flow (e.g. renewal under review)
-      if (pendingFlow) {
-        setBlockedApp(pendingFlow)
-        setLatestApprovedApp(null)
-        setIsBlocked(true)
+      // If user is on "new" application flow:
+      if (expectedType === "new") {
+        if (pendingFlow) {
+          setBlockedApp(pendingFlow)
+          setLatestApprovedApp(null)
+          setIsBlocked(true)
+        } else if (approvedAny) {
+          setBlockedApp(approvedAny)
+          setLatestApprovedApp(approvedAny)
+          setIsBlocked(true)
+        } else {
+          setBlockedApp(null)
+          setLatestApprovedApp(null)
+          setIsBlocked(false)
+        }
       }
-      // PRIORITY 2: Any other pending Senior Citizen application under review
-      else if (pendingAny) {
-        setBlockedApp(pendingAny)
-        setLatestApprovedApp(null)
-        setIsBlocked(true)
-      }
-      // PRIORITY 3: Approved application for this specific flow
-      else if (approvedFlow) {
-        setBlockedApp(approvedFlow)
-        setLatestApprovedApp(approvedFlow)
-        setIsBlocked(true)
-      }
-      // PRIORITY 4: If flow is "new" and already has an approved Senior ID, block "new"
-      else if (expectedType === "new" && approvedAny) {
-        setBlockedApp(approvedAny)
-        setLatestApprovedApp(approvedAny)
-        setIsBlocked(true)
-      }
-      // OTHERWISE: Allow user to fill out Renewal, Replacement, or Booklet form
+      // If user is on "renewal", "replacement", or "booklet" flow:
       else {
-        setBlockedApp(null)
-        setLatestApprovedApp(null)
-        setIsBlocked(false)
+        // Only block if there is currently an ongoing PENDING application for THIS exact flow
+        if (pendingFlow) {
+          setBlockedApp(pendingFlow)
+          setLatestApprovedApp(null)
+          setIsBlocked(true)
+        } else {
+          setBlockedApp(null)
+          setLatestApprovedApp(null)
+          setIsBlocked(false)
+        }
       }
     }
 
