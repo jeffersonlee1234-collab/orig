@@ -697,6 +697,18 @@ export default function SeniorCitizenApplicationWizard({
 
       if (!isMounted) return
 
+      // Prioritized Match Resolvers
+      const pendingFlow = allUserSeniorApps.find((a) => {
+        if (a.status !== "pending" && a.status !== "under_review") return false
+        if (expectedType === "replacement") return a.type === "replacement" || a.type === "loss"
+        if (expectedType === "renewal") return a.type === "renewal"
+        return a.type === "new" || !a.type
+      })
+
+      const approvedAny = allUserSeniorApps.find(
+        (a) => a.status === "approved" || a.status === "completed" || a.status === "for_release"
+      )
+
       // If user is on "new" application flow:
       if (expectedType === "new") {
         if (pendingFlow) {

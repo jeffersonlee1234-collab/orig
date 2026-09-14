@@ -871,18 +871,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         return a.type === "new" || !a.type
       })
 
-      const pendingAny = allUserPwdApps.find(
-        (a) => a.status === "pending" || a.status === "under_review"
-      )
-
-      const approvedFlow = allUserPwdApps.find((a) => {
-        if (a.status !== "approved" && a.status !== "completed" && a.status !== "for_release")
-          return false
-        if (expectedType === "replacement") return a.type === "replacement" || a.type === "loss"
-        if (expectedType === "renewal") return a.type === "renewal"
-        return a.type === "new" || !a.type
-      })
-
       const approvedAny = allUserPwdApps.find(
         (a) => a.status === "approved" || a.status === "completed" || a.status === "for_release"
       )
