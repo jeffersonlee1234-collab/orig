@@ -1,6 +1,8 @@
 // frontend/src/utils/realtimeSync.ts
 // Cross-tab and live server synchronization utility for GovServe applications
 
+import { clearApiCache } from "./cachedApiFetch"
+
 const CHANNEL_NAME = "govserve_realtime_sync"
 
 let channel: BroadcastChannel | null = null
@@ -31,6 +33,9 @@ export function notifyApplicationChange(
     timestamp: Date.now(),
   }
 
+  // Clear in-memory API cache immediately so fresh data is fetched
+  clearApiCache()
+
   // 1. BroadcastChannel (instant zero-latency multi-tab dispatch)
   try {
     if (channel) {
@@ -43,49 +48,46 @@ export function notifyApplicationChange(
     localStorage.setItem("govserve_last_sync_ping", JSON.stringify(msg))
   } catch {}
 
-  // 3. Local window custom events for all modules
+  // 3. Local window custom events (without redundant duplicates)
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("govserve_realtime_event", { detail: msg }))
-    window.dispatchEvent(new Event("solo_parent_applications_updated"))
     window.dispatchEvent(new Event("pwd_senior_applications_updated"))
-    window.dispatchEvent(new Event("child_welfare_applications_updated"))
-    window.dispatchEvent(new Event("livelihood_status_updated"))
-    window.dispatchEvent(new Event("livelihood_applications_updated"))
-    window.dispatchEvent(new Event("training_applications_updated"))
-    window.dispatchEvent(new Event("user_notifications_updated"))
-    window.dispatchEvent(new Event("appointments_updated"))
-    window.dispatchEvent(new Event("financial_disbursements_updated"))
-    window.dispatchEvent(new Event("financial_aid_updated"))
-    window.dispatchEvent(new Event("user_updated"))
-    window.dispatchEvent(new Event("case_management_updated"))
-    window.dispatchEvent(new Event("applications_updated"))
-    window.dispatchEvent(new Event("application_updated"))
-    window.dispatchEvent(new Event("storage"))
+    window.dispatchEvent(new Event("solo_parent_applications_updated"))
   }
 }
 
 export function subscribeToRealtimeChanges(callback: (msg?: SyncMessage) => void): () => void {
   if (typeof window === "undefined") return () => {}
 
+  let debounceTimer: any = null
+  const debouncedCallback = (data?: SyncMessage) => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      callback(data)
+    }, 250)
+  }
+
   // BroadcastChannel listener
   const onChannelMsg = (event: MessageEvent) => {
-    callback(event.data)
+    clearApiCache()
+    debouncedCallback(event.data)
   }
 
   // Local custom event listener
   const onWindowEvent = (e: Event) => {
     const customEvt = e as CustomEvent<SyncMessage>
-    callback(customEvt.detail)
+    debouncedCallback(customEvt.detail)
   }
 
   // Storage listener for cross-tab ping
   const onStorage = (e: StorageEvent) => {
     if (e.key === "govserve_last_sync_ping" && e.newValue) {
+      clearApiCache()
       try {
         const parsed = JSON.parse(e.newValue)
-        callback(parsed)
+        debouncedCallback(parsed)
       } catch {
-        callback()
+        debouncedCallback()
       }
     }
   }
@@ -93,7 +95,8 @@ export function subscribeToRealtimeChanges(callback: (msg?: SyncMessage) => void
   // Window focus & visibility change for immediate sync when user switches tabs/devices
   const onVisibilityOrFocus = () => {
     if (document.visibilityState === "visible") {
-      callback()
+      clearApiCache()
+      debouncedCallback()
     }
   }
 
@@ -101,47 +104,18 @@ export function subscribeToRealtimeChanges(callback: (msg?: SyncMessage) => void
     channel.addEventListener("message", onChannelMsg)
   }
   window.addEventListener("govserve_realtime_event", onWindowEvent)
-  window.addEventListener("solo_parent_applications_updated", onWindowEvent)
   window.addEventListener("pwd_senior_applications_updated", onWindowEvent)
-  window.addEventListener("child_welfare_applications_updated", onWindowEvent)
-  window.addEventListener("livelihood_status_updated", onWindowEvent)
-  window.addEventListener("livelihood_applications_updated", onWindowEvent)
-  window.addEventListener("appointments_updated", onWindowEvent)
-  window.addEventListener("financial_disbursements_updated", onWindowEvent)
-  window.addEventListener("financial_aid_updated", onWindowEvent)
-  window.addEventListener("user_updated", onWindowEvent)
-  window.addEventListener("case_management_updated", onWindowEvent)
-  window.addEventListener("applications_updated", onWindowEvent)
-  window.addEventListener("application_updated", onWindowEvent)
   window.addEventListener("storage", onStorage)
   window.addEventListener("focus", onVisibilityOrFocus)
   document.addEventListener("visibilitychange", onVisibilityOrFocus)
 
-  // Periodic heartbeat every 2.5 seconds for cross-device synchronization
-  const heartbeatInterval = setInterval(() => {
-    if (document.visibilityState === "visible") {
-      callback()
-    }
-  }, 2500)
-
   return () => {
-    clearInterval(heartbeatInterval)
+    if (debounceTimer) clearTimeout(debounceTimer)
     if (channel) {
       channel.removeEventListener("message", onChannelMsg)
     }
     window.removeEventListener("govserve_realtime_event", onWindowEvent)
-    window.removeEventListener("solo_parent_applications_updated", onWindowEvent)
     window.removeEventListener("pwd_senior_applications_updated", onWindowEvent)
-    window.removeEventListener("child_welfare_applications_updated", onWindowEvent)
-    window.removeEventListener("livelihood_status_updated", onWindowEvent)
-    window.removeEventListener("livelihood_applications_updated", onWindowEvent)
-    window.removeEventListener("appointments_updated", onWindowEvent)
-    window.removeEventListener("financial_disbursements_updated", onWindowEvent)
-    window.removeEventListener("financial_aid_updated", onWindowEvent)
-    window.removeEventListener("user_updated", onWindowEvent)
-    window.removeEventListener("case_management_updated", onWindowEvent)
-    window.removeEventListener("applications_updated", onWindowEvent)
-    window.removeEventListener("application_updated", onWindowEvent)
     window.removeEventListener("storage", onStorage)
     window.removeEventListener("focus", onVisibilityOrFocus)
     document.removeEventListener("visibilitychange", onVisibilityOrFocus)

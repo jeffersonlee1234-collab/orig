@@ -10,6 +10,7 @@ import { useLanguage } from "../ui/language-context"
 import { API_BASE } from "../../config/api"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 
 export default function ApplyPWDSenior() {
   const { t, language } = useLanguage()
@@ -52,22 +53,7 @@ export default function ApplyPWDSenior() {
 
     const checkActiveApp = async () => {
       try {
-        let backendApps: any[] = []
-        let backendFetched = false
-        try {
-          const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
-            cache: "no-store",
-          })
-          if (res.ok) {
-            const data = await res.json()
-            if (Array.isArray(data)) {
-              backendApps = data
-              backendFetched = true
-            }
-          }
-        } catch (err) {
-          console.warn("Could not fetch applications from backend:", err)
-        }
+        const backendApps = await fetchPwdSeniorApplications()
 
         // Sync local storage with fresh backend records
         let localApps: any[] = []
@@ -77,21 +63,15 @@ export default function ApplyPWDSenior() {
           if (!Array.isArray(localApps)) localApps = []
         } catch {}
 
-        let allApps: any[] = []
-        if (backendFetched && backendApps.length > 0) {
-          allApps = [...backendApps]
-          // Merge any newer local statuses if backend had a temporary lag
-          for (const la of localApps) {
-            if (la && !allApps.some((ba) => (ba.id && ba.id === la.id) || (ba.referenceNumber && ba.referenceNumber === la.referenceNumber))) {
-              allApps.push(la)
-            }
+        let allApps = [...backendApps]
+        for (const la of localApps) {
+          if (la && !allApps.some((ba) => (ba.id && ba.id === la.id) || (ba.referenceNumber && ba.referenceNumber === la.referenceNumber))) {
+            allApps.push(la)
           }
-          try {
-            localStorage.setItem("pwd_senior_applications", JSON.stringify(allApps))
-          } catch {}
-        } else {
-          allApps = [...localApps]
         }
+        try {
+          localStorage.setItem("pwd_senior_applications", JSON.stringify(allApps))
+        } catch {}
 
         const currentQcid = getLoggedInUserQcid() || "110000572516915"
         const userProf = getCurrentUserProfile()

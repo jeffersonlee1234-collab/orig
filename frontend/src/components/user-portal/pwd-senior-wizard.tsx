@@ -6,6 +6,7 @@ import { API_BASE } from "../../config/api"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 
 type DisabilityClass = "apparent" | "non-apparent" | null
 type IdStatus = "new" | "renewal" | "loss" | null
@@ -846,27 +847,18 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       }
 
       let allUserPwdApps: any[] = []
-      let backendFetched = false
-
-      // Check backend API first
       try {
-        const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
-          cache: "no-store",
-        })
-        if (res.ok && isMounted) {
-          const apps = await res.json()
-          if (Array.isArray(apps)) {
-            allUserPwdApps = apps.filter(checkUserMatches)
-            backendFetched = true
-            try {
-              localStorage.setItem("pwd_senior_applications", JSON.stringify(apps))
-            } catch {}
-          }
+        const apps = await fetchPwdSeniorApplications()
+        if (Array.isArray(apps) && isMounted) {
+          allUserPwdApps = apps.filter(checkUserMatches)
+          try {
+            localStorage.setItem("pwd_senior_applications", JSON.stringify(apps))
+          } catch {}
         }
       } catch {}
 
       // Fallback to localStorage only if backend was not reachable (offline)
-      if (!backendFetched && isMounted) {
+      if (allUserPwdApps.length === 0 && isMounted) {
         const localKeys = ["pwd_senior_applications", "applications", "all_user_applications", "active_applications"]
         for (const k of localKeys) {
           try {

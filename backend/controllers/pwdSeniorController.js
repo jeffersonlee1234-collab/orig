@@ -87,16 +87,31 @@ async function initPwdSeniorTable() {
 
 initPwdSeniorTable();
 
+let cachedApps = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 2500;
+
+function invalidateAppsCache() {
+  cachedApps = null;
+  lastCacheTime = 0;
+}
+
 /**
  * GET /api/pwd-senior/applications
  * Returns all submitted applications
  */
 exports.getAllApplications = async (req, res) => {
+  const now = Date.now();
+  if (cachedApps && now - lastCacheTime < CACHE_TTL_MS) {
+    return res.json(cachedApps);
+  }
   try {
     const result = await db.query(
       'SELECT * FROM pwd_senior_applications ORDER BY created_at DESC'
     );
     if (result.rows.length === 0) {
+      cachedApps = [];
+      lastCacheTime = now;
       return res.json([]);
     }
     const mapped = result.rows.map((row) => {
@@ -216,6 +231,8 @@ exports.getAllApplications = async (req, res) => {
         isArchived: row.is_archived || false,
       };
     });
+    cachedApps = mapped;
+    lastCacheTime = Date.now();
     return res.json(mapped);
   } catch (err) {
     console.warn('[DB Error] Fetching from DB failed, returning in-memory:', err.message);
@@ -411,6 +428,7 @@ exports.createApplication = async (req, res) => {
       }).catch(() => {});
     } catch {}
 
+    invalidateAppsCache();
     return res.status(201).json({ success: true, application: newApp });
   } catch (err) {
     console.error('Error creating PWD/Senior application:', err);
@@ -669,6 +687,7 @@ exports.updateApplicationStatus = async (req, res) => {
       });
     }
 
+    invalidateAppsCache();
     return res.json({ success: true, id, status, assignedIdNumber, referenceNumber: refNo });
   } catch (err) {
     console.error('Error updating status:', err);
@@ -686,6 +705,7 @@ exports.deleteApplication = async (req, res) => {
     // Also remove from memoryApplications
     memoryApplications = memoryApplications.filter(app => app.id !== id && app.referenceNumber !== id);
 
+    invalidateAppsCache();
     return res.json({ success: true, message: `Application ${id} deleted successfully` });
   } catch (err) {
     console.error('Error deleting application:', err);
@@ -699,6 +719,7 @@ exports.clearSeniorApplications = async (req, res) => {
     await db.query(`DELETE FROM pwd_senior_applications WHERE category ILIKE '%senior%' OR category = 'Senior Citizen'`);
     memoryApplications = memoryApplications.filter(app => !app.category || !app.category.toLowerCase().includes('senior'));
 
+    invalidateAppsCache();
     return res.json({ success: true, message: 'All Senior Citizen applications cleared for fresh testing' });
   } catch (err) {
     console.error('Error clearing senior applications:', err);
@@ -726,6 +747,7 @@ exports.cleanupUserPwdSenior = async (req, res) => {
         !String(app.firstName || app.first_name || '').toLowerCase().includes(nameOrRef.toLowerCase())
     );
 
+    invalidateAppsCache();
     return res.json({ success: true, message: `Deleted ${result.rowCount} PWD/Senior applications for ${nameOrRef}` });
   } catch (err) {
     console.error('Error clearing user PWD/Senior applications:', err);

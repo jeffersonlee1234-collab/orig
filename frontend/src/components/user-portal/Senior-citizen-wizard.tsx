@@ -18,6 +18,7 @@ import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
 import { useLanguage } from "../ui/language-context"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 
 interface DocumentItem {
   id: string
@@ -680,27 +681,18 @@ export default function SeniorCitizenApplicationWizard({
       }
 
       let allUserSeniorApps: any[] = []
-      let backendFetched = false
-
-      // 1. Fetch from backend API
       try {
-        const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
-          cache: "no-store",
-        })
-        if (res.ok && isMounted) {
-          const apps = await res.json()
-          if (Array.isArray(apps)) {
-            allUserSeniorApps = apps.filter(checkUserMatches)
-            backendFetched = true
-            try {
-              localStorage.setItem("pwd_senior_applications", JSON.stringify(apps))
-            } catch {}
-          }
+        const apps = await fetchPwdSeniorApplications()
+        if (Array.isArray(apps) && isMounted) {
+          allUserSeniorApps = apps.filter(checkUserMatches)
+          try {
+            localStorage.setItem("pwd_senior_applications", JSON.stringify(apps))
+          } catch {}
         }
       } catch {}
 
-      // 2. Check localStorage only if offline / backend not fetched
-      if (!backendFetched && isMounted) {
+      // 2. Check localStorage fallback
+      if (allUserSeniorApps.length === 0 && isMounted) {
         const localKeys = ["pwd_senior_applications", "applications", "all_user_applications", "active_applications"]
         for (const k of localKeys) {
           try {
