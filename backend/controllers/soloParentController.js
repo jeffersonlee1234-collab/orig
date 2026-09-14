@@ -274,11 +274,9 @@ async function initSoloParentColumns() {
     console.warn('[Solo Parent Table Init]:', err.message);
   }
 
-  for (const colQuery of columnDefs) {
-    try {
-      await db.query(colQuery);
-    } catch {}
-  }
+  try {
+    await db.query(columnDefs.join(';\n'));
+  } catch {}
   soloColsInitialized = true;
 }
 initSoloParentColumns();
