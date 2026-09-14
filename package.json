@@ -1,0 +1,12 @@
+{
+  "name": "orig",
+  "version": "1.0.0",
+  "description": "Minimal Node.js + Express baseline application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
