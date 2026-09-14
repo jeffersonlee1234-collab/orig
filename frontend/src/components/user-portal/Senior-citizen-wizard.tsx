@@ -393,6 +393,9 @@ export default function SeniorCitizenApplicationWizard({
         const isSeniorCategory = cat.includes("SENIOR") || cat === "SENIOR CITIZEN" || String(a.service || "").toLowerCase().includes("senior")
         if (!isSeniorCategory) return false
 
+        const isApproved = a.status === "approved" || a.status === "completed" || a.status === "for_release"
+        if (!isApproved) return false
+
         const aAssignedClean = String(a.assignedIdNumber || a.assigned_id_number || "").replace(/[^a-z0-9]/gi, "").toLowerCase()
         const aRefClean = String(a.referenceNumber || a.reference_no || a.reference_number || "").replace(/[^a-z0-9]/gi, "").toLowerCase()
         const aExistingClean = String(a.existingIdNumber || a.existing_id_number || a.seniorIdNumber || "").replace(/[^a-z0-9]/gi, "").toLowerCase()
