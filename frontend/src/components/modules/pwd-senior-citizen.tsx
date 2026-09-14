@@ -620,6 +620,20 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 function getDocImageUrl(doc: ApplicationDocument | null, app?: ApplicationSubmission | null): string {
   if (!doc) return ""
+
+  // 0. Direct match from app.documents if provided
+  if (app && Array.isArray(app.documents)) {
+    const matched = app.documents.find((d: any) =>
+      (d?.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
+      (d?.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
+    )
+    if (matched) {
+      const matchCandidate = matched.fileUrl || (matched as any).previewUrl || (matched as any).dataUrl || (matched as any).base64
+      if (matchCandidate && typeof matchCandidate === "string" && (matchCandidate.startsWith("data:") || matchCandidate.startsWith("http://") || matchCandidate.startsWith("https://"))) {
+        return matchCandidate
+      }
+    }
+  }
   
   // 1. Direct candidate
   const candidate =
@@ -672,6 +686,9 @@ function getDocImageUrl(doc: ApplicationDocument | null, app?: ApplicationSubmis
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             if (!item) continue
+            if (app && item.referenceNumber && app.referenceNumber && item.referenceNumber !== app.referenceNumber && item.id !== app.id) {
+              continue
+            }
             if (Array.isArray(item.documents)) {
               const matchedDoc = item.documents.find((d: any) =>
                 (d.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
