@@ -174,6 +174,42 @@ exports.getNotifications = async (req, res) => {
         });
       } catch (_) {}
 
+      // Collect from child_welfare_applications
+      try {
+        const cwRes = await db.query(
+          `SELECT reference_number, user_id 
+           FROM child_welfare_applications 
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4))`,
+          [identifiers, userEmail, userFn, userLn]
+        );
+        cwRes.rows.forEach((r) => {
+          if (r.reference_number) identifiers.push(String(r.reference_number));
+          if (r.user_id) identifiers.push(String(r.user_id));
+        });
+      } catch (_) {}
+
+      // Collect from training_applications
+      try {
+        const trnRes = await db.query(
+          `SELECT reference_number, user_id, qcid 
+           FROM training_applications 
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (COALESCE(applicant_info::text, '') ILIKE '%' || $2 || '%' AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (COALESCE(applicant_info::text, '') ILIKE '%' || $3 || '%' AND COALESCE(applicant_info::text, '') ILIKE '%' || $4 || '%'))`,
+          [identifiers, userEmail, userFn, userLn]
+        );
+        trnRes.rows.forEach((r) => {
+          if (r.reference_number) identifiers.push(String(r.reference_number));
+          if (r.qcid) identifiers.push(String(r.qcid));
+          if (r.user_id) identifiers.push(String(r.user_id));
+        });
+      } catch (_) {}
+
       identifiers = Array.from(new Set(identifiers.filter((s) => s && s !== 'undefined' && s !== 'null')));
     }
 
@@ -397,7 +433,7 @@ exports.getNotifications = async (req, res) => {
     if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
       try {
         const cwRes = await db.query(
-          `SELECT id, reference_number, user_id, application_status, rejection_reason, created_at, updated_at, guardian_email, support_category
+          `SELECT id, reference_number, user_id, application_status, rejection_reason, created_at, updated_at, guardian_email, category_title, approved_amount, form_data
            FROM child_welfare_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(reference_number::text, '') = ANY($1::text[]))
               OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
@@ -407,17 +443,18 @@ exports.getNotifications = async (req, res) => {
         );
         cwRes.rows.forEach((app) => {
           const st = String(app.application_status || '').toLowerCase();
-          if (st === 'approved' || st === 'rejected' || st === 'completed') {
+          if (st === 'approved' || st === 'rejected' || st === 'completed' || st === 'for_release') {
             const notifId = `cw-${app.id || app.reference_number}-${st}`;
             const appDate = app.updated_at || app.created_at;
             if (!isItemDismissed(notifId, appDate)) {
-              const isApproved = st === 'approved' || st === 'completed';
+              const isApproved = st === 'approved' || st === 'completed' || st === 'for_release';
+              const programName = app.category_title || 'Child Welfare Assistance';
               items.push({
                 id: notifId,
-                title: isApproved ? 'Child Welfare Application: Approved' : 'Child Welfare Application: Not Approved',
+                title: isApproved ? `Child Welfare (${programName}): Approved` : `Child Welfare (${programName}): Not Approved`,
                 desc: isApproved
-                  ? `Congratulations! Your application for ${app.support_category || 'Child Welfare Assistance'} has been approved and forwarded to Appointments.`
-                  : `Child Welfare Assistance: ${app.rejection_reason || 'Not approved'} (Ref: ${app.reference_number})`,
+                  ? `Congratulations! Your application for ${programName} (Ref: ${app.reference_number}) has been approved for ₱${(Number(app.approved_amount) || 5000).toLocaleString()} financial grant.`
+                  : `Child Welfare (${programName}): ${app.rejection_reason || 'Not approved'} (Ref: ${app.reference_number})`,
                 time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,

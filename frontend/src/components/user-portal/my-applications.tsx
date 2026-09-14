@@ -2013,25 +2013,41 @@ export default function MyApplications() {
 
         // 4. Child Welfare Applications
         try {
-          const cwData = await cachedApiFetch<any>(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000)
-          if (cwData?.applications && Array.isArray(cwData.applications)) {
-            const mappedCw: ApplicationRecord[] = cwData.applications
+          let cwApps: any[] = []
+          try {
+            const cwData = await cachedApiFetch<any>(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000)
+            cwApps = cwData?.applications || (Array.isArray(cwData) ? cwData : [])
+          } catch {}
+
+          if (!cwApps || cwApps.length === 0) {
+            try {
+              const local = localStorage.getItem("child_welfare_applications")
+              if (local) cwApps = JSON.parse(local)
+            } catch {}
+          }
+
+          if (Array.isArray(cwApps) && cwApps.length > 0) {
+            const mappedCw: ApplicationRecord[] = cwApps
               .filter((app: any) => {
                 if (app.is_archived === true) return false
-                const appQc = String(app.reference_number || app.qc_id || "").trim().toLowerCase()
-                const appEmail = String(app.email || "").trim().toLowerCase()
+                const appQc = String(app.reference_number || app.referenceNumber || app.qcid_number || app.qc_id || "").trim().toLowerCase()
+                const appEmail = String(app.guardian_email || app.email || "").trim().toLowerCase()
                 const uQc = qcId.toLowerCase()
+                const appGuardian = `${app.guardian_first_name || app.guardianFirstName || ""} ${app.guardian_last_name || app.guardianLastName || ""}`.trim().toLowerCase()
+                const appChild = String(app.child_name || app.childName || "").trim().toLowerCase()
+                const uName = `${userProfile.firstName} ${userProfile.lastName}`.trim().toLowerCase()
                 return (
-                  (uQc !== "" && appQc === uQc) ||
+                  (uQc !== "" && (appQc === uQc || appQc.includes(uQc) || uQc.includes(appQc))) ||
                   (userEmail !== "" && appEmail === userEmail) ||
+                  (uName !== "" && (appGuardian.includes(uName) || appChild.includes(uName) || uName.includes(appGuardian) || uName.includes(appChild))) ||
                   (app.user_id && String(app.user_id) === String(userId))
                 )
               })
               .map((app: any) => ({
-                applicationNo: app.reference_number || qcId,
-                assistance: app.category_title || "Child Welfare Assistance",
+                applicationNo: app.reference_number || app.referenceNumber || qcId,
+                assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
                 assistanceCategory: "Child Welfare",
-                dateApplied: new Date(app.created_at || Date.now()).toLocaleDateString("en-PH", {
+                dateApplied: new Date(app.created_at || app.submittedAt || Date.now()).toLocaleDateString("en-PH", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
@@ -2044,19 +2060,19 @@ export default function MyApplications() {
                     : app.application_status === "rejected" || app.status === "rejected"
                     ? "Rejected"
                     : "Under Review",
-                applicantName: app.child_name || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
+                applicantName: app.child_name || app.childName || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
                 dateOfBirth: userProfile.birthDateDisplay,
                 address:
                   app.address ||
                   `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                contactNumber: app.guardian_contact_no || app.contact_number || userProfile.mobileNumber,
+                contactNumber: app.guardian_contact_no || app.parentContactNo || app.contact_number || userProfile.mobileNumber,
                 email: app.guardian_email || app.email || userProfile.email,
                 remarks:
-                  app.application_status === "approved"
+                  app.application_status === "approved" || app.status === "approved"
                     ? `Aprubado para sa Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()}) - Nakatala sa Financial Aid & Appointments`
-                    : app.application_status === "released"
+                    : app.application_status === "released" || app.status === "released"
                     ? `Na-release na ang Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()})`
-                    : app.application_status === "rejected"
+                    : app.application_status === "rejected" || app.status === "rejected"
                     ? (app.rejection_reason ? `Tinanggihan: ${app.rejection_reason}` : "Tinanggihan")
                     : "Kasalukuyang sinusuri (Under review)",
               }))

@@ -205,7 +205,7 @@ export default function CitizenGuideHub() {
               const refNum = a.reference_number || a.referenceNumber || a.id
               return {
                 id: a.id || refNum,
-                program: "Child Welfare",
+                program: a.category_title || a.classification_title || "Child Welfare Assistance",
                 category: "Child Welfare",
                 status: a.application_status || a.status || "pending",
                 date: a.created_at || new Date().toISOString(),
@@ -216,8 +216,48 @@ export default function CitizenGuideHub() {
           }
         } catch {}
 
-        // 5. Clean up stale localStorage caches for deleted items
-        const localKeys = ["pwd_senior_applications", "aics_applications", "all_user_applications", "applications"]
+        // 5. Livelihood Apps
+        try {
+          const data5 = await cachedApiFetch(`${API_BASE}/api/livelihood/applications`, { headers: authHeaders }, 4000).catch(() => null)
+          if (data5) {
+            const list5 = data5.applications || (Array.isArray(data5) ? data5 : [])
+            const matched5 = list5.filter(isUserMatch).map((a: any) => {
+              const refNum = a.reference_number || a.referenceNumber || a.qcid || a.id
+              return {
+                id: a.id || refNum,
+                program: a.proposed_business_name ? `Livelihood: ${a.proposed_business_name}` : a.livelihood_type || "Livelihood Assistance",
+                category: "Livelihood",
+                status: a.application_status || a.status || "pending",
+                date: a.created_at || new Date().toISOString(),
+                ref: refNum
+              }
+            })
+            found.push(...matched5)
+          }
+        } catch {}
+
+        // 6. Training Apps
+        try {
+          const data6 = await cachedApiFetch(`${API_BASE}/api/training/applications`, { headers: authHeaders }, 4000).catch(() => null)
+          if (data6) {
+            const list6 = Array.isArray(data6) ? data6 : data6.applications || []
+            const matched6 = list6.filter(isUserMatch).map((a: any) => {
+              const refNum = a.reference_number || a.referenceNumber || a.qcid || a.id
+              return {
+                id: a.id || refNum,
+                program: a.training_name || "Skills Training Program",
+                category: "Training",
+                status: a.status || "pending",
+                date: a.created_at || new Date().toISOString(),
+                ref: refNum
+              }
+            })
+            found.push(...matched6)
+          }
+        } catch {}
+
+        // 7. Clean up stale localStorage caches for deleted items
+        const localKeys = ["pwd_senior_applications", "aics_applications", "all_user_applications", "applications", "livelihood_applications", "training_applications", "child_welfare_applications", "solo_parent_applications"]
         for (const k of localKeys) {
           try {
             const local = JSON.parse(localStorage.getItem(k) || "[]")
