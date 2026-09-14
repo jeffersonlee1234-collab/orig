@@ -237,27 +237,6 @@ function parseJsonSafe(val: any, fallback: any = {}) {
   }
 }
 
-function getSampleDocumentFallback(docName?: string, filename?: string): string {
-  const name = `${docName || ""} ${filename || ""}`.toLowerCase()
-  if (name.includes("loss") || name.includes("affidavit")) return "/samples/AFFIDAVIT OF LOSS.webp"
-  if (name.includes("whole body") || name.includes("body")) return "/samples/WHOLE BODY.jpg"
-  if (name.includes("signature") || name.includes("pirma")) return "/samples/SIGNATURE.avif"
-  if (name.includes("disability") || name.includes("medical") || name.includes("certificate of disability")) return "/samples/CERTIFICATE OF DISABILITY.jpg"
-  if (name.includes("residence") || name.includes("residency")) return "/samples/PROOF OF RESIDENCE.webp"
-  if (name.includes("indigency")) return "/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg"
-  if (name.includes("barangay") || name.includes("referral")) return "/samples/BARANGAY CERTIFICATE.webp"
-  if (name.includes("birth") || name.includes("psa") || name.includes("minor") || name.includes("child")) return "/samples/BIRTH CERTIFICATE OF MINOR.jpg"
-  if (name.includes("endorsement")) return "/samples/ENDORSEMENT FROM SOLO PARENT.webp"
-  if (name.includes("circumstance")) return "/samples/PROOF OF CIRCUMSTANCE (ANY ONE).webp"
-  if (name.includes("enrollment") || name.includes("school")) return "/samples/CERTIFICATE OF ENROLLMENT.png"
-  if (name.includes("intent")) return "/samples/LETTER OF INTENT.png"
-  if (name.includes("death")) return "/samples/sample_death_certificate.png"
-  if (name.includes("burial")) return "/samples/sample_burial_contract.png"
-  if (name.includes("qc id") || name.includes("pwd id")) return "/samples/QC ID NG PERSON WITH DISABILITY.jpg"
-  if (name.includes("gov") || name.includes("valid id") || name.includes("government") || name.includes("id") || name.includes("parent") || name.includes("guardian")) return "/samples/sample_valid_id.png"
-
-  return ""
-}
 
 function resolveFileUrl(fileUrl?: string, filename?: string, isChildWelfare: boolean = false): string {
   if (fileUrl) {
@@ -2648,7 +2627,7 @@ export default function SoloParentChildWelfareAdmin() {
   })
   const isFetchingRef = useRef(false)
 
-  const loadApplications = async () => {
+  const loadApplications = async (_silent?: boolean) => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
     try {
