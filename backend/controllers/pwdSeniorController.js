@@ -142,7 +142,14 @@ function saveBase64File(base64Data, filenamePrefix = 'pwd-senior') {
     const dir = path.join(__dirname, '..', 'uploads', 'pwd-senior');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const safeFilename = `${filenamePrefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+    // Sanitize prefix: remove slashes, special characters, and multiple underscores
+    const cleanPrefix = String(filenamePrefix || 'pwd-senior')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 40) || 'doc';
+
+    const safeFilename = `${cleanPrefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
     const filePath = path.join(dir, safeFilename);
     fs.writeFileSync(filePath, buffer);
     return `/uploads/pwd-senior/${safeFilename}`;
@@ -159,9 +166,11 @@ function sanitizeDocumentList(docs) {
     const cleanDoc = { ...doc };
 
     // Save base64 image if present to physical disk
-    const rawData = cleanDoc.dataUrl || cleanDoc.base64 || cleanDoc.data || (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null);
+    const rawData = cleanDoc.dataUrl || cleanDoc.base64 || cleanDoc.data || 
+      (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null) ||
+      (cleanDoc.previewUrl && cleanDoc.previewUrl.startsWith('data:') ? cleanDoc.previewUrl : null);
     if (rawData && typeof rawData === 'string' && rawData.startsWith('data:')) {
-      const savedPath = saveBase64File(rawData, cleanDoc.name || 'document');
+      const savedPath = saveBase64File(rawData, cleanDoc.name || cleanDoc.filename || 'document');
       if (savedPath) {
         cleanDoc.fileUrl = savedPath;
         cleanDoc.previewUrl = savedPath;
@@ -178,11 +187,13 @@ function sanitizeDocumentList(docs) {
       if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && !cleanDoc.previewUrl.startsWith('data:')) {
         cleanDoc.fileUrl = cleanDoc.previewUrl;
       } else if (cleanDoc.filename && typeof cleanDoc.filename === 'string') {
-        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanDoc.filename}`;
+        const cleanFn = path.basename(cleanDoc.filename);
+        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanFn}`;
       }
     } else if (typeof cleanDoc.fileUrl === 'string') {
       if (!cleanDoc.fileUrl.startsWith('/') && !cleanDoc.fileUrl.startsWith('http') && !cleanDoc.fileUrl.startsWith('data:')) {
-        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanDoc.fileUrl}`;
+        const cleanFn = path.basename(cleanDoc.fileUrl);
+        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanFn}`;
       }
     }
 
@@ -190,9 +201,11 @@ function sanitizeDocumentList(docs) {
       cleanDoc.files = cleanDoc.files.map((f) => {
         if (!f || typeof f !== 'object') return f;
         const cleanF = { ...f };
-        const rawF = cleanF.dataUrl || cleanF.base64 || (cleanF.fileUrl && cleanF.fileUrl.startsWith('data:') ? cleanF.fileUrl : null);
+        const rawF = cleanF.dataUrl || cleanF.base64 || 
+          (cleanF.fileUrl && cleanF.fileUrl.startsWith('data:') ? cleanF.fileUrl : null) ||
+          (cleanF.previewUrl && cleanF.previewUrl.startsWith('data:') ? cleanF.previewUrl : null);
         if (rawF && typeof rawF === 'string' && rawF.startsWith('data:')) {
-          const savedF = saveBase64File(rawF, cleanF.name || 'file');
+          const savedF = saveBase64File(rawF, cleanF.name || cleanF.filename || 'file');
           if (savedF) {
             cleanF.fileUrl = savedF;
             cleanF.previewUrl = savedF;
@@ -202,9 +215,11 @@ function sanitizeDocumentList(docs) {
         if (cleanF.base64) delete cleanF.base64;
         if (cleanF.data) delete cleanF.data;
         if (!cleanF.fileUrl && cleanF.filename) {
-          cleanF.fileUrl = `/uploads/pwd-senior/${cleanF.filename}`;
+          const cleanFn = path.basename(cleanF.filename);
+          cleanF.fileUrl = `/uploads/pwd-senior/${cleanFn}`;
         } else if (typeof cleanF.fileUrl === 'string' && !cleanF.fileUrl.startsWith('/') && !cleanF.fileUrl.startsWith('http') && !cleanF.fileUrl.startsWith('data:')) {
-          cleanF.fileUrl = `/uploads/pwd-senior/${cleanF.fileUrl}`;
+          const cleanFn = path.basename(cleanF.fileUrl);
+          cleanF.fileUrl = `/uploads/pwd-senior/${cleanFn}`;
         }
         return cleanF;
       });

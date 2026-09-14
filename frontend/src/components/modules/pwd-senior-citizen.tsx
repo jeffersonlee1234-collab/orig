@@ -1061,6 +1061,26 @@ function DocumentViewerModal({
   const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src) || (src && src.startsWith("data:image"))
 
   const handleImageError = () => {
+    // 1. Direct base64 fallback from doc object
+    const directData = (doc as any).dataUrl || (doc as any).base64 || (doc as any).data
+    if (directData && typeof directData === "string" && directData.startsWith("data:") && src !== directData) {
+      setSrc(directData)
+      return
+    }
+
+    // 2. Direct base64 fallback from app.documents or extra_data
+    if (app && Array.isArray(app.documents)) {
+      const match = app.documents.find((d: any) =>
+        (d?.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
+        (d?.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
+      )
+      const dataBackup = (match as any)?.dataUrl || (match as any)?.base64 || (match as any)?.data || (match as any)?.previewUrl
+      if (dataBackup && typeof dataBackup === "string" && dataBackup.startsWith("data:") && src !== dataBackup) {
+        setSrc(dataBackup)
+        return
+      }
+    }
+
     const rawFilename = (doc.filename || doc.name || src.split("/").pop() || "").split("/").pop() || ""
     if (retryStep === 0 && rawFilename && !src.includes("/uploads/pwd-senior/")) {
       setRetryStep(1)
@@ -1072,19 +1092,26 @@ function DocumentViewerModal({
       setRetryStep(3)
       setSrc(`${API_BASE}/uploads/${rawFilename}`)
     } else {
-      // Check local storage for original uploaded base64 data
+      // 3. Fallback across all local storage collections
       try {
-        const local = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
-        for (const item of local) {
-          if (Array.isArray(item.documents)) {
-            const matched = item.documents.find((d: any) =>
-              (d.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
-              (d.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
-            )
-            const backup = matched?.dataUrl || matched?.fileUrl || matched?.previewUrl || matched?.base64
-            if (backup && typeof backup === "string" && (backup.startsWith("data:") || backup.startsWith("http"))) {
-              setSrc(backup)
-              return
+        const localKeys = ["pwd_senior_applications", "all_user_applications", "user_applications", "applications", "userProfile"]
+        for (const k of localKeys) {
+          const raw = localStorage.getItem(k)
+          if (!raw) continue
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              if (Array.isArray(item?.documents)) {
+                const matched = item.documents.find((d: any) =>
+                  (d?.name && doc?.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
+                  (d?.filename && doc?.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
+                )
+                const backup = matched?.dataUrl || matched?.base64 || matched?.previewUrl || matched?.fileUrl
+                if (backup && typeof backup === "string" && (backup.startsWith("data:") || (backup.startsWith("http") && backup !== src))) {
+                  setSrc(backup)
+                  return
+                }
+              }
             }
           }
         }

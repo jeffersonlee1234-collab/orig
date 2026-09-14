@@ -40,33 +40,98 @@ function stripLargeDataUrls(obj, depth = 0) {
   return obj;
 }
 
+const fsSync = require('fs');
+
+function saveBase64File(base64Data, filenamePrefix = 'child-welfare') {
+  if (!base64Data || typeof base64Data !== 'string' || !base64Data.startsWith('data:')) return '';
+  try {
+    const matches = base64Data.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return '';
+    const mimeType = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    let ext = '.jpg';
+    if (mimeType.includes('png')) ext = '.png';
+    else if (mimeType.includes('webp')) ext = '.webp';
+    else if (mimeType.includes('pdf')) ext = '.pdf';
+
+    const dir = path.join(__dirname, '..', 'uploads', 'child-welfare');
+    if (!fsSync.existsSync(dir)) fsSync.mkdirSync(dir, { recursive: true });
+
+    const cleanPrefix = String(filenamePrefix || 'child-welfare')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 40) || 'doc';
+
+    const safeFilename = `${cleanPrefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+    const filePath = path.join(dir, safeFilename);
+    fsSync.writeFileSync(filePath, buffer);
+    return `/uploads/child-welfare/${safeFilename}`;
+  } catch (err) {
+    console.warn('Error saving child welfare base64 file:', err.message);
+    return '';
+  }
+}
+
 function sanitizeDocumentList(docs) {
   if (!Array.isArray(docs)) return [];
   return docs.map((doc) => {
     if (!doc || typeof doc !== 'object') return doc;
     const cleanDoc = { ...doc };
+
+    const rawData = cleanDoc.dataUrl || cleanDoc.base64 || cleanDoc.data || 
+      (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null) ||
+      (cleanDoc.previewUrl && cleanDoc.previewUrl.startsWith('data:') ? cleanDoc.previewUrl : null);
+    if (rawData && typeof rawData === 'string' && rawData.startsWith('data:')) {
+      const savedPath = saveBase64File(rawData, cleanDoc.name || cleanDoc.filename || 'document');
+      if (savedPath) {
+        cleanDoc.fileUrl = savedPath;
+        cleanDoc.previewUrl = savedPath;
+      }
+    }
+
     if (cleanDoc.dataUrl) delete cleanDoc.dataUrl;
     if (cleanDoc.base64) delete cleanDoc.base64;
     if (cleanDoc.data) delete cleanDoc.data;
     if (cleanDoc.content) delete cleanDoc.content;
-    if (cleanDoc.fileUrl && typeof cleanDoc.fileUrl === 'string' && cleanDoc.fileUrl.startsWith('data:')) {
-      cleanDoc.fileUrl = '';
+
+    if (!cleanDoc.fileUrl) {
+      if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && !cleanDoc.previewUrl.startsWith('data:')) {
+        cleanDoc.fileUrl = cleanDoc.previewUrl;
+      } else if (cleanDoc.filename && typeof cleanDoc.filename === 'string') {
+        const cleanFn = path.basename(cleanDoc.filename);
+        cleanDoc.fileUrl = `/uploads/child-welfare/${cleanFn}`;
+      }
+    } else if (typeof cleanDoc.fileUrl === 'string') {
+      if (!cleanDoc.fileUrl.startsWith('/') && !cleanDoc.fileUrl.startsWith('http') && !cleanDoc.fileUrl.startsWith('data:')) {
+        const cleanFn = path.basename(cleanDoc.fileUrl);
+        cleanDoc.fileUrl = `/uploads/child-welfare/${cleanFn}`;
+      }
     }
-    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:')) {
-      cleanDoc.previewUrl = cleanDoc.fileUrl || '';
-    }
+
     if (Array.isArray(cleanDoc.files)) {
       cleanDoc.files = cleanDoc.files.map((f) => {
         if (!f || typeof f !== 'object') return f;
         const cleanF = { ...f };
+        const rawF = cleanF.dataUrl || cleanF.base64 || 
+          (cleanF.fileUrl && cleanF.fileUrl.startsWith('data:') ? cleanF.fileUrl : null) ||
+          (cleanF.previewUrl && cleanF.previewUrl.startsWith('data:') ? cleanF.previewUrl : null);
+        if (rawF && typeof rawF === 'string' && rawF.startsWith('data:')) {
+          const savedF = saveBase64File(rawF, cleanF.name || cleanF.filename || 'file');
+          if (savedF) {
+            cleanF.fileUrl = savedF;
+            cleanF.previewUrl = savedF;
+          }
+        }
         if (cleanF.dataUrl) delete cleanF.dataUrl;
         if (cleanF.base64) delete cleanF.base64;
         if (cleanF.data) delete cleanF.data;
-        if (cleanF.fileUrl && typeof cleanF.fileUrl === 'string' && cleanF.fileUrl.startsWith('data:')) {
-          cleanF.fileUrl = '';
-        }
-        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:')) {
-          cleanF.previewUrl = cleanF.fileUrl || '';
+        if (!cleanF.fileUrl && cleanF.filename) {
+          const cleanFn = path.basename(cleanF.filename);
+          cleanF.fileUrl = `/uploads/child-welfare/${cleanFn}`;
+        } else if (typeof cleanF.fileUrl === 'string' && !cleanF.fileUrl.startsWith('/') && !cleanF.fileUrl.startsWith('http') && !cleanF.fileUrl.startsWith('data:')) {
+          const cleanFn = path.basename(cleanF.fileUrl);
+          cleanF.fileUrl = `/uploads/child-welfare/${cleanFn}`;
         }
         return cleanF;
       });
