@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
-import { cachedApiFetch, deduplicatedFetch } from "../../utils/cachedApiFetch"
+import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import {
@@ -1709,15 +1709,6 @@ export default function MyApplications() {
         const userFirst = (userProfile.firstName || "").trim().toLowerCase()
         const userLast = (userProfile.lastName || "").trim().toLowerCase()
         const userFull = `${userFirst} ${userLast}`.trim()
-
-        const profileCriteria = {
-          qcId,
-          userId: String(userId),
-          userEmail,
-          userFirst,
-          userLast,
-          userFull,
-        }
 
         const isUserMatch = (app: any): boolean => {
           if (!app) return false
