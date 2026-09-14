@@ -664,11 +664,11 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           bloodType: p.bloodType || prev.bloodType || "O+",
           permanentAddress: prev.permanentAddress || p.permanentAddress || fullAddr,
           presentAddress: prev.presentAddress || p.presentAddress || p.permanentAddress || fullAddr,
-          emergencyFirstName: prev.emergencyFirstName || p.emergencyFirstName || "",
-          emergencyLastName: prev.emergencyLastName || p.emergencyLastName || "",
-          emergencyContactNo: prev.emergencyContactNo || p.emergencyContactNo || (p.contactNo ? String(p.contactNo).replace(/\s+/g, "") : ""),
-          emergencyRelationship: prev.emergencyRelationship || p.emergencyRelationship || "Spouse",
-          emergencyAddress: prev.emergencyAddress || p.emergencyAddress || fullAddr,
+          emergencyFirstName: prev.emergencyFirstName || "",
+          emergencyLastName: prev.emergencyLastName || "",
+          emergencyContactNo: prev.emergencyContactNo || "",
+          emergencyRelationship: prev.emergencyRelationship || "",
+          emergencyAddress: prev.emergencyAddress || "",
         }))
       }
     }
@@ -772,11 +772,11 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       bloodType: prof.bloodType || (prof as any).blood_type || "O+",
       permanentAddress: prof.permanentAddress || fullAddr,
       presentAddress: prof.presentAddress || prof.permanentAddress || fullAddr,
-      emergencyFirstName: prof.emergencyFirstName || "",
-      emergencyLastName: prof.emergencyLastName || "",
-      emergencyContactNo: prof.emergencyContactNo || (prof.contactNo ? String(prof.contactNo).replace(/\s+/g, "") : ""),
-      emergencyRelationship: prof.emergencyRelationship || "Spouse",
-      emergencyAddress: prof.emergencyAddress || fullAddr,
+      emergencyFirstName: "",
+      emergencyLastName: "",
+      emergencyContactNo: "",
+      emergencyRelationship: "",
+      emergencyAddress: "",
     }
   })
 
