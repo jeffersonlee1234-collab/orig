@@ -15,7 +15,6 @@ export function SessionInactivityWatcher() {
     return sessionStorage.getItem("terminated_new_device") || "";
   });
   const lastActivityRef = useRef<number>(Date.now());
-  const lastVerifyTimeRef = useRef<number>(0);
   const timerRef = useRef<any>(null);
   const verifyIntervalRef = useRef<any>(null);
 
