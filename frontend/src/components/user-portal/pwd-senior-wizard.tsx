@@ -1962,45 +1962,84 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                       </div>
 
                       <div className="p-4 rounded-xl bg-slate-50 border border-blue-200 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className={`block text-xs font-semibold ${attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified) ? "text-red-600" : "text-foreground"}`}>
-                            {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                        {/* 1. Reason for Renewal (Moved to Top) */}
+                        <div className="space-y-2">
+                          <label className={`block text-xs font-semibold ${attemptedNext && !reasonForRenewal ? "text-red-600 font-semibold" : "text-foreground"}`}>
+                            Reason for Renewal <span className="text-red-500">*</span>
                           </label>
-                          {isIdVerified && (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                              <Check className="w-3.5 h-3.5" /> PWD ID Verified
-                            </span>
+                          <div className="flex flex-wrap items-center gap-6 pt-1">
+                            {[
+                              { label: "Expired ID", value: "Expired ID" },
+                              { label: "Updating Personal Information", value: "Updating Personal Information" },
+                              { label: "Damaged ID", value: "Damaged ID" },
+                            ].map((opt) => (
+                              <label key={opt.value} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+                                <input
+                                  type="radio"
+                                  name="pwdRenewalReasonInitial"
+                                  value={opt.value}
+                                  checked={reasonForRenewal === opt.value}
+                                  onChange={() => setReasonForRenewal(opt.value)}
+                                  className="h-4 w-4 text-blue-600 accent-blue-600 cursor-pointer"
+                                />
+                                <span>{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                          {attemptedNext && !reasonForRenewal && (
+                            <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng renewal bago mag-verify.</p>
                           )}
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <TextInput
-                            prefix="PWD-"
-                            isPwdIdMask
-                            value={formData.existingPwdIdNumber}
-                            onChange={(v) => {
-                              updateField("existingPwdIdNumber", v)
-                              updateField("hasExistingPwdId", t("yes"))
-                              setIsIdVerified(false)
-                            }}
-                            placeholder="137404-2026-847708"
-                            invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
-                          />
-                          <button
-                            type="button"
-                            onClick={handleVerifyId}
-                            disabled={!(formData.existingPwdIdNumber || "").trim() || isVerifying}
-                            className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
-                          >
-                            {isVerifying ? (
-                              <>
-                                <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span>Verifying...</span>
-                              </>
-                            ) : (
-                              <span>VERIFY PWD ID</span>
+
+                        {/* 2. PWD ID Input & Verify Button */}
+                        <div className="pt-2 border-t border-blue-100 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className={`block text-xs font-semibold ${attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified) ? "text-red-600" : "text-foreground"}`}>
+                              {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                            </label>
+                            {isIdVerified && (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                                <Check className="w-3.5 h-3.5" /> PWD ID Verified
+                              </span>
                             )}
-                          </button>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <TextInput
+                              prefix="PWD-"
+                              isPwdIdMask
+                              value={formData.existingPwdIdNumber}
+                              onChange={(v) => {
+                                updateField("existingPwdIdNumber", v)
+                                updateField("hasExistingPwdId", t("yes"))
+                                setIsIdVerified(false)
+                              }}
+                              placeholder="137404-2026-847708"
+                              invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleVerifyId}
+                              disabled={!reasonForRenewal || !(formData.existingPwdIdNumber || "").trim() || isVerifying}
+                              title={!reasonForRenewal ? "Pumili muna ng dahilan sa itaas bago i-verify" : undefined}
+                              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                            >
+                              {isVerifying ? (
+                                <>
+                                  <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>Verifying...</span>
+                                </>
+                              ) : (
+                                <span>VERIFY PWD ID</span>
+                              )}
+                            </button>
+                          </div>
+                          {!reasonForRenewal && (formData.existingPwdIdNumber || "").trim() && !isIdVerified && (
+                            <p className="text-xs text-amber-600 font-medium">
+                              ⚠️ Pumili muna ng Reason for Renewal sa itaas bago i-click ang VERIFY PWD ID.
+                            </p>
+                          )}
                         </div>
+
                         {verifyError && (
                           <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in duration-200">
                             <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -2021,60 +2060,34 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                         )}
 
                         {isIdVerified && (
-                          <div className="space-y-3 animate-in fade-in duration-200">
-                            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
-                              <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                                <Check className="h-4 w-4 text-emerald-600" />
-                                <span>PWD ID verified.</span>
-                              </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-emerald-950 pt-1">
-                                <div>
-                                  <span className="text-emerald-700 block">Name:</span>
-                                  <span className="font-semibold text-sm">{formData.firstName} {formData.middleName ? `${formData.middleName} ` : ""}{formData.lastName}</span>
-                                </div>
-                                <div>
-                                  <span className="text-emerald-700 block">Disability Type:</span>
-                                  <span className="font-semibold text-sm">{disabilityType || "Visual Disability"}</span>
-                                </div>
-                                <div>
-                                  <span className="text-emerald-700 block">PWD ID Status:</span>
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mt-0.5 ${
-                                    activeAppStatus === "pending" || approvedPwdRecord?.status === "pending"
-                                      ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                      : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                  }`}>
-                                    {activeAppStatus === "pending" || approvedPwdRecord?.status === "pending" ? "Pending" : "Active"}
-                                  </span>
-                                </div>
-                              </div>
+                          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 animate-in fade-in duration-200">
+                            <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                              <Check className="h-4 w-4 text-emerald-600" />
+                              <span>PWD ID verified.</span>
                             </div>
-
-                            <div className="pt-2 border-t border-blue-100 space-y-2">
-                              <label className={`block text-xs font-semibold ${attemptedNext && !reasonForRenewal ? "text-red-600 font-semibold" : "text-foreground"}`}>
-                                Reason for Renewal <span className="text-red-500">*</span>
-                              </label>
-                              <div className="flex flex-wrap items-center gap-6 pt-1">
-                                {[
-                                  { label: "Expired ID", value: "Expired ID" },
-                                  { label: "Updating Personal Information", value: "Updating Personal Information" },
-                                  { label: "Damaged ID", value: "Damaged ID" },
-                                ].map((opt) => (
-                                  <label key={opt.value} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
-                                    <input
-                                      type="radio"
-                                      name="pwdRenewalReasonInitial"
-                                      value={opt.value}
-                                      checked={reasonForRenewal === opt.value}
-                                      onChange={() => setReasonForRenewal(opt.value)}
-                                      className="h-4 w-4 text-blue-600 accent-blue-600 cursor-pointer"
-                                    />
-                                    <span>{opt.label}</span>
-                                  </label>
-                                ))}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs text-emerald-950 pt-1">
+                              <div>
+                                <span className="text-emerald-700 block">Name:</span>
+                                <span className="font-semibold text-sm">{formData.firstName} {formData.middleName ? `${formData.middleName} ` : ""}{formData.lastName}</span>
                               </div>
-                              {attemptedNext && !reasonForRenewal && (
-                                <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng renewal.</p>
-                              )}
+                              <div>
+                                <span className="text-emerald-700 block">Disability Type:</span>
+                                <span className="font-semibold text-sm">{disabilityType || "Visual Disability"}</span>
+                              </div>
+                              <div>
+                                <span className="text-emerald-700 block">PWD ID Status:</span>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mt-0.5 ${
+                                  activeAppStatus === "pending" || approvedPwdRecord?.status === "pending"
+                                    ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                    : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                }`}>
+                                  {activeAppStatus === "pending" || approvedPwdRecord?.status === "pending" ? "Pending" : "Active"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-emerald-700 block">Reason:</span>
+                                <span className="font-semibold text-sm">{reasonForRenewal}</span>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2093,55 +2106,16 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                       </div>
 
                       <div className="p-4 rounded-xl bg-slate-50 border border-blue-200 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className={`block text-xs font-semibold ${attemptedNext && !isIdVerified ? "text-red-600" : "text-foreground"}`}>
-                            {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
-                          </label>
-                          {isIdVerified && (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                              <Check className="w-3.5 h-3.5" /> PWD ID Verified
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <TextInput
-                            prefix="PWD-"
-                            isPwdIdMask={true}
-                            value={formData.existingPwdIdNumber}
-                            onChange={(v) => {
-                              updateField("existingPwdIdNumber", v)
-                              updateField("hasExistingPwdId", t("yes"))
-                              setIsIdVerified(false)
-                            }}
-                            placeholder="137404-2026-847708"
-                            invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
-                          />
-                          <button
-                            type="button"
-                            onClick={handleVerifyId}
-                            disabled={!(formData.existingPwdIdNumber || "").trim() || isVerifying}
-                            className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
-                          >
-                            {isVerifying ? (
-                              <>
-                                <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span>Verifying...</span>
-                              </>
-                            ) : (
-                              <span>VERIFY PWD ID</span>
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="pt-2 border-t border-blue-100">
-                          <label className={`block text-xs font-semibold ${attemptedNext && reasonForReplacement === "" ? "text-red-600" : "text-foreground"} mb-1.5`}>
+                        {/* 1. Reason for Replacement (Moved to Top) */}
+                        <div className="space-y-1.5">
+                          <label className={`block text-xs font-semibold ${attemptedNext && reasonForReplacement === "" ? "text-red-600" : "text-foreground"}`}>
                             Reason for Replacement <span className="text-red-500">*</span>
                           </label>
                           <div className="flex items-center gap-6">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input
                                 type="radio"
-                                name="pwdReplacementReason"
+                                name="pwdReplacementReasonInitial"
                                 value="Lost"
                                 checked={reasonForReplacement === "Lost"}
                                 onChange={() => setReasonForReplacement("Lost")}
@@ -2149,10 +2123,10 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                               />
                               <span className="text-xs font-medium text-foreground">Lost / Nawala</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input
                                 type="radio"
-                                name="pwdReplacementReason"
+                                name="pwdReplacementReasonInitial"
                                 value="Damaged"
                                 checked={reasonForReplacement === "Damaged"}
                                 onChange={() => setReasonForReplacement("Damaged")}
@@ -2162,7 +2136,56 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                             </label>
                           </div>
                           {attemptedNext && reasonForReplacement === "" && (
-                            <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng pagpapalit (Lost o Damaged).</p>
+                            <p className="text-xs text-red-500 mt-1">Pumili muna ng dahilan ng pagpapalit (Lost o Damaged).</p>
+                          )}
+                        </div>
+
+                        {/* 2. PWD ID Input & Verify Button */}
+                        <div className="pt-2 border-t border-blue-100 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className={`block text-xs font-semibold ${attemptedNext && !isIdVerified ? "text-red-600" : "text-foreground"}`}>
+                              {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                            </label>
+                            {isIdVerified && (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                                <Check className="w-3.5 h-3.5" /> PWD ID Verified
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <TextInput
+                              prefix="PWD-"
+                              isPwdIdMask={true}
+                              value={formData.existingPwdIdNumber}
+                              onChange={(v) => {
+                                updateField("existingPwdIdNumber", v)
+                                updateField("hasExistingPwdId", t("yes"))
+                                setIsIdVerified(false)
+                              }}
+                              placeholder="137404-2026-847708"
+                              invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleVerifyId}
+                              disabled={!reasonForReplacement || !(formData.existingPwdIdNumber || "").trim() || isVerifying}
+                              title={!reasonForReplacement ? "Pumili muna ng dahilan sa itaas bago i-verify" : undefined}
+                              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                            >
+                              {isVerifying ? (
+                                <>
+                                  <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>Verifying...</span>
+                                </>
+                              ) : (
+                                <span>VERIFY PWD ID</span>
+                              )}
+                            </button>
+                          </div>
+                          {!reasonForReplacement && (formData.existingPwdIdNumber || "").trim() && !isIdVerified && (
+                            <p className="text-xs text-amber-600 font-medium">
+                              ⚠️ Pumili muna ng Reason for Replacement sa itaas bago i-click ang VERIFY PWD ID.
+                            </p>
                           )}
                         </div>
 
@@ -2230,52 +2253,23 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   )}
                 </div>
               ) : (
-                <div>
-                  <p className={`text-sm mb-2 ${attemptedNext && idStatus === null ? "text-red-600 font-semibold" : "text-foreground"}`}>
-                    {t("pwdIdStatusQuestion")} <span className="text-red-500">*</span>
-                  </p>
-                  <div className="flex items-center gap-6">
+                <div className="space-y-4 pt-2">
+                  <div className="border-b border-blue-200 pb-2">
+                    <p className="text-sm font-bold text-foreground">{t("pwdWhatTypeOfApp")}</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
-                        name="idStatus"
-                        checked={idStatus === "renewal"}
-                        onChange={() => {
-                          setIdStatus("renewal")
-                          updateField("hasExistingPwdId", t("yes"))
-                          setIsIdVerified(false)
-                        }}
-                      />
-                      <span className={`text-sm ${idStatus === "renewal" ? "font-semibold text-blue-700" : "text-blue-700"}`}>
-                        {t("pwdRenewalOption")}
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="idStatus"
-                        checked={idStatus === "loss"}
-                        onChange={() => {
-                          setIdStatus("loss")
-                          updateField("hasExistingPwdId", t("yes"))
-                          setIsIdVerified(false)
-                        }}
-                      />
-                      <span className={`text-sm ${idStatus === "loss" ? "font-semibold text-blue-700" : "text-blue-700"}`}>
-                        Replacement / Lost ID
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="idStatus"
+                        name="pwdAppType"
+                        value="new"
                         checked={idStatus === "new"}
                         onChange={() => {
                           setIdStatus("new")
                           updateField("hasExistingPwdId", t("no"))
-                          updateField("existingPwdIdNumber", "")
                           setIsIdVerified(false)
                         }}
+                        className="accent-blue-600 cursor-pointer"
                       />
                       <span className={`text-sm ${idStatus === "new" ? "font-semibold text-blue-700" : "text-blue-700"}`}>
                         {t("pwdNewApplicationOption")}
@@ -2290,55 +2284,94 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                     <div className="mt-3 space-y-3">
                       {idStatus === "renewal" && (
                         <div className="p-4 rounded-lg bg-slate-50 border border-blue-200 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <label className={`block text-xs font-semibold ${attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified) ? "text-red-600" : "text-foreground"}`}>
-                              {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                          {/* 1. Reason for Renewal (Moved to Top) */}
+                          <div className="space-y-2">
+                            <label className={`block text-xs font-semibold ${attemptedNext && !reasonForRenewal ? "text-red-600 font-semibold" : "text-foreground"}`}>
+                              Reason for Renewal <span className="text-red-500">*</span>
                             </label>
-                            {isIdVerified && (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                                <Check className="w-3.5 h-3.5" /> PWD ID Verified
-                              </span>
+                            <div className="flex flex-wrap items-center gap-6 pt-1">
+                              {[
+                                { label: "Expired ID", value: "Expired ID" },
+                                { label: "Updating Personal Information", value: "Updating Personal Information" },
+                                { label: "Damaged ID", value: "Damaged ID" },
+                              ].map((opt) => (
+                                <label key={opt.value} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+                                  <input
+                                    type="radio"
+                                    name="pwdRenewalReason"
+                                    value={opt.value}
+                                    checked={reasonForRenewal === opt.value}
+                                    onChange={() => setReasonForRenewal(opt.value)}
+                                    className="h-4 w-4 text-blue-600 accent-blue-600 cursor-pointer"
+                                  />
+                                  <span>{opt.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                            {attemptedNext && !reasonForRenewal && (
+                              <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng renewal bago mag-verify.</p>
                             )}
                           </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <TextInput
-                              prefix="PWD-"
-                              isPwdIdMask
-                              value={formData.existingPwdIdNumber}
-                              onChange={(v) => {
-                                updateField("existingPwdIdNumber", v)
-                                updateField("hasExistingPwdId", t("yes"))
-                                setIsIdVerified(false)
-                              }}
-                              placeholder="137404-2026-847708"
-                              verified={isIdVerified}
-                              invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleVerifyId}
-                              disabled={!(formData.existingPwdIdNumber || "").trim() || isVerifying}
-                              className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
-                                isIdVerified
-                                  ? "bg-emerald-600 hover:bg-emerald-700"
-                                  : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                              }`}
-                            >
-                              {isVerifying ? (
-                                <>
-                                  <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  <span>Verifying...</span>
-                                </>
-                              ) : isIdVerified ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>VERIFIED</span>
-                                </>
-                              ) : (
-                                <span>VERIFY PWD ID</span>
+
+                          {/* 2. PWD ID Input & Verify Button */}
+                          <div className="pt-2 border-t border-blue-100 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className={`block text-xs font-semibold ${attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified) ? "text-red-600" : "text-foreground"}`}>
+                                {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                              </label>
+                              {isIdVerified && (
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                                  <Check className="w-3.5 h-3.5" /> PWD ID Verified
+                                </span>
                               )}
-                            </button>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <TextInput
+                                prefix="PWD-"
+                                isPwdIdMask
+                                value={formData.existingPwdIdNumber}
+                                onChange={(v) => {
+                                  updateField("existingPwdIdNumber", v)
+                                  updateField("hasExistingPwdId", t("yes"))
+                                  setIsIdVerified(false)
+                                }}
+                                placeholder="137404-2026-847708"
+                                verified={isIdVerified}
+                                invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleVerifyId}
+                                disabled={!reasonForRenewal || !(formData.existingPwdIdNumber || "").trim() || isVerifying}
+                                title={!reasonForRenewal ? "Pumili muna ng dahilan sa itaas bago i-verify" : undefined}
+                                className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
+                                  isIdVerified
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                }`}
+                              >
+                                {isVerifying ? (
+                                  <>
+                                    <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>Verifying...</span>
+                                  </>
+                                ) : isIdVerified ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>VERIFIED</span>
+                                  </>
+                                ) : (
+                                  <span>VERIFY PWD ID</span>
+                                )}
+                              </button>
+                            </div>
+                            {!reasonForRenewal && (formData.existingPwdIdNumber || "").trim() && !isIdVerified && (
+                              <p className="text-xs text-amber-600 font-medium">
+                                ⚠️ Pumili muna ng Reason for Renewal sa itaas bago i-click ang VERIFY PWD ID.
+                              </p>
+                            )}
                           </div>
+
                           {verifyError && (
                             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in duration-200">
                               <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -2359,60 +2392,34 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                           )}
 
                           {isIdVerified && (
-                            <div className="space-y-3 animate-in fade-in duration-200">
-                              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
-                                <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                                  <Check className="h-4 w-4 text-emerald-600" />
-                                  <span>PWD ID verified.</span>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-emerald-950 pt-1">
-                                  <div>
-                                    <span className="text-emerald-700 block">Name:</span>
-                                    <span className="font-semibold text-sm">{formData.firstName} {formData.middleName ? `${formData.middleName} ` : ""}{formData.lastName}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-emerald-700 block">Disability Type:</span>
-                                    <span className="font-semibold text-sm">{disabilityType || "Visual Disability"}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-emerald-700 block">PWD ID Status:</span>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mt-0.5 ${
-                                      activeAppStatus === "pending" || approvedPwdRecord?.status === "pending"
-                                        ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                        : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                    }`}>
-                                      {activeAppStatus === "pending" || approvedPwdRecord?.status === "pending" ? "Pending" : "Active"}
-                                    </span>
-                                  </div>
-                                </div>
+                            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 animate-in fade-in duration-200">
+                              <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                                <Check className="h-4 w-4 text-emerald-600" />
+                                <span>PWD ID verified.</span>
                               </div>
-
-                              <div className="pt-2 border-t border-blue-100 space-y-2">
-                                <label className={`block text-xs font-semibold ${attemptedNext && !reasonForRenewal ? "text-red-600 font-semibold" : "text-foreground"}`}>
-                                  Reason for Renewal <span className="text-red-500">*</span>
-                                </label>
-                                <div className="flex flex-wrap items-center gap-6 pt-1">
-                                  {[
-                                    { label: "Expired ID", value: "Expired ID" },
-                                    { label: "Updating Personal Information", value: "Updating Personal Information" },
-                                    { label: "Damaged ID", value: "Damaged ID" },
-                                  ].map((opt) => (
-                                    <label key={opt.value} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
-                                      <input
-                                        type="radio"
-                                        name="pwdRenewalReason"
-                                        value={opt.value}
-                                        checked={reasonForRenewal === opt.value}
-                                        onChange={() => setReasonForRenewal(opt.value)}
-                                        className="h-4 w-4 text-blue-600 accent-blue-600 cursor-pointer"
-                                      />
-                                      <span>{opt.label}</span>
-                                    </label>
-                                  ))}
+                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs text-emerald-950 pt-1">
+                                <div>
+                                  <span className="text-emerald-700 block">Name:</span>
+                                  <span className="font-semibold text-sm">{formData.firstName} {formData.middleName ? `${formData.middleName} ` : ""}{formData.lastName}</span>
                                 </div>
-                                {attemptedNext && !reasonForRenewal && (
-                                  <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng renewal.</p>
-                                )}
+                                <div>
+                                  <span className="text-emerald-700 block">Disability Type:</span>
+                                  <span className="font-semibold text-sm">{disabilityType || "Visual Disability"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-emerald-700 block">PWD ID Status:</span>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mt-0.5 ${
+                                    activeAppStatus === "pending" || approvedPwdRecord?.status === "pending"
+                                      ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                      : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  }`}>
+                                    {activeAppStatus === "pending" || approvedPwdRecord?.status === "pending" ? "Pending" : "Active"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-emerald-700 block">Reason:</span>
+                                  <span className="font-semibold text-sm">{reasonForRenewal}</span>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -2421,61 +2428,13 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
 
                       {idStatus === "loss" && (
                         <div className="p-4 rounded-lg bg-slate-50 border border-blue-200 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <label className={`block text-xs font-semibold ${attemptedNext && !isIdVerified ? "text-red-600" : "text-foreground"}`}>
-                              {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
-                            </label>
-                            {isIdVerified && (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                                <Check className="w-3.5 h-3.5" /> PWD ID Verified
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <TextInput
-                              prefix="PWD-"
-                              isPwdIdMask={true}
-                              value={formData.existingPwdIdNumber}
-                              onChange={(v) => {
-                                updateField("existingPwdIdNumber", v)
-                                updateField("hasExistingPwdId", t("yes"))
-                                setIsIdVerified(false)
-                              }}
-                              placeholder="137404-2026-847708"
-                              invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleVerifyId}
-                              disabled={!(formData.existingPwdIdNumber || "").trim() || isVerifying}
-                              className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
-                                isIdVerified
-                                  ? "bg-emerald-600 hover:bg-emerald-700"
-                                  : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                              }`}
-                            >
-                              {isVerifying ? (
-                                <>
-                                  <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  <span>Verifying...</span>
-                                </>
-                              ) : isIdVerified ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>VERIFIED</span>
-                                </>
-                              ) : (
-                                <span>VERIFY PWD ID</span>
-                              )}
-                            </button>
-                          </div>
-
-                          <div className="pt-2 border-t border-blue-100">
-                            <label className={`block text-xs font-semibold ${attemptedNext && reasonForReplacement === "" ? "text-red-600" : "text-foreground"} mb-1.5`}>
+                          {/* 1. Reason for Replacement (Moved to Top) */}
+                          <div className="space-y-1.5">
+                            <label className={`block text-xs font-semibold ${attemptedNext && reasonForReplacement === "" ? "text-red-600" : "text-foreground"}`}>
                               Reason for Replacement <span className="text-red-500">*</span>
                             </label>
                             <div className="flex items-center gap-6">
-                              <label className="flex items-center gap-2 cursor-pointer">
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
                                 <input
                                   type="radio"
                                   name="pwdReplacementReasonModal"
@@ -2486,7 +2445,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                                 />
                                 <span className="text-xs font-medium text-foreground">Lost / Nawala</span>
                               </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
                                 <input
                                   type="radio"
                                   name="pwdReplacementReasonModal"
@@ -2499,7 +2458,65 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                               </label>
                             </div>
                             {attemptedNext && reasonForReplacement === "" && (
-                              <p className="text-xs text-red-500 mt-1">Pumili ng dahilan ng pagpapalit (Lost o Damaged).</p>
+                              <p className="text-xs text-red-500 mt-1">Pumili muna ng dahilan ng pagpapalit (Lost o Damaged).</p>
+                            )}
+                          </div>
+
+                          {/* 2. PWD ID Input & Verify Button */}
+                          <div className="pt-2 border-t border-blue-100 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className={`block text-xs font-semibold ${attemptedNext && !isIdVerified ? "text-red-600" : "text-foreground"}`}>
+                                {t("pwdExistingIdLabel")} <span className="text-red-500">*</span>
+                              </label>
+                              {isIdVerified && (
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                                  <Check className="w-3.5 h-3.5" /> PWD ID Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <TextInput
+                                prefix="PWD-"
+                                isPwdIdMask={true}
+                                value={formData.existingPwdIdNumber}
+                                onChange={(v) => {
+                                  updateField("existingPwdIdNumber", v)
+                                  updateField("hasExistingPwdId", t("yes"))
+                                  setIsIdVerified(false)
+                                }}
+                                placeholder="137404-2026-847708"
+                                invalid={attemptedNext && (!(formData.existingPwdIdNumber || "").trim() || !isIdVerified)}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleVerifyId}
+                                disabled={!reasonForReplacement || !(formData.existingPwdIdNumber || "").trim() || isVerifying}
+                                title={!reasonForReplacement ? "Pumili muna ng dahilan sa itaas bago i-verify" : undefined}
+                                className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
+                                  isIdVerified
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                }`}
+                              >
+                                {isVerifying ? (
+                                  <>
+                                    <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>Verifying...</span>
+                                  </>
+                                ) : isIdVerified ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>VERIFIED</span>
+                                  </>
+                                ) : (
+                                  <span>VERIFY PWD ID</span>
+                                )}
+                              </button>
+                            </div>
+                            {!reasonForReplacement && (formData.existingPwdIdNumber || "").trim() && !isIdVerified && (
+                              <p className="text-xs text-amber-600 font-medium">
+                                ⚠️ Pumili muna ng Reason for Replacement sa itaas bago i-click ang VERIFY PWD ID.
+                              </p>
                             )}
                           </div>
 

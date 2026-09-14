@@ -1302,7 +1302,68 @@ export default function SeniorCitizenApplicationWizard({
               {/* ID Verification Field para sa Renewal at Lost ID */}
               {appFlow !== "new" && (
                 <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
-                  <div className="space-y-2">
+                  {/* 1. Reason for Renewal or Replacement (Top) */}
+                  <div className="space-y-2.5">
+                    <label className="block text-xs font-bold uppercase text-gray-800 tracking-wide">
+                      {appFlow === "renewal" ? "Reason for Renewal *" : "Reason for Replacement *"}
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-5">
+                      {appFlow === "renewal" ? (
+                        <>
+                          <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="reasonForRenewal"
+                              value="Expired / Due for Renewal"
+                              checked={reasonForRenewal === "Expired / Due for Renewal"}
+                              onChange={() => setReasonForRenewal("Expired / Due for Renewal")}
+                              className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
+                            />
+                            <span className="font-medium">Expired / Due for Renewal</span>
+                          </label>
+                          <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="reasonForRenewal"
+                              value="Updated Information"
+                              checked={reasonForRenewal === "Updated Information"}
+                              onChange={() => setReasonForRenewal("Updated Information")}
+                              className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
+                            />
+                            <span className="font-medium">Updated Information</span>
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="reasonForReplacement"
+                              value="Lost / Nawala"
+                              checked={reasonForReplacement === "Lost / Nawala"}
+                              onChange={() => setReasonForReplacement("Lost / Nawala")}
+                              className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
+                            />
+                            <span className="font-medium">Lost / Missing</span>
+                          </label>
+                          <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="reasonForReplacement"
+                              value="Damaged / Nasira"
+                              checked={reasonForReplacement === "Damaged / Nasira"}
+                              onChange={() => setReasonForReplacement("Damaged / Nasira")}
+                              className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
+                            />
+                            <span className="font-medium">Damaged / Defaced</span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. ID input and Verify */}
+                  <div className="pt-3 border-t border-gray-200 space-y-2">
                     <label className="text-xs font-bold uppercase text-gray-800 tracking-wide flex items-center gap-1.5">
                       <IdCard className="w-4 h-4 text-[#3b82f6]" />
                       SENIOR CITIZEN ID NUMBER *
@@ -1338,7 +1399,16 @@ export default function SeniorCitizenApplicationWizard({
                       <button
                         type="button"
                         onClick={handleVerifyId}
-                        disabled={!(existingIdNumber || "").trim() || isVerifying}
+                        disabled={
+                          (appFlow === "renewal" ? !reasonForRenewal : !reasonForReplacement) ||
+                          !(existingIdNumber || "").trim() ||
+                          isVerifying
+                        }
+                        title={
+                          (appFlow === "renewal" ? !reasonForRenewal : !reasonForReplacement)
+                            ? "Pumili muna ng dahilan sa itaas bago i-verify"
+                            : undefined
+                        }
                         className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
                           isIdVerified
                             ? "bg-emerald-600 hover:bg-emerald-700"
@@ -1359,6 +1429,12 @@ export default function SeniorCitizenApplicationWizard({
                       </button>
                     </div>
 
+                    {(appFlow === "renewal" ? !reasonForRenewal : !reasonForReplacement) && (existingIdNumber || "").trim() && !isIdVerified && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        ⚠️ Pumili muna ng dahilan sa itaas bago i-click ang VERIFY ID.
+                      </p>
+                    )}
+
                     {isIdVerified && (
                       <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold mt-1 animate-in fade-in duration-150">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1376,68 +1452,6 @@ export default function SeniorCitizenApplicationWizard({
                       </div>
                     )}
                   </div>
-
-                  {/* Reason for Renewal or Replacement when verified */}
-                  {isIdVerified && (
-                    <div className="pt-3 border-t border-gray-200 space-y-2.5 animate-in fade-in duration-200">
-                      <label className="block text-xs font-bold uppercase text-gray-800 tracking-wide">
-                        {appFlow === "renewal" ? "Reason for Renewal *" : "Reason for Replacement *"}
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-5">
-                        {appFlow === "renewal" ? (
-                          <>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
-                              <input
-                                type="radio"
-                                name="reasonForRenewal"
-                                value="Expired / Due for Renewal"
-                                checked={reasonForRenewal === "Expired / Due for Renewal"}
-                                onChange={() => setReasonForRenewal("Expired / Due for Renewal")}
-                                className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
-                              />
-                              <span className="font-medium">Expired / Due for Renewal</span>
-                            </label>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
-                              <input
-                                type="radio"
-                                name="reasonForRenewal"
-                                value="Updated Information"
-                                checked={reasonForRenewal === "Updated Information"}
-                                onChange={() => setReasonForRenewal("Updated Information")}
-                                className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
-                              />
-                              <span className="font-medium">Updated Information</span>
-                            </label>
-                          </>
-                        ) : (
-                          <>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
-                              <input
-                                type="radio"
-                                name="reasonForReplacement"
-                                value="Lost / Nawala"
-                                checked={reasonForReplacement === "Lost / Nawala"}
-                                onChange={() => setReasonForReplacement("Lost / Nawala")}
-                                className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
-                              />
-                              <span className="font-medium">Lost / Missing</span>
-                            </label>
-                            <label className="flex items-center gap-2.5 text-sm text-gray-800 cursor-pointer select-none">
-                              <input
-                                type="radio"
-                                name="reasonForReplacement"
-                                value="Damaged / Nasira"
-                                checked={reasonForReplacement === "Damaged / Nasira"}
-                                onChange={() => setReasonForReplacement("Damaged / Nasira")}
-                                className="h-4 w-4 accent-[#3b82f6] cursor-pointer"
-                              />
-                              <span className="font-medium">Damaged / Defaced</span>
-                            </label>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
