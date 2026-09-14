@@ -2719,7 +2719,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                     <LockedField
                       value={
                         formData.permanentAddress ||
-                        userProfile?.permanentAddress ||
+                        (userProfile as any)?.permanentAddress ||
                         [
                           formData.addressHouseNo || userProfile?.addressHouseNo || (userProfile as any)?.houseNo,
                           formData.addressStreet || userProfile?.addressStreet || (userProfile as any)?.street,
@@ -2736,8 +2736,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                       value={
                         formData.presentAddress ||
                         formData.permanentAddress ||
-                        userProfile?.presentAddress ||
-                        userProfile?.permanentAddress ||
+                        (userProfile as any)?.presentAddress ||
+                        (userProfile as any)?.permanentAddress ||
                         [
                           formData.addressHouseNo || userProfile?.addressHouseNo || (userProfile as any)?.houseNo,
                           formData.addressStreet || userProfile?.addressStreet || (userProfile as any)?.street,
