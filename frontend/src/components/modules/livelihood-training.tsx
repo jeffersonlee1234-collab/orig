@@ -2165,26 +2165,6 @@ export default function LivelihoodApplicationsAdmin() {
     } catch (_) {}
   }
 
-  // Reset / Clear all applications in Admin for clean testing
-  const handleResetAll = async () => {
-    if (!window.confirm("Sigurado ka bang nais mong burahin ang lahat ng livelihood applications at records sa Admin para makapagsimula mula sa simula?")) {
-      return
-    }
-    setApplications([])
-    setSelectedReviewApp(null)
-    setSelectedAssistanceApp(null)
-    setSelectedMonitoringApp(null)
-    try {
-      localStorage.removeItem("livelihood_applications")
-      window.dispatchEvent(new Event("livelihood_status_updated"))
-      window.dispatchEvent(new Event("storage"))
-    } catch (_) {}
-
-    try {
-      await fetch(`${API_BASE}/api/livelihood/applications/reset`, { method: "POST" })
-    } catch (_) {}
-  }
-
   useEffect(() => {
     fetchApps()
     const interval = setInterval(fetchApps, 8000)
@@ -2561,17 +2541,6 @@ export default function LivelihoodApplicationsAdmin() {
             Intake evaluation, capital &amp; materials disbursement, and post-release livelihood monitoring.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleResetAll}
-          id="btn-reset-livelihood-registry"
-          className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-center shrink-0 shadow-xs"
-          title="Burahin lahat ng records sa Admin para sa malinis na testing"
-        >
-          <Trash2 className="h-4 w-4" />
-          [ Burahin Laman ng Admin / Reset ]
-        </button>
       </div>
 
       {/* Admin 4-Stage Navigation Tabs */}
