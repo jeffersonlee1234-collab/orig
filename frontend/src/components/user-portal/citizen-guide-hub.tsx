@@ -119,20 +119,31 @@ export default function CitizenGuideHub() {
         const isUserMatch = (a: any) => {
           if (!a) return false
           if (a.is_archived === true) return false
-          const aRef = String(a.reference_no || a.referenceNumber || a.reference_number || a.qc_id || a.qcid || a.applicationNo || a.id || "").toLowerCase().trim()
-          const aEmail = String(a.email || "").toLowerCase().trim()
-          const aName = String(a.full_name || a.applicantName || a.lastName || "").toLowerCase().trim()
+          const aRef = String(a.reference_no || a.referenceNumber || a.reference_number || a.qc_id || a.qcid || a.applicationNo || a.assignedIdNumber || a.assigned_id_number || a.solo_parent_id_number || a.id || "").toLowerCase().trim()
+          const aEmail = String(a.email || a.guardian_email || a.guardianEmail || a.applicantInfo?.email || a.applicant_info?.email || "").toLowerCase().trim()
+          const aFirst = String(a.firstName || a.first_name || a.guardian_first_name || a.applicantInfo?.firstName || "").toLowerCase().trim()
+          const aLast = String(a.lastName || a.last_name || a.guardian_last_name || a.applicantInfo?.lastName || "").toLowerCase().trim()
+          const aName = String(a.full_name || a.applicantName || a.child_name || a.applicantInfo?.fullName || `${aFirst} ${aLast}`).toLowerCase().trim()
 
           // Check if deleted
           if (deletedSet.has(aRef) || (a.id && deletedSet.has(String(a.id).toLowerCase().trim()))) {
             return false
           }
 
-          return Boolean(
-            (currentQcid && (aRef === currentQcid || aRef.includes(currentQcid) || currentQcid.includes(aRef))) ||
-            (userEmail && aEmail && userEmail === aEmail) ||
-            (userLastName && aName.includes(userLastName))
-          )
+          if (userEmail && aEmail && userEmail === aEmail) return true
+          if (currentQcid && aRef && (aRef === currentQcid || aRef.includes(currentQcid) || currentQcid.includes(aRef))) return true
+
+          const firstWord = userFirstName.split(" ")[0] || ""
+          const lastWord = userLastName.split(" ").pop() || ""
+
+          if (firstWord && lastWord) {
+            if (aName.includes(firstWord) && aName.includes(lastWord)) return true
+            if ((aFirst.includes(firstWord) || firstWord.includes(aFirst)) && (aLast.includes(lastWord) || lastWord.includes(aLast))) return true
+          } else if (firstWord) {
+            if (aName.includes(firstWord) || aFirst.includes(firstWord)) return true
+          }
+
+          return false
         }
 
         // 1. AICS Apps

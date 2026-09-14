@@ -560,13 +560,15 @@ exports.getApplicationByReference = async (req, res) => {
 exports.getUserApplications = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { qcid, email } = req.query;
+    const { qcid, email, firstName, lastName } = req.query;
 
     const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' && userId !== '1' ? String(userId).trim() : null;
-    const cleanQcid = qcid && String(qcid).trim() ? String(qcid).trim() : null;
-    const cleanEmail = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+    const cleanQcid = qcid && String(qcid).trim() && qcid !== 'undefined' ? String(qcid).trim() : null;
+    const cleanEmail = email && String(email).trim() && email !== 'undefined' ? String(email).trim().toLowerCase() : null;
+    const cleanFirstName = firstName && String(firstName).trim() && firstName !== 'undefined' ? String(firstName).trim().toLowerCase() : null;
+    const cleanLastName = lastName && String(lastName).trim() && lastName !== 'undefined' ? String(lastName).trim().toLowerCase() : null;
 
-    if (!cleanUserId && !cleanQcid && !cleanEmail) {
+    if (!cleanUserId && !cleanQcid && !cleanEmail && !cleanFirstName && !cleanLastName) {
       return res.status(200).json({ success: true, applications: [] });
     }
 
@@ -579,11 +581,32 @@ exports.getUserApplications = async (req, res) => {
     }
     if (cleanQcid) {
       params.push(cleanQcid);
-      orClauses.push(`(reference_number = $${params.length} OR user_id::text = $${params.length})`);
+      orClauses.push(`(reference_number = $${params.length} OR qcid_number = $${params.length} OR user_id::text = $${params.length})`);
     }
     if (cleanEmail) {
       params.push(cleanEmail);
       orClauses.push(`(LOWER(COALESCE(guardian_email, '')) = LOWER($${params.length}) OR LOWER(COALESCE(email, '')) = LOWER($${params.length}))`);
+    }
+    if (cleanFirstName && cleanLastName) {
+      params.push(cleanFirstName);
+      const fnIdx = params.length;
+      params.push(cleanLastName);
+      const lnIdx = params.length;
+      orClauses.push(`(
+        (LOWER(COALESCE(guardian_first_name, '')) = $${fnIdx} OR guardian_first_name ILIKE '%' || $${fnIdx} || '%' OR child_name ILIKE '%' || $${fnIdx} || '%')
+        AND
+        (LOWER(COALESCE(guardian_last_name, '')) = $${lnIdx} OR guardian_last_name ILIKE '%' || $${lnIdx} || '%' OR child_name ILIKE '%' || $${lnIdx} || '%')
+      )`);
+    } else if (cleanLastName) {
+      params.push(cleanLastName);
+      orClauses.push(`(LOWER(COALESCE(guardian_last_name, '')) = $${params.length} OR guardian_last_name ILIKE '%' || $${params.length} || '%' OR child_name ILIKE '%' || $${params.length} || '%')`);
+    } else if (cleanFirstName) {
+      params.push(cleanFirstName);
+      orClauses.push(`(LOWER(COALESCE(guardian_first_name, '')) = $${params.length} OR guardian_first_name ILIKE '%' || $${params.length} || '%' OR child_name ILIKE '%' || $${params.length} || '%')`);
+    }
+
+    if (orClauses.length === 0) {
+      return res.status(200).json({ success: true, applications: [] });
     }
 
     const result = await db.query(

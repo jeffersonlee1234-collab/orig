@@ -701,9 +701,7 @@ exports.getUserApplications = async (req, res) => {
     }
 
     if (orClauses.length === 0) {
-      const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
-      const cleanRows = (fallback.rows || []).map(sanitizeAppRow);
-      return res.status(200).json({ success: true, applications: cleanRows });
+      return res.status(200).json({ success: true, applications: [] });
     }
 
     const result = await db.query(

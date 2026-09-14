@@ -1708,6 +1708,112 @@ export default function MyApplications() {
         const userEmail = (userProfile.email || "").trim().toLowerCase()
         const userFirst = (userProfile.firstName || "").trim().toLowerCase()
         const userLast = (userProfile.lastName || "").trim().toLowerCase()
+        const userFull = `${userFirst} ${userLast}`.trim()
+
+        const profileCriteria = {
+          qcId,
+          userId: String(userId),
+          userEmail,
+          userFirst,
+          userLast,
+          userFull,
+        }
+
+        const isUserMatch = (app: any): boolean => {
+          if (!app) return false
+          if (app.is_archived === true) return false
+
+          // 1. Exact Email Match
+          const appEmail = String(
+            app.email ||
+            app.guardian_email ||
+            app.guardianEmail ||
+            app.applicantInfo?.email ||
+            app.applicant_info?.email ||
+            app.formData?.email ||
+            app.form_data?.email ||
+            ""
+          ).trim().toLowerCase()
+          if (userEmail && appEmail && userEmail === appEmail) return true
+
+          // 2. User ID Match
+          const appUserId = String(app.user_id || app.userId || "").trim().toLowerCase()
+          if (userId && appUserId && String(userId) === appUserId && String(userId) !== "0" && String(userId) !== "null" && String(userId) !== "undefined") {
+            return true
+          }
+
+          // 3. QCID / Reference Number Match
+          const appQc = String(
+            app.qc_id ||
+            app.qcid ||
+            app.qcidNo ||
+            app.qcidNumber ||
+            app.qcid_number ||
+            app.reference_no ||
+            app.reference_number ||
+            app.referenceNumber ||
+            app.assignedIdNumber ||
+            app.assigned_id_number ||
+            app.solo_parent_id_number ||
+            ""
+          ).trim().toLowerCase()
+
+          if (qcId && appQc && (appQc === qcId.toLowerCase() || appQc.includes(qcId.toLowerCase()) || qcId.toLowerCase().includes(appQc))) {
+            return true
+          }
+
+          // 4. Full Name Match (Matches both first and last name of the user)
+          const appFirst = String(
+            app.firstName ||
+            app.first_name ||
+            app.guardian_first_name ||
+            app.guardianFirstName ||
+            app.applicantInfo?.firstName ||
+            app.applicant_info?.firstName ||
+            ""
+          ).trim().toLowerCase()
+
+          const appLast = String(
+            app.lastName ||
+            app.last_name ||
+            app.guardian_last_name ||
+            app.guardianLastName ||
+            app.applicantInfo?.lastName ||
+            app.applicant_info?.lastName ||
+            ""
+          ).trim().toLowerCase()
+
+          const appFullName = String(
+            app.full_name ||
+            app.fullName ||
+            app.applicantName ||
+            app.applicant_name ||
+            app.child_name ||
+            app.childName ||
+            app.applicantInfo?.fullName ||
+            app.applicant_info?.fullName ||
+            `${appFirst} ${appLast}`
+          ).trim().toLowerCase()
+
+          if (userFull && appFullName) {
+            const firstWord = userFirst.split(" ")[0] || ""
+            const lastWord = userLast.split(" ").pop() || ""
+
+            if (firstWord && lastWord) {
+              if (appFullName.includes(firstWord) && appFullName.includes(lastWord)) return true
+              if (
+                (appFirst.includes(firstWord) || firstWord.includes(appFirst)) &&
+                (appLast.includes(lastWord) || lastWord.includes(appLast))
+              ) {
+                return true
+              }
+            } else if (firstWord) {
+              if (appFullName.includes(firstWord) || appFirst.includes(firstWord)) return true
+            }
+          }
+
+          return false
+        }
 
         // Fetch deleted list from backend & local storage
         let initialDeleted: ApplicationRecord[] = []
@@ -1778,16 +1884,7 @@ export default function MyApplications() {
           const data = await cachedApiFetch<any>(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId)}`, { headers: authHeaders }, 4000)
           if (data?.applications && Array.isArray(data.applications)) {
             const mappedAics: ApplicationRecord[] = data.applications
-              .filter((app: any) => {
-                if (app.is_archived === true) return false
-                const appQc = String(app.qc_id || app.reference_no || app.reference_number || "").trim().toLowerCase()
-                const appEmail = String(app.email || "").trim().toLowerCase()
-                const appName = String(app.full_name || "").trim().toLowerCase()
-                const matchQc = qcId !== "" && appQc === qcId.toLowerCase()
-                const matchEmail = userEmail !== "" && appEmail === userEmail
-                const matchName = userFirst !== "" && userLast !== "" && appName.includes(userFirst) && appName.includes(userLast)
-                return Boolean(matchQc || matchEmail || matchName)
-              })
+              .filter(isUserMatch)
               .map((app: any) => {
                 const rawType = (app.assistance_type || "Transportation").replace(/\s*assistance/gi, "").trim()
                 const cleanAssistance = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
@@ -1857,21 +1954,7 @@ export default function MyApplications() {
           }
 
           const mappedPwd: ApplicationRecord[] = (pwdApps || [])
-            .filter((p: any) => {
-              if (p.is_archived === true) return false
-              const pRef = String(p.referenceNumber || "").trim().toLowerCase()
-              const pAssigned = String(p.assignedIdNumber || "").trim().toLowerCase()
-              const pEmail = String(p.email || "").trim().toLowerCase()
-              const pQc = String(p.qcidNo || p.qcid || "").trim().toLowerCase()
-              const pFirst = String(p.firstName || "").trim().toLowerCase()
-              const pLast = String(p.lastName || "").trim().toLowerCase()
-
-              const matchQc = qcId !== "" && (pRef === qcId.toLowerCase() || pQc === qcId.toLowerCase() || pAssigned === qcId.toLowerCase())
-              const matchEmail = userEmail !== "" && pEmail === userEmail
-              const matchName = userFirst !== "" && userLast !== "" && pFirst.includes(userFirst) && pLast.includes(userLast)
-
-              return Boolean(matchQc || matchEmail || matchName)
-            })
+            .filter(isUserMatch)
             .map((p: any) => {
               const isPwd =
                 String(p.category || "").toUpperCase() === "PWD" ||
@@ -1943,9 +2026,22 @@ export default function MyApplications() {
         try {
           let spApps: any[] = []
           try {
-            const spData = await cachedApiFetch<any>(`${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000)
+            const spData = await cachedApiFetch<any>(
+              `${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
+              { headers: authHeaders },
+              4000
+            )
             spApps = spData?.applications || (Array.isArray(spData) ? spData : [])
           } catch {}
+
+          // Fallback check all admin apps if none found
+          if (!spApps || spApps.length === 0) {
+            try {
+              const allSp = await cachedApiFetch<any>(`${API_BASE}/api/solo-parent/applications`, { headers: authHeaders }, 4000)
+              const listAll = allSp?.applications || (Array.isArray(allSp) ? allSp : [])
+              spApps = listAll.filter(isUserMatch)
+            } catch {}
+          }
 
           if (!spApps || spApps.length === 0) {
             try {
@@ -1956,21 +2052,7 @@ export default function MyApplications() {
 
           if (Array.isArray(spApps) && spApps.length > 0) {
             const mappedSp: ApplicationRecord[] = spApps
-              .filter((app: any) => {
-                if (app.is_archived === true) return false
-                const appQc = String(app.qcid_number || app.qc_id || app.reference_number || "").trim().toLowerCase()
-                const appEmail = String(app.email || "").trim().toLowerCase()
-                const uQc = qcId.toLowerCase()
-                const appName = `${app.first_name || app.firstName || ""} ${app.last_name || app.lastName || ""}`.trim().toLowerCase()
-                const uName = `${userProfile.firstName} ${userProfile.lastName}`.trim().toLowerCase()
-                return (
-                  (uQc !== "" && appQc.includes(uQc)) ||
-                  (uQc !== "" && uQc.includes(appQc)) ||
-                  (userEmail !== "" && appEmail === userEmail) ||
-                  (uName !== "" && appName === uName) ||
-                  (app.user_id && String(app.user_id) === String(userId))
-                )
-              })
+              .filter(isUserMatch)
               .map((app: any) => ({
                 applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
                 assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
@@ -2015,9 +2097,22 @@ export default function MyApplications() {
         try {
           let cwApps: any[] = []
           try {
-            const cwData = await cachedApiFetch<any>(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000)
+            const cwData = await cachedApiFetch<any>(
+              `${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
+              { headers: authHeaders },
+              4000
+            )
             cwApps = cwData?.applications || (Array.isArray(cwData) ? cwData : [])
           } catch {}
+
+          // Fallback check all admin apps if none found
+          if (!cwApps || cwApps.length === 0) {
+            try {
+              const allCw = await cachedApiFetch<any>(`${API_BASE}/api/child-welfare/admin/all`, { headers: authHeaders }, 4000)
+              const listAll = allCw?.applications || (Array.isArray(allCw) ? allCw : [])
+              cwApps = listAll.filter(isUserMatch)
+            } catch {}
+          }
 
           if (!cwApps || cwApps.length === 0) {
             try {
@@ -2028,21 +2123,7 @@ export default function MyApplications() {
 
           if (Array.isArray(cwApps) && cwApps.length > 0) {
             const mappedCw: ApplicationRecord[] = cwApps
-              .filter((app: any) => {
-                if (app.is_archived === true) return false
-                const appQc = String(app.reference_number || app.referenceNumber || app.qcid_number || app.qc_id || "").trim().toLowerCase()
-                const appEmail = String(app.guardian_email || app.email || "").trim().toLowerCase()
-                const uQc = qcId.toLowerCase()
-                const appGuardian = `${app.guardian_first_name || app.guardianFirstName || ""} ${app.guardian_last_name || app.guardianLastName || ""}`.trim().toLowerCase()
-                const appChild = String(app.child_name || app.childName || "").trim().toLowerCase()
-                const uName = `${userProfile.firstName} ${userProfile.lastName}`.trim().toLowerCase()
-                return (
-                  (uQc !== "" && (appQc === uQc || appQc.includes(uQc) || uQc.includes(appQc))) ||
-                  (userEmail !== "" && appEmail === userEmail) ||
-                  (uName !== "" && (appGuardian.includes(uName) || appChild.includes(uName) || uName.includes(appGuardian) || uName.includes(appChild))) ||
-                  (app.user_id && String(app.user_id) === String(userId))
-                )
-              })
+              .filter(isUserMatch)
               .map((app: any) => ({
                 applicationNo: app.reference_number || app.referenceNumber || qcId,
                 assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
@@ -2113,31 +2194,9 @@ export default function MyApplications() {
             }
           } catch {}
 
-          const storedActiveRef = localStorage.getItem("active_livelihood_ref") || ""
-
           if (Array.isArray(livApps) && livApps.length > 0) {
             const mappedLiv: ApplicationRecord[] = livApps
-              .filter((l: any) => {
-                if (l.is_archived === true) return false
-                const lQc = String(l.qcid || l.reference_number || l.referenceNumber || l.user_id || l.userId || "").trim().toLowerCase()
-                const lEmail = String(l.email || "").trim().toLowerCase()
-                const lFirst = String(l.first_name || l.firstName || "").trim().toLowerCase()
-                const lLast = String(l.last_name || l.lastName || "").trim().toLowerCase()
-                const lName = `${lFirst} ${lLast}`.trim()
-                const lAppFullName = String(l.applicant_name || "").trim().toLowerCase()
-
-                const matchRef = storedActiveRef !== "" && (lQc.includes(storedActiveRef.toLowerCase()) || storedActiveRef.toLowerCase().includes(lQc))
-                const matchQc = qcId !== "" && (lQc.includes(qcId.toLowerCase()) || qcId.toLowerCase().includes(lQc))
-                const matchEmail = userEmail !== "" && lEmail === userEmail
-                const matchName =
-                  (userFirst !== "" && (lFirst.includes(userFirst) || lAppFullName.includes(userFirst))) ||
-                  (userLast !== "" && (lLast.includes(userLast) || lAppFullName.includes(userLast))) ||
-                  (userFirst !== "" && userLast !== "" && (lName.includes(`${userFirst} ${userLast}`) || `${userFirst} ${userLast}`.includes(lName)))
-
-                const matchId = userId !== "" && String(l.user_id || l.userId || "") === String(userId)
-
-                return Boolean(matchRef || matchQc || matchEmail || matchName || matchId || lQc === "110000116932100" || l.reference_number === "110000116932100" || l.reference_number === "LP-2026-2518")
-              })
+              .filter(isUserMatch)
               .map((l: any) => {
                 const isRel =
                   l.assistance?.release_status === "RELEASED" ||
@@ -2254,24 +2313,7 @@ export default function MyApplications() {
 
           if (Array.isArray(trnApps) && trnApps.length > 0) {
             const mappedTrn: ApplicationRecord[] = trnApps
-              .filter((t: any) => {
-                if (t.is_archived === true) return false
-                const tQc = String(t.qcid || t.referenceNumber || t.reference_number || t.userId || t.user_id || "").trim().toLowerCase()
-                const tEmail = String(t.applicantInfo?.email || t.applicant_info?.email || t.email || "").trim().toLowerCase()
-                const tFirst = String(t.applicantInfo?.firstName || t.applicant_info?.firstName || t.firstName || "").trim().toLowerCase()
-                const tLast = String(t.applicantInfo?.lastName || t.applicant_info?.lastName || t.lastName || "").trim().toLowerCase()
-                const tFullName = String(t.applicantInfo?.fullName || t.applicant_info?.fullName || t.applicantName || "").trim().toLowerCase()
-
-                const matchQc = qcId !== "" && (tQc.includes(qcId.toLowerCase()) || qcId.toLowerCase().includes(tQc))
-                const matchEmail = userEmail !== "" && tEmail === userEmail
-                const matchName =
-                  (userFirst !== "" && (tFirst.includes(userFirst) || tFullName.includes(userFirst))) ||
-                  (userLast !== "" && (tLast.includes(userLast) || tFullName.includes(userLast))) ||
-                  (userFirst !== "" && userLast !== "" && (tFullName.includes(`${userFirst} ${userLast}`) || `${userFirst} ${userLast}`.includes(tFullName)))
-                const matchId = userId !== "" && String(t.user_id || t.userId || "") === String(userId)
-
-                return Boolean(matchQc || matchEmail || matchName || matchId || tQc === "110000116932100" || t.reference_number === "110000116932100")
-              })
+              .filter(isUserMatch)
               .map((t: any) => {
                 const isAppr = t.status === "approved" || t.status === "Approved" || t.status === "enrolled" || t.status === "Enrolled"
                 const isRel = t.status === "completed" || t.status === "Completed" || (t.attendance?.completed === true)
