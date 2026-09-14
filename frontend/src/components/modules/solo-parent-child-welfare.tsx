@@ -419,6 +419,14 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
 }
 
 function mapSoloParentRow(row: any): SoloParentSubmission {
+  if (!row) return {} as any
+  if (row.id && String(row.id).startsWith("SP-") && row.category === "Solo Parent") {
+    return {
+      ...row,
+      documents: Array.isArray(row.documents) ? row.documents : mapUploadedDocuments(row, false),
+    }
+  }
+
   const formData = parseJsonSafe(row.form_data, {})
   const extraData = parseJsonSafe(row.extra_data, {})
   const fdFormData = typeof formData.formData === "object" ? formData.formData : formData
@@ -431,6 +439,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     formData.emergencyFirstName ||
     extraData.emergencyFirstName ||
     row.emergency_first_name ||
+    row.emergencyFirstName ||
     ""
 
   const emLast =
@@ -438,6 +447,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     formData.emergencyLastName ||
     extraData.emergencyLastName ||
     row.emergency_last_name ||
+    row.emergencyLastName ||
     ""
 
   const emCombined = [emFirst, emLast].filter(Boolean).join(" ")
@@ -450,6 +460,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     formData.emergencyContactPerson ||
     extraData.emergencyName ||
     row.emergency_name ||
+    row.emergencyName ||
     ""
 
   let emergencyContactNo =
@@ -460,6 +471,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     extraData.emergencyContactNo ||
     row.emergency_contact_no ||
     row.emergency_phone ||
+    row.emergencyContactNo ||
     ""
 
   let emergencyRelationship =
@@ -468,6 +480,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     extraData.emergencyRelationship ||
     row.emergency_relationship ||
     row.relationshipToApplicant ||
+    row.emergencyRelationship ||
     ""
 
   let emergencyAddress =
@@ -476,6 +489,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     extraData.emergencyAddress ||
     row.emergency_address ||
     row.emergencyResidentialAddress ||
+    row.emergencyAddress ||
     ""
 
   let bloodType =
@@ -483,37 +497,40 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     formData.bloodType ||
     extraData.bloodType ||
     row.blood_type ||
+    row.bloodType ||
     "O+"
 
+  const rawId = String(row.id || "").replace(/^SP-/, "")
+
   return {
-    id: `SP-${row.id}`,
-    submittedAt: row.created_at || new Date().toISOString(),
-    referenceNumber: row.reference_number || "",
+    id: `SP-${rawId}`,
+    submittedAt: row.submittedAt || row.created_at || new Date().toISOString(),
+    referenceNumber: row.referenceNumber || row.reference_number || "",
     category: "Solo Parent",
-    applicationType: row.application_type || fdFormData.idStatus || formData.idStatus || "new",
-    classification: row.classification_title || fdFormData.selectedCategory?.title || formData.selectedCategory?.title || "Solo Parent Beneficiary",
-    firstName: row.first_name || fdFormData.firstName || formData.firstName || "",
-    middleName: row.middle_name || fdFormData.middleName || formData.middleName || "",
-    lastName: row.last_name || fdFormData.lastName || formData.lastName || "",
+    applicationType: row.applicationType || row.application_type || fdFormData.idStatus || formData.idStatus || "new",
+    classification: row.classification || row.classification_title || fdFormData.selectedCategory?.title || formData.selectedCategory?.title || "Solo Parent Beneficiary",
+    firstName: row.firstName || row.first_name || fdFormData.firstName || formData.firstName || "",
+    middleName: row.middleName || row.middle_name || fdFormData.middleName || formData.middleName || "",
+    lastName: row.lastName || row.last_name || fdFormData.lastName || formData.lastName || "",
     suffix: row.suffix || fdFormData.suffix || formData.suffix || "",
     age: row.age || (fdFormData.age ? parseInt(fdFormData.age, 10) : undefined) || (formData.age ? parseInt(formData.age, 10) : undefined),
     sex: row.sex || fdFormData.sex || formData.sex || "",
-    dobMonth: row.dob_month || fdFormData.dobMonth || formData.dobMonth || "",
-    dobDay: row.dob_day || fdFormData.dobDay || formData.dobDay || "",
-    dobYear: row.dob_year || fdFormData.dobYear || formData.dobYear || "",
-    placeOfBirth: row.place_of_birth || fdFormData.placeOfBirth || formData.placeOfBirth || "",
-    educationalAttainment: row.educational_attainment || fdFormData.educationalAttainment || formData.educationalAttainment || "",
+    dobMonth: row.dobMonth || row.dob_month || fdFormData.dobMonth || formData.dobMonth || "",
+    dobDay: row.dobDay || row.dob_day || fdFormData.dobDay || formData.dobDay || "",
+    dobYear: row.dobYear || row.dob_year || fdFormData.dobYear || formData.dobYear || "",
+    placeOfBirth: row.placeOfBirth || row.place_of_birth || fdFormData.placeOfBirth || formData.placeOfBirth || "",
+    educationalAttainment: row.educationalAttainment || row.educational_attainment || fdFormData.educationalAttainment || formData.educationalAttainment || "",
     occupation: row.occupation || fdFormData.occupation || formData.occupation || "",
-    companyAgency: row.company_agency || fdFormData.companyAgency || formData.companyAgency || "",
-    monthlyIncome: row.monthly_income || fdFormData.monthlyIncome || formData.monthlyIncome || "",
-    totalFamilyIncome: row.total_family_income || fdFormData.totalFamilyIncome || formData.totalFamilyIncome || "",
-    contactNo: row.contact_no || fdFormData.contactNo || formData.contactNo || "",
-    addressHouseNo: row.address_house_no || fdFormData.addressHouseNo || formData.addressHouseNo || "",
-    addressStreet: row.address_street || fdFormData.addressStreet || formData.addressStreet || "",
-    addressBarangay: row.address_barangay || fdFormData.addressBarangay || formData.addressBarangay || "",
-    addressCityMunicipality: row.address_city_municipality || fdFormData.addressCityMunicipality || formData.addressCityMunicipality || "QUEZON CITY",
-    civilStatus: row.civil_status || fdFormData.civilStatus || formData.civilStatus || "",
-    qcidNumber: row.qcid_number || fdFormData.qcidNumber || formData.qcidNumber || "",
+    companyAgency: row.companyAgency || row.company_agency || fdFormData.companyAgency || formData.companyAgency || "",
+    monthlyIncome: row.monthlyIncome || row.monthly_income || fdFormData.monthlyIncome || formData.monthlyIncome || "",
+    totalFamilyIncome: row.totalFamilyIncome || row.total_family_income || fdFormData.totalFamilyIncome || formData.totalFamilyIncome || "",
+    contactNo: row.contactNo || row.contact_no || fdFormData.contactNo || formData.contactNo || "",
+    addressHouseNo: row.addressHouseNo || row.address_house_no || fdFormData.addressHouseNo || formData.addressHouseNo || "",
+    addressStreet: row.addressStreet || row.address_street || fdFormData.addressStreet || formData.addressStreet || "",
+    addressBarangay: row.addressBarangay || row.address_barangay || fdFormData.addressBarangay || formData.addressBarangay || "",
+    addressCityMunicipality: row.addressCityMunicipality || row.address_city_municipality || fdFormData.addressCityMunicipality || formData.addressCityMunicipality || "QUEZON CITY",
+    civilStatus: row.civilStatus || row.civil_status || fdFormData.civilStatus || formData.civilStatus || "",
+    qcidNumber: row.qcidNumber || row.qcid_number || fdFormData.qcidNumber || formData.qcidNumber || "",
     email: row.email || fdFormData.email || formData.email || "",
     familyMembers: familyMembers || [],
     emergencyName: emergencyName,
@@ -525,20 +542,20 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
     bloodType: bloodType,
     formData: formData,
     extraData: extraData,
-    circumstanceDetails: row.circumstance_details || formData.circumstanceDetails || "",
-    needsProblems: row.needs_problems || formData.needsProblems || "",
-    familyResources: row.family_resources || formData.familyResources || "",
+    circumstanceDetails: row.circumstanceDetails || row.circumstance_details || formData.circumstanceDetails || "",
+    needsProblems: row.needsProblems || row.needs_problems || formData.needsProblems || "",
+    familyResources: row.familyResources || row.family_resources || formData.familyResources || "",
     documents: mapUploadedDocuments(row, false),
-    status: row.application_status || "pending",
-    soloParentIdNumber: row.solo_parent_id_number || row.assigned_id_number || undefined,
-    assignedIdNumber: row.assigned_id_number || row.solo_parent_id_number || undefined,
+    status: row.status || row.application_status || "pending",
+    soloParentIdNumber: row.soloParentIdNumber || row.solo_parent_id_number || row.assigned_id_number || undefined,
+    assignedIdNumber: row.assignedIdNumber || row.assigned_id_number || row.solo_parent_id_number || undefined,
     applicantPhoto:
-      row.applicant_photo ||
       row.applicantPhoto ||
-      row.photo_url ||
+      row.applicant_photo ||
       row.photoUrl ||
-      row.id_photo ||
+      row.photo_url ||
       row.idPhoto ||
+      row.id_photo ||
       formData.applicantPhoto ||
       formData.idPhoto ||
       formData.photoUrl ||
@@ -546,10 +563,10 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
       extraData.photoUrl ||
       undefined,
     photoUrl:
-      row.applicant_photo ||
-      row.applicantPhoto ||
-      row.photo_url ||
       row.photoUrl ||
+      row.applicantPhoto ||
+      row.applicant_photo ||
+      row.photo_url ||
       row.id_photo ||
       row.idPhoto ||
       formData.applicantPhoto ||
@@ -558,65 +575,75 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
       extraData.applicantPhoto ||
       extraData.photoUrl ||
       undefined,
-    rejectionReason: row.rejection_reason || undefined,
-    approvedBy: row.approved_by ? String(row.approved_by) : undefined,
-    approvedDate: row.updated_at,
-    notes: row.admin_notes || undefined,
+    rejectionReason: row.rejectionReason || row.rejection_reason || undefined,
+    approvedBy: row.approvedBy ? String(row.approvedBy) : row.approved_by ? String(row.approved_by) : undefined,
+    approvedDate: row.approvedDate || row.updated_at,
+    notes: row.notes || row.admin_notes || undefined,
   }
 }
 
 function mapChildWelfareRow(row: any): ChildWelfareSubmission {
+  if (!row) return {} as any
+  if (row.id && String(row.id).startsWith("CW-") && row.category === "Child Welfare") {
+    return {
+      ...row,
+      documents: Array.isArray(row.documents) ? row.documents : mapUploadedDocuments(row, true),
+    }
+  }
+
+  const rawId = String(row.id || "").replace(/^CW-/, "")
+
   return {
-    id: `CW-${row.id}`,
-    submittedAt: row.created_at,
-    referenceNumber: row.reference_number,
+    id: `CW-${rawId}`,
+    submittedAt: row.submittedAt || row.created_at || new Date().toISOString(),
+    referenceNumber: row.referenceNumber || row.reference_number || "",
     category: "Child Welfare",
-    supportCategory: row.category_title || "",
-    guardianFirstName: row.guardian_first_name,
-    guardianMiddleName: row.guardian_middle_name,
-    guardianLastName: row.guardian_last_name,
-    guardianSex: row.guardian_sex,
-    guardianDateOfBirth: row.guardian_date_of_birth,
-    guardianAge: row.guardian_age,
-    guardianCivilStatus: row.guardian_civil_status,
-    guardianRelationshipToChild: row.guardian_relationship_to_child,
-    guardianContactNo: row.guardian_contact_no,
-    guardianEmail: row.guardian_email,
-    guardianValidId: row.guardian_valid_id,
-    addressHouseNo: row.address_house_no,
-    addressStreet: row.address_street,
-    addressBarangay: row.address_barangay,
-    addressCityMunicipality: row.address_city_municipality,
-    childName: row.child_name,
-    childSex: row.child_sex,
-    childBirthday: row.child_birthday,
-    childAge: row.child_age,
-    childSchoolDaycare: row.child_school_daycare,
-    childBirthCertificate: row.child_birth_certificate,
-    childGradeLevel: row.child_grade_level,
-    childSchoolAddress: row.child_school_address,
-    childEnrollmentStatus: row.child_enrollment_status,
-    childSpecialNeeds: row.child_special_needs,
-    childSpecialNeedsSpecify: row.child_special_needs_specify,
-    householdMembers: row.household_members,
-    childrenStudying: row.children_studying,
-    monthlyHouseholdIncome: row.monthly_household_income,
-    mainSourceIncome: row.main_source_income,
-    employmentStatus: row.employment_status,
-    otherFinancialSupport: row.other_financial_support,
-    supportTypes: row.support_types || [],
-    supportOther: row.support_other,
-    primaryReasonForAssistance: row.primary_reason_for_assistance,
-    specificNeeds: row.specific_needs,
-    estimatedAmountNeeded: row.estimated_amount_needed,
-    urgency: row.urgency,
-    childLivingArrangement: row.child_living_arrangement,
-    otherChildrenNeedingAssistance: row.other_children_needing_assistance,
-    otherChildrenCount: row.other_children_count,
-    otherGovtAssistanceReceived: row.other_govt_assistance_received,
-    otherGovtProgram: row.other_govt_program,
-    additionalInfo: row.additional_info,
-    isReportingPersonCurrentParent: (() => {
+    supportCategory: row.supportCategory || row.category_title || "",
+    guardianFirstName: row.guardianFirstName || row.guardian_first_name || "",
+    guardianMiddleName: row.guardianMiddleName || row.guardian_middle_name || "",
+    guardianLastName: row.guardianLastName || row.guardian_last_name || "",
+    guardianSex: row.guardianSex || row.guardian_sex || "",
+    guardianDateOfBirth: row.guardianDateOfBirth || row.guardian_date_of_birth || "",
+    guardianAge: row.guardianAge || row.guardian_age,
+    guardianCivilStatus: row.guardianCivilStatus || row.guardian_civil_status || "",
+    guardianRelationshipToChild: row.guardianRelationshipToChild || row.guardian_relationship_to_child || "",
+    guardianContactNo: row.guardianContactNo || row.guardian_contact_no || "",
+    guardianEmail: row.guardianEmail || row.guardian_email || "",
+    guardianValidId: row.guardianValidId || row.guardian_valid_id || "",
+    addressHouseNo: row.addressHouseNo || row.address_house_no || "",
+    addressStreet: row.addressStreet || row.address_street || "",
+    addressBarangay: row.addressBarangay || row.address_barangay || "",
+    addressCityMunicipality: row.addressCityMunicipality || row.address_city_municipality || "QUEZON CITY",
+    childName: row.childName || row.child_name || "",
+    childSex: row.childSex || row.child_sex || "",
+    childBirthday: row.childBirthday || row.child_birthday || "",
+    childAge: row.childAge || row.child_age,
+    childSchoolDaycare: row.childSchoolDaycare || row.child_school_daycare || "",
+    childBirthCertificate: row.childBirthCertificate || row.child_birth_certificate || "",
+    childGradeLevel: row.childGradeLevel || row.child_grade_level || "",
+    childSchoolAddress: row.childSchoolAddress || row.child_school_address || "",
+    childEnrollmentStatus: row.childEnrollmentStatus || row.child_enrollment_status || "",
+    childSpecialNeeds: row.childSpecialNeeds || row.child_special_needs || "",
+    childSpecialNeedsSpecify: row.childSpecialNeedsSpecify || row.child_special_needs_specify || "",
+    householdMembers: row.householdMembers || row.household_members || [],
+    childrenStudying: row.childrenStudying || row.children_studying,
+    monthlyHouseholdIncome: row.monthlyHouseholdIncome || row.monthly_household_income || "",
+    mainSourceIncome: row.mainSourceIncome || row.main_source_income || "",
+    employmentStatus: row.employmentStatus || row.employment_status || "",
+    otherFinancialSupport: row.otherFinancialSupport || row.other_financial_support || "",
+    supportTypes: row.supportTypes || row.support_types || [],
+    supportOther: row.supportOther || row.support_other || "",
+    primaryReasonForAssistance: row.primaryReasonForAssistance || row.primary_reason_for_assistance || "",
+    specificNeeds: row.specificNeeds || row.specific_needs || "",
+    estimatedAmountNeeded: row.estimatedAmountNeeded || row.estimated_amount_needed || "",
+    urgency: row.urgency || "",
+    childLivingArrangement: row.childLivingArrangement || row.child_living_arrangement || "",
+    otherChildrenNeedingAssistance: row.otherChildrenNeedingAssistance || row.other_children_needing_assistance || "",
+    otherChildrenCount: row.otherChildrenCount || row.other_children_count,
+    otherGovtAssistanceReceived: row.otherGovtAssistanceReceived || row.other_govt_assistance_received || "",
+    otherGovtProgram: row.otherGovtProgram || row.other_govt_program || "",
+    additionalInfo: row.additionalInfo || row.additional_info || "",
+    isReportingPersonCurrentParent: row.isReportingPersonCurrentParent || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
@@ -626,7 +653,7 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
       if (addInfo.includes("Reporting Person is Current Parent/Guardian: Yes")) return "Yes"
       return "Yes"
     })(),
-    specifiedRelationship: (() => {
+    specifiedRelationship: row.specifiedRelationship || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
@@ -635,7 +662,7 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
       const match = addInfo.match(/\(Specified:\s*([^)]+)\)/)
       return match ? match[1] : ""
     })(),
-    isImmediateDanger: (() => {
+    isImmediateDanger: row.isImmediateDanger || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
@@ -645,7 +672,7 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
       if (addInfo.includes("Immediate Danger: No")) return "No"
       return "No"
     })(),
-    isChildSafe: (() => {
+    isChildSafe: row.isChildSafe || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
@@ -655,37 +682,37 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
       if (addInfo.includes("Child Currently in Safe Location: No")) return "No"
       return "Yes"
     })(),
-    emergencyType: (() => {
+    emergencyType: row.emergencyType || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
       return fdForm.emergencyType || fd.emergencyType || (row as any).emergency_type || ""
     })(),
-    emergencyDate: (() => {
+    emergencyDate: row.emergencyDate || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
       return fdForm.emergencyDate || fd.emergencyDate || ""
     })(),
-    emergencyTime: (() => {
+    emergencyTime: row.emergencyTime || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
       return fdForm.emergencyTime || fd.emergencyTime || ""
     })(),
-    emergencyDateTime: (() => {
+    emergencyDateTime: row.emergencyDateTime || (() => {
       const rawFd = row.form_data || {}
       const fd = typeof rawFd === "string" ? parseJsonSafe(rawFd, {}) : (rawFd || {})
       const fdForm = typeof fd.formData === "object" && fd.formData !== null ? fd.formData : fd
       return [fdForm.emergencyDate, fdForm.emergencyTime].filter(Boolean).join(" at ") || fdForm.emergencyDateTime || fd.emergencyDateTime || ""
     })(),
     documents: mapUploadedDocuments(row, true),
-    status: row.application_status,
-    approvedAmount: row.approved_amount || undefined,
-    rejectionReason: row.rejection_reason || undefined,
-    approvedBy: row.approved_by ? String(row.approved_by) : undefined,
-    approvedDate: row.updated_at,
-    notes: row.admin_notes || undefined,
+    status: row.status || row.application_status || "pending",
+    approvedAmount: row.approvedAmount || row.approved_amount || undefined,
+    rejectionReason: row.rejectionReason || row.rejection_reason || undefined,
+    approvedBy: row.approvedBy ? String(row.approvedBy) : row.approved_by ? String(row.approved_by) : undefined,
+    approvedDate: row.approvedDate || row.updated_at,
+    notes: row.notes || row.admin_notes || undefined,
   }
 }
 
@@ -2623,39 +2650,33 @@ export default function SoloParentChildWelfareAdmin() {
       return []
     }
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadError, setLoadError] = useState("")
   const isFetchingRef = useRef(false)
 
-  const loadApplications = async (silent = true) => {
+  const loadApplications = async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
-    if (!silent && applications.length === 0) setIsLoading(true)
-    setLoadError("")
     try {
       const apps = await fetchAllSubmissions()
       setApplications(apps)
     } catch (err) {
       console.error("Failed to load applications:", err)
-      if (!silent && applications.length === 0) setLoadError("Unable to load applications. Please try again.")
     } finally {
       isFetchingRef.current = false
-      setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    loadApplications(applications.length === 0 ? false : true)
+    loadApplications()
 
     const interval = setInterval(() => {
-      loadApplications(true)
+      loadApplications()
     }, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
-      loadApplications(true)
+      loadApplications()
     })
 
-    const handleSync = () => loadApplications(true)
+    const handleSync = () => loadApplications()
     window.addEventListener("focus", handleSync)
 
     return () => {
@@ -3044,16 +3065,7 @@ export default function SoloParentChildWelfareAdmin() {
             </div>
           </div>
 
-          {isLoading && applications.length === 0 ? (
-            <div className="text-center py-16 gw-card">
-              <p className="text-sm" style={{ color: "var(--ink-soft)" }}>Loading applications...</p>
-            </div>
-          ) : loadError && applications.length === 0 ? (
-            <div className="text-center py-16 gw-card">
-              <p className="text-sm" style={{ color: "var(--redwood-ink)" }}>{loadError}</p>
-              <button onClick={() => loadApplications(false)} className="gw-btn-ghost px-4 py-2 mt-3">Try Again</button>
-            </div>
-          ) : filteredApps.length === 0 ? (
+          {filteredApps.length === 0 ? (
             <div className="text-center py-16 gw-card">
               <FileText className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--ink-faint)" }} />
               <p className="gw-serif text-base font-semibold" style={{ color: "var(--ink)" }}>No applications found</p>
