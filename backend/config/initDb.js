@@ -521,6 +521,27 @@ async function initDb() {
       ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_state_user_notif ON user_notification_state(user_identifier, notif_id);
+
+      -- High-Performance Indexes for Query Speed Optimization
+      CREATE INDEX IF NOT EXISTS idx_users_qcid ON users(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_pwd_senior_qcid ON pwd_senior_applications(qcid);
+      CREATE INDEX IF NOT EXISTS idx_pwd_senior_status ON pwd_senior_applications(status);
+      CREATE INDEX IF NOT EXISTS idx_pwd_senior_ref ON pwd_senior_applications(reference_number);
+      CREATE INDEX IF NOT EXISTS idx_pwd_senior_user_id ON pwd_senior_applications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_aics_qcid ON aics_applications(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_aics_status ON aics_applications(status);
+      CREATE INDEX IF NOT EXISTS idx_aics_user_id ON aics_applications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_solo_parent_qcid ON solo_parent_applications(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_solo_parent_status ON solo_parent_applications(application_status);
+      CREATE INDEX IF NOT EXISTS idx_child_welfare_qcid ON child_welfare_applications(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_child_welfare_status ON child_welfare_applications(application_status);
+      CREATE INDEX IF NOT EXISTS idx_livelihood_status ON livelihood_applications(application_status);
+      CREATE INDEX IF NOT EXISTS idx_training_status ON training_applications(status);
+      CREATE INDEX IF NOT EXISTS idx_appointments_user ON appointments(user_id);
+      CREATE INDEX IF NOT EXISTS idx_beneficiaries_qcid ON beneficiaries(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_user_notif_qcid ON user_notifications(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_user_notif_user ON user_notifications(user_id);
     `);
 
     // Seed / Ensure strictly 1 official Administrator account in DB
