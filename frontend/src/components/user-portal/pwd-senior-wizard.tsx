@@ -1370,8 +1370,10 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           }
           return {
             name: k,
-            filename: up?.file?.name || "doc.jpg",
+            filename: up?.file?.name || `${k}.jpg`,
             fileUrl: fileUrl,
+            previewUrl: fileUrl,
+            dataUrl: fileUrl,
             uploadedAt: new Date().toISOString(),
             status: "verified",
           }

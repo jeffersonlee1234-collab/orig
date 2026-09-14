@@ -620,13 +620,13 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 function getDocImageUrl(doc: ApplicationDocument | null): string {
   if (!doc) return ""
-  const candidate = doc.fileUrl || (doc as any).url || (doc as any).previewUrl || (doc as any).path || (doc as any).filePath || (doc as any).dataUrl || (doc as any).base64
+  const candidate = doc.fileUrl || (doc as any).previewUrl || (doc as any).dataUrl || (doc as any).url || (doc as any).base64 || (doc as any).filePath || (doc as any).path
   if (candidate && typeof candidate === "string") {
-    if (candidate.startsWith("data:") || candidate.startsWith("http")) {
+    if (candidate.startsWith("data:") || candidate.startsWith("http://") || candidate.startsWith("https://")) {
       return candidate
     }
     if (candidate.startsWith("blob:")) {
-      const alt = (doc as any).dataUrl || (doc as any).base64
+      const alt = (doc as any).dataUrl || (doc as any).base64 || (doc as any).previewUrl
       if (alt && typeof alt === "string" && (alt.startsWith("data:") || alt.startsWith("http"))) {
         return alt
       }
@@ -638,12 +638,7 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
     if (candidate.startsWith("uploads/")) {
       return `${API_BASE}/${candidate}`
     }
-    return `${API_BASE}/uploads/${candidate}`
   }
-  if (doc.filename && typeof doc.filename === "string" && !doc.filename.toLowerCase().startsWith("sample") && !doc.filename.toLowerCase().includes("samples/")) {
-    return `${API_BASE}/uploads/${doc.filename}`
-  }
-
   return ""
 }
 
