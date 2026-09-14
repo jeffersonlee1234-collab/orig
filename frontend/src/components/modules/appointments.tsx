@@ -123,10 +123,14 @@ interface ScheduleModalProps {
 function ScheduleModal({ appointment, onClose, onSave }: ScheduleModalProps) {
   const [date, setDate] = useState(appointment.scheduledDate || "")
   const [time, setTime] = useState(appointment.scheduledTime || "")
-  const [location, setLocation] = useState(appointment.officeLocation || "")
-  const [notes, setNotes] = useState(appointment.notes || "")
+  const location = appointment.officeLocation || "Quezon City Hall"
 
-  const canSave = date.trim() !== "" && time.trim() !== "" && location.trim() !== ""
+  const canSave = date.trim() !== "" && time.trim() !== ""
+
+  const autoNotes =
+    appointment.notes && !appointment.notes.includes("Awtomatikong pumasok")
+      ? appointment.notes
+      : `Mangyaring magtungo sa ${location} sa itinakdang petsa at oras. Dalhin ang orihinal na QCID / Valid ID para sa transaksyon sa ${appointment.concern}.`
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
@@ -136,7 +140,7 @@ function ScheduleModal({ appointment, onClose, onSave }: ScheduleModalProps) {
             <h2 className="text-lg font-bold text-foreground">Set Appointment Schedule</h2>
             <p className="text-sm text-muted-foreground mt-0.5">{appointment.applicantName} — {appointment.referenceNo}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl font-light">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl font-light cursor-pointer">
             ×
           </button>
         </div>
@@ -164,25 +168,11 @@ function ScheduleModal({ appointment, onClose, onSave }: ScheduleModalProps) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Office Location *</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. SSDD Main Office, Room 102"
-              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground">Notes / Instructions</label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Bring original IDs, 2x2 picture..."
-              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
+            <label className="text-xs font-semibold text-muted-foreground">Office Location</label>
+            <div className="w-full mt-1 px-3 py-2.5 text-sm bg-slate-50 border border-border rounded-lg text-foreground font-semibold flex items-center justify-between">
+              <span>{location}</span>
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded uppercase tracking-wider">Fixed Venue</span>
+            </div>
           </div>
         </div>
 
@@ -190,7 +180,7 @@ function ScheduleModal({ appointment, onClose, onSave }: ScheduleModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+            className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -198,9 +188,9 @@ function ScheduleModal({ appointment, onClose, onSave }: ScheduleModalProps) {
             type="button"
             disabled={!canSave}
             onClick={() => {
-              if (canSave) onSave(appointment.id, date, time, location, notes)
+              if (canSave) onSave(appointment.id, date, time, location, autoNotes)
             }}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             Confirm & Save Schedule
           </button>
