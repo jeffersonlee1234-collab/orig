@@ -1365,9 +1365,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         setIsIdVerified(false)
         setApprovedPwdRecord(null)
         setVerifyError(
-          t("pwdIdNotFoundError") ||
           t("pwdNoRecordFoundDesc") ||
-          "PWD ID was not found in the official records. Please verify the official ID Number received in your email or on your issued PWD ID card."
+          "No approved PWD ID record found. Reminder: Your New Application (New App PWD ID) must first be approved by the Admin before you can apply for Replacement or Renewal."
         )
       }
     } catch {
