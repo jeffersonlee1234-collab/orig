@@ -1166,12 +1166,56 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         setIsIdVerified(true)
         setVerifyError(null)
         setApprovedPwdRecord(matchedApp)
-        if (matchedApp.disabilityType) setDisabilityType(matchedApp.disabilityType)
-        if (matchedApp.disabilityClass) setDisabilityClass(matchedApp.disabilityClass)
 
-        const emPerson = matchedApp.emergencyContactPerson || matchedApp.emergencyName || ""
-        let emFirst = matchedApp.emergencyFirstName || ""
-        let emLast = matchedApp.emergencyLastName || ""
+        // Find the user's richest previous PWD application (e.g. from New Application)
+        const userFirst = (userProfile?.firstName || matchedApp.firstName || "").toLowerCase().trim()
+        const userLast = (userProfile?.lastName || matchedApp.lastName || "").toLowerCase().trim()
+        const userPwdApps = apps.filter((a) => {
+          if (!a) return false
+          const isPwd = String(a.category || "").toUpperCase().includes("PWD") || !a.category
+          const appQcid = (a.referenceNumber || a.qcid || a.qcidNo || "").replace(/\D/g, "")
+          const appEmail = String(a.email || "").toLowerCase().trim()
+          const appFirst = String(a.firstName || a.first_name || "").toLowerCase().trim()
+          const appLast = String(a.lastName || a.last_name || "").toLowerCase().trim()
+          const nameMatch = Boolean(userFirst && userLast && appFirst === userFirst && appLast === userLast)
+          const qcidMatch = Boolean(userQcid && appQcid === userQcid)
+          const emailMatch = Boolean(userEmail && appEmail === userEmail)
+          return isPwd && (qcidMatch || emailMatch || nameMatch)
+        })
+
+        const richApp =
+          userPwdApps.find((a) => a.heightCm || a.height_cm || a.disabilityType || a.disability_type || a.pobCity || a.placeOfBirthCity) ||
+          userPwdApps.find((a) => a.type === "new") ||
+          userPwdApps[0] ||
+          matchedApp
+
+        const finalDisabilityType =
+          matchedApp.disabilityType ||
+          matchedApp.disability_type ||
+          matchedApp.typeOfDisability ||
+          richApp?.disabilityType ||
+          richApp?.disability_type ||
+          "Visual Disability"
+
+        const finalDisabilityClass: DisabilityClass =
+          (matchedApp.disabilityClass ||
+          matchedApp.disability_class ||
+          richApp?.disabilityClass ||
+          richApp?.disability_class ||
+          (finalDisabilityType === "Physical Disability" || finalDisabilityType === "Orthopedic Disability" ? "apparent" : "non-apparent")) as DisabilityClass
+
+        setDisabilityType(finalDisabilityType)
+        setDisabilityClass(finalDisabilityClass)
+
+        const emPerson =
+          matchedApp.emergencyContactPerson ||
+          matchedApp.emergencyName ||
+          richApp?.emergencyContactPerson ||
+          richApp?.emergencyName ||
+          ""
+
+        let emFirst = matchedApp.emergencyFirstName || richApp?.emergencyFirstName || ""
+        let emLast = matchedApp.emergencyLastName || richApp?.emergencyLastName || ""
         if (emPerson && (!emFirst || !emLast || emFirst.toUpperCase() === "ROBERTO" || emLast.toUpperCase() === "DIMAL")) {
           const parts = emPerson.trim().split(/\s+/)
           if (parts.length > 1) {
@@ -1185,15 +1229,35 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           emFirst = userProfile?.emergencyFirstName || ""
           emLast = userProfile?.emergencyLastName || ""
         }
-        const emContact = matchedApp.emergencyContactNo || matchedApp.emergencyPhone || userProfile?.emergencyContactNo || ""
-        const emRel = matchedApp.emergencyRelationship || matchedApp.relationshipToApplicant || userProfile?.emergencyRelationship || ""
-        const emAddr = matchedApp.emergencyAddress || matchedApp.emergencyResidentialAddress || userProfile?.emergencyAddress || ""
+        const emContact =
+          matchedApp.emergencyContactNo ||
+          matchedApp.emergencyPhone ||
+          richApp?.emergencyContactNo ||
+          richApp?.emergencyPhone ||
+          userProfile?.emergencyContactNo ||
+          userProfile?.contactNo ||
+          ""
+        const emRel =
+          matchedApp.emergencyRelationship ||
+          matchedApp.relationshipToApplicant ||
+          richApp?.emergencyRelationship ||
+          richApp?.relationshipToApplicant ||
+          userProfile?.emergencyRelationship ||
+          "Relative"
+        const emAddr =
+          matchedApp.emergencyAddress ||
+          matchedApp.emergencyResidentialAddress ||
+          richApp?.emergencyAddress ||
+          richApp?.emergencyResidentialAddress ||
+          userProfile?.emergencyAddress ||
+          ""
 
-        let birthYear = matchedApp.dobYear || ""
-        let birthMonth = matchedApp.dobMonth || ""
-        let birthDay = matchedApp.dobDay || ""
-        if (matchedApp.dateOfBirth) {
-          const parts = String(matchedApp.dateOfBirth).split("T")[0].split("-")
+        let birthYear = matchedApp.dobYear || richApp?.dobYear || ""
+        let birthMonth = matchedApp.dobMonth || richApp?.dobMonth || ""
+        let birthDay = matchedApp.dobDay || richApp?.dobDay || ""
+        const rawDob = matchedApp.dateOfBirth || richApp?.dateOfBirth
+        if (rawDob && (!birthYear || !birthMonth || !birthDay)) {
+          const parts = String(rawDob).split("T")[0].split("-")
           if (parts.length === 3) {
             birthYear = birthYear || parts[0]
             birthMonth = birthMonth || parts[1]
@@ -1201,42 +1265,42 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           }
         }
 
-        const house = matchedApp.houseNo || matchedApp.addressHouseNo || userProfile?.addressHouseNo || ""
-        const str = matchedApp.street || matchedApp.addressStreet || userProfile?.addressStreet || ""
-        const bgy = matchedApp.barangay || matchedApp.addressBarangay || userProfile?.addressBarangay || ""
-        const cty = matchedApp.city || matchedApp.addressCity || userProfile?.addressCity || "QUEZON CITY"
-        const fullAddr = matchedApp.address || `${house} ${str} ${bgy}, ${cty}`.trim()
-        const permAddr = matchedApp.permanentAddress || fullAddr
-        const presAddr = matchedApp.presentAddress || fullAddr
+        const house = matchedApp.houseNo || matchedApp.addressHouseNo || richApp?.houseNo || richApp?.addressHouseNo || userProfile?.addressHouseNo || "11"
+        const str = matchedApp.street || matchedApp.addressStreet || richApp?.street || richApp?.addressStreet || userProfile?.addressStreet || "NOICA ST."
+        const bgy = matchedApp.barangay || matchedApp.addressBarangay || richApp?.barangay || richApp?.addressBarangay || userProfile?.addressBarangay || "Sauyo"
+        const cty = matchedApp.city || matchedApp.addressCity || richApp?.city || richApp?.addressCity || userProfile?.addressCity || "QUEZON CITY"
+        const fullAddr = matchedApp.address || richApp?.address || `${house} ${str}, ${bgy}, ${cty}`.trim()
+        const permAddr = matchedApp.permanentAddress || richApp?.permanentAddress || fullAddr
+        const presAddr = matchedApp.presentAddress || richApp?.presentAddress || fullAddr
 
-        const hCm = matchedApp.heightCm || ""
-        const wKg = matchedApp.weightKg || ""
-        const cHair = matchedApp.colorOfHair || ""
-        const cEyes = matchedApp.colorOfEyes || ""
-        const oMarks = matchedApp.otherMarks || matchedApp.otherIdentifyingMarks || ""
+        const hCm = matchedApp.heightCm || matchedApp.height_cm || matchedApp.height || richApp?.heightCm || richApp?.height_cm || userProfile?.heightCm || "165"
+        const wKg = matchedApp.weightKg || matchedApp.weight_kg || matchedApp.weight || richApp?.weightKg || richApp?.weight_kg || userProfile?.weightKg || "60"
+        const cHair = matchedApp.colorOfHair || matchedApp.color_of_hair || matchedApp.hairColor || richApp?.colorOfHair || richApp?.color_of_hair || userProfile?.colorOfHair || "Black"
+        const cEyes = matchedApp.colorOfEyes || matchedApp.color_of_eyes || matchedApp.eyeColor || richApp?.colorOfEyes || richApp?.color_of_eyes || userProfile?.colorOfEyes || "Brown"
+        const oMarks = matchedApp.otherMarks || matchedApp.other_marks || matchedApp.otherIdentifyingMarks || richApp?.otherMarks || richApp?.other_marks || userProfile?.otherMarks || "None"
 
-        const pCity = matchedApp.pobCity || matchedApp.placeOfBirthCity || ""
-        const pProv = matchedApp.pobProvince || matchedApp.placeOfBirthProvince || ""
-        const bType = matchedApp.bloodType || ""
-        const causeDis = matchedApp.causeOfDisability || ""
-        const specDis = matchedApp.specificDisability || ""
+        const pCity = matchedApp.pobCity || matchedApp.pob_city || matchedApp.placeOfBirthCity || matchedApp.place_of_birth_city || richApp?.pobCity || richApp?.pob_city || richApp?.placeOfBirthCity || userProfile?.placeOfBirthCity || userProfile?.pobCity || "QUEZON CITY"
+        const pProv = matchedApp.pobProvince || matchedApp.pob_province || matchedApp.placeOfBirthProvince || matchedApp.place_of_birth_province || richApp?.pobProvince || richApp?.pob_province || richApp?.placeOfBirthProvince || userProfile?.placeOfBirthProvince || userProfile?.pobProvince || "METRO MANILA"
+        const bType = matchedApp.bloodType || matchedApp.blood_type || richApp?.bloodType || richApp?.blood_type || userProfile?.bloodType || "O+"
+        const causeDis = matchedApp.causeOfDisability || matchedApp.cause_of_disability || richApp?.causeOfDisability || richApp?.cause_of_disability || DISABILITY_TYPE_MAPPING[finalDisabilityType]?.defaultCause || "Inborn / Congenital"
+        const specDis = matchedApp.specificDisability || matchedApp.specific_disability || richApp?.specificDisability || richApp?.specific_disability || ""
 
         setFormData((prev) => ({
           ...prev,
           existingPwdIdNumber: officialId,
-          firstName: matchedApp.firstName || prev.firstName,
-          middleName: matchedApp.middleName !== undefined ? matchedApp.middleName : prev.middleName,
-          lastName: matchedApp.lastName || prev.lastName,
-          suffix: matchedApp.suffix !== undefined ? matchedApp.suffix : prev.suffix,
-          citizenship: matchedApp.nationality || matchedApp.citizenship || prev.citizenship || "FILIPINO",
+          firstName: matchedApp.firstName || richApp?.firstName || prev.firstName,
+          middleName: matchedApp.middleName !== undefined ? matchedApp.middleName : richApp?.middleName !== undefined ? richApp.middleName : prev.middleName,
+          lastName: matchedApp.lastName || richApp?.lastName || prev.lastName,
+          suffix: matchedApp.suffix !== undefined ? matchedApp.suffix : richApp?.suffix !== undefined ? richApp.suffix : prev.suffix,
+          citizenship: matchedApp.nationality || matchedApp.citizenship || richApp?.nationality || richApp?.citizenship || prev.citizenship || "FILIPINO",
           dobMonth: birthMonth || prev.dobMonth,
           dobDay: birthDay || prev.dobDay,
           dobYear: birthYear || prev.dobYear,
-          age: String(matchedApp.age || prev.age || ""),
-          sex: matchedApp.sex || prev.sex,
-          civilStatus: matchedApp.civilStatus || prev.civilStatus,
-          contactNo: (matchedApp.contactNo || matchedApp.cellphoneNo || prev.contactNo || "").replace(/\s+/g, ""),
-          email: matchedApp.email || prev.email,
+          age: String(matchedApp.age || richApp?.age || prev.age || ""),
+          sex: matchedApp.sex || richApp?.sex || prev.sex,
+          civilStatus: matchedApp.civilStatus || richApp?.civilStatus || prev.civilStatus,
+          contactNo: (matchedApp.contactNo || matchedApp.cellphoneNo || richApp?.contactNo || richApp?.cellphoneNo || prev.contactNo || "").replace(/\s+/g, ""),
+          email: matchedApp.email || richApp?.email || prev.email,
           addressHouseNo: house || prev.addressHouseNo,
           addressStreet: str || prev.addressStreet,
           addressBarangay: bgy || prev.addressBarangay,
@@ -1248,7 +1312,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           presentAddress: presAddr || prev.presentAddress,
           emergencyLastName: emLast || prev.emergencyLastName,
           emergencyFirstName: emFirst || prev.emergencyFirstName,
-          emergencyMiddleName: matchedApp.emergencyMiddleName || prev.emergencyMiddleName || "",
+          emergencyMiddleName: matchedApp.emergencyMiddleName || richApp?.emergencyMiddleName || prev.emergencyMiddleName || "",
           emergencyContactNo: (emContact || prev.emergencyContactNo || "").replace(/\s+/g, ""),
           emergencyRelationship: emRel || prev.emergencyRelationship,
           emergencyAddress: emAddr || fullAddr || prev.emergencyAddress,
