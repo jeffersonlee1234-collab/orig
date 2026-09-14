@@ -17,6 +17,9 @@ if (connectionString) {
   poolConfig = {
     connectionString,
     ssl: isInternalOrLocal ? false : { rejectUnauthorized: false },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   };
 } else {
   poolConfig = {
@@ -26,6 +29,9 @@ if (connectionString) {
     password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || '').trim(),
     database: process.env.PGDATABASE || process.env.DB_NAME || 'railway',
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   };
 }
 

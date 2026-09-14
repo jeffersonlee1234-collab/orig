@@ -743,7 +743,7 @@ function ResidentHeader({
     }
 
     fetchNotifs()
-    const interval = setInterval(fetchNotifs, 2500)
+    const interval = setInterval(fetchNotifs, 5000)
     const unsubscribe = subscribeToRealtimeChanges(() => {
       fetchNotifs()
     })

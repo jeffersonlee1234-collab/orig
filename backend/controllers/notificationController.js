@@ -1,58 +1,43 @@
 // controllers/notificationController.js
 const db = require('../config/db');
 
+let tableInitPromise = null;
 async function ensureTables() {
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS user_notifications (
-        id SERIAL PRIMARY KEY,
-        user_id VARCHAR(100),
-        title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        is_read BOOLEAN DEFAULT false,
-        is_dismissed BOOLEAN DEFAULT false,
-        application_ref VARCHAR(100),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `);
-
-    try {
-      await db.query(`
-        ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);
-        ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
-        ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT false;
-        ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS application_ref VARCHAR(100);
-        ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-      `);
-    } catch (_) {}
-
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS user_notification_state (
-        id SERIAL PRIMARY KEY,
-        user_identifier VARCHAR(150) NOT NULL,
-        notif_id VARCHAR(255) NOT NULL,
-        is_read BOOLEAN DEFAULT false,
-        is_dismissed BOOLEAN DEFAULT false,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `);
-
-    try {
-      await db.query(`
-        ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS user_identifier VARCHAR(150);
-        ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS notif_id VARCHAR(255);
-        ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
-        ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT false;
-        ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_state_user_notif ON user_notification_state(user_identifier, notif_id);
-      `);
-    } catch (_) {}
-  } catch (err) {
-    console.warn('Warning creating notification tables:', err.message);
+  if (!tableInitPromise) {
+    tableInitPromise = (async () => {
+      try {
+        await db.query(`
+          CREATE TABLE IF NOT EXISTS user_notifications (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(100),
+            title VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT false,
+            is_dismissed BOOLEAN DEFAULT false,
+            application_ref VARCHAR(100),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS user_notification_state (
+            id SERIAL PRIMARY KEY,
+            user_identifier VARCHAR(150) NOT NULL,
+            notif_id VARCHAR(255) NOT NULL,
+            is_read BOOLEAN DEFAULT false,
+            is_dismissed BOOLEAN DEFAULT false,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_state_user_notif ON user_notification_state(user_identifier, notif_id);
+          CREATE INDEX IF NOT EXISTS idx_user_notif_user_id ON user_notifications(user_id);
+          CREATE INDEX IF NOT EXISTS idx_user_notif_app_ref ON user_notifications(application_ref);
+        `);
+      } catch (err) {
+        console.warn('Warning creating notification tables:', err.message);
+      }
+    })();
   }
+  return tableInitPromise;
 }
 
-// Ensure tables exist on load
+// Ensure tables exist once on startup
 ensureTables();
 
 function extractIdentifiers(req) {
@@ -101,81 +86,95 @@ function formatManilaTime(dateInput) {
 // Aggregates real-time notifications for user across all services and syncs read/dismissed state
 exports.getNotifications = async (req, res) => {
   try {
-    await ensureTables();
     let identifiers = extractIdentifiers(req);
     const { email, firstName, lastName } = req.query;
     const userEmail = (email || '').toLowerCase().trim();
     const userFn = (firstName || '').trim().toLowerCase();
     const userLn = (lastName || '').trim().toLowerCase();
 
-    // 0. Auto-discover all application references belonging to this user (by name, email, qcid, or user_id)
-    try {
-      const nameOrClauses = [];
-      const nameParams = [];
-
-      if (identifiers.length > 0) {
-        nameParams.push(identifiers);
-        nameOrClauses.push(`qcid = ANY($${nameParams.length}::text[]) OR reference_number = ANY($${nameParams.length}::text[]) OR user_id = ANY($${nameParams.length}::text[])`);
-      }
-      if (userEmail) {
-        nameParams.push(userEmail);
-        nameOrClauses.push(`(LOWER(email) = $${nameParams.length} OR LOWER(COALESCE(form_data->>'email', '')) = $${nameParams.length})`);
-      }
-      if (userFn && userLn) {
-        nameParams.push(userFn, userLn);
-        nameOrClauses.push(`((LOWER(first_name) = $${nameParams.length - 1} OR first_name ILIKE '%' || $${nameParams.length - 1} || '%' OR LOWER(COALESCE(form_data->>'firstName', '')) = $${nameParams.length - 1}) AND (LOWER(last_name) = $${nameParams.length} OR last_name ILIKE '%' || $${nameParams.length} || '%' OR LOWER(COALESCE(form_data->>'lastName', '')) = $${nameParams.length}))`);
-      }
-
-      if (nameOrClauses.length > 0) {
-        // Collect from solo_parent_applications
-        const spLookup = await db.query(
-          `SELECT id, reference_number, user_id, assigned_id_number, solo_parent_id_number, qcid_number FROM solo_parent_applications WHERE ${nameOrClauses.join(' OR ').replace(/qcid/g, 'qcid_number')}`,
-          nameParams
+    // 0. Auto-discover all application references belonging to this user
+    if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
+      // Collect from solo_parent_applications
+      try {
+        const spRes = await db.query(
+          `SELECT reference_number, user_id, assigned_id_number, solo_parent_id_number, qcid_number 
+           FROM solo_parent_applications 
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(qcid_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(assigned_id_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(solo_parent_id_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
+          [identifiers, userEmail, userFn, userLn]
         );
-        spLookup.rows.forEach((r) => {
+        spRes.rows.forEach((r) => {
           if (r.reference_number) identifiers.push(String(r.reference_number));
           if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
           if (r.solo_parent_id_number) identifiers.push(String(r.solo_parent_id_number));
           if (r.qcid_number) identifiers.push(String(r.qcid_number));
           if (r.user_id) identifiers.push(String(r.user_id));
         });
+      } catch (_) {}
 
-        // Collect from pwd_senior_applications
-        const pwdLookup = await db.query(
-          `SELECT id, reference_number, user_id, assigned_id_number, qcid FROM pwd_senior_applications WHERE ${nameOrClauses.join(' OR ')}`,
-          nameParams
+      // Collect from pwd_senior_applications
+      try {
+        const pwdRes = await db.query(
+          `SELECT reference_number, user_id, assigned_id_number, qcid 
+           FROM pwd_senior_applications 
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(assigned_id_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
+          [identifiers, userEmail, userFn, userLn]
         );
-        pwdLookup.rows.forEach((r) => {
+        pwdRes.rows.forEach((r) => {
           if (r.reference_number) identifiers.push(String(r.reference_number));
           if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
           if (r.qcid) identifiers.push(String(r.qcid));
           if (r.user_id) identifiers.push(String(r.user_id));
         });
+      } catch (_) {}
 
-        // Collect from livelihood_applications
-        const livLookup = await db.query(
-          `SELECT id, reference_number, user_id, qcid FROM livelihood_applications WHERE ${nameOrClauses.join(' OR ')}`,
-          nameParams
+      // Collect from livelihood_applications
+      try {
+        const livRes = await db.query(
+          `SELECT reference_number, user_id, qcid 
+           FROM livelihood_applications 
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
+          [identifiers, userEmail, userFn, userLn]
         );
-        livLookup.rows.forEach((r) => {
+        livRes.rows.forEach((r) => {
           if (r.reference_number) identifiers.push(String(r.reference_number));
           if (r.qcid) identifiers.push(String(r.qcid));
           if (r.user_id) identifiers.push(String(r.user_id));
         });
+      } catch (_) {}
 
-        // Collect from aics_applications
-        const aicsLookup = await db.query(
-          `SELECT id, reference_no, qc_id FROM aics_applications WHERE ${nameOrClauses.join(' OR ').replace(/qcid/g, 'qc_id').replace(/reference_number/g, 'reference_no')}`,
-          nameParams
+      // Collect from aics_applications
+      try {
+        const aicsRes = await db.query(
+          `SELECT reference_no, qc_id 
+           FROM aics_applications 
+           WHERE (COALESCE(qc_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_no::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
+          [identifiers, userEmail, userFn, userLn]
         );
-        aicsLookup.rows.forEach((r) => {
+        aicsRes.rows.forEach((r) => {
           if (r.reference_no) identifiers.push(String(r.reference_no));
           if (r.qc_id) identifiers.push(String(r.qc_id));
         });
-      }
+      } catch (_) {}
+
       identifiers = Array.from(new Set(identifiers.filter((s) => s && s !== 'undefined' && s !== 'null')));
-    } catch (e) {
-      console.warn('Error expanding user notification identifiers:', e.message);
     }
 
     // 1. Fetch persistent read and dismissed state and __ALL__ cutoff for this user
@@ -226,7 +225,7 @@ exports.getNotifications = async (req, res) => {
       let params = [];
       if (identifiers.length > 0) {
         query = `SELECT * FROM user_notifications 
-                 WHERE user_id = ANY($1::text[]) OR application_ref = ANY($1::text[])
+                 WHERE COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[])
                  ORDER BY created_at DESC LIMIT 50`;
         params = [identifiers];
       }
@@ -253,13 +252,14 @@ exports.getNotifications = async (req, res) => {
         const aicsRes = await db.query(
           `SELECT id, reference_no, qc_id, assistance_type, status, rejection_reason, created_at, updated_at, email
            FROM aics_applications 
-           WHERE qc_id = ANY($1::text[]) OR reference_no = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(first_name) = $3 AND LOWER(last_name) = $4))
+           WHERE (COALESCE(qc_id::text, '') = ANY($1::text[]) OR COALESCE(reference_no::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
         aicsRes.rows.forEach((app) => {
-          const st = String(app.status || "").toLowerCase()
+          const st = String(app.status || "").toLowerCase();
           if (st === 'approved' || st === 'rejected' || st === 'completed') {
             const notifId = `aics-${app.id}-${st}`;
             const appDate = app.updated_at || app.created_at;
@@ -287,13 +287,17 @@ exports.getNotifications = async (req, res) => {
         const pwdRes = await db.query(
           `SELECT id, reference_number, qcid, category, service, status, rejection_reason, approved_date, created_at, email, assigned_id_number, application_type
            FROM pwd_senior_applications 
-           WHERE qcid = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR assigned_id_number = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(first_name) = $3 AND LOWER(last_name) = $4))
+           WHERE (COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(assigned_id_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(user_id::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
         pwdRes.rows.forEach((app) => {
-          const st = String(app.status || "").toLowerCase()
+          const st = String(app.status || "").toLowerCase();
           if (st === 'approved' || st === 'rejected' || st === 'completed' || st === 'for_release') {
             const notifId = `pwd-${app.id || app.reference_number}-${st}`;
             const appDate = app.approved_date || app.created_at;
@@ -343,8 +347,13 @@ exports.getNotifications = async (req, res) => {
         const spRes = await db.query(
           `SELECT id, reference_number, user_id, qcid_number, application_status, rejection_reason, created_at, updated_at, email, assigned_id_number, solo_parent_id_number, application_type
            FROM solo_parent_applications 
-           WHERE user_id = ANY($1::text[]) OR qcid_number = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR assigned_id_number = ANY($1::text[]) OR solo_parent_id_number = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(first_name) = $3 AND LOWER(last_name) = $4))
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(qcid_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(assigned_id_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(solo_parent_id_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
@@ -390,8 +399,9 @@ exports.getNotifications = async (req, res) => {
         const cwRes = await db.query(
           `SELECT id, reference_number, user_id, application_status, rejection_reason, created_at, updated_at, guardian_email, support_category
            FROM child_welfare_applications 
-           WHERE user_id = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR (LOWER(guardian_email) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(guardian_first_name) = $3 AND LOWER(guardian_last_name) = $4))
+           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
@@ -426,8 +436,11 @@ exports.getNotifications = async (req, res) => {
         const livRes = await db.query(
           `SELECT id, reference_number, user_id, qcid, application_status, rejection_reason, created_at, updated_at, email, livelihood_type
            FROM livelihood_applications 
-           WHERE qcid = ANY($1::text[]) OR user_id = ANY($1::text[]) OR reference_number = ANY($1::text[]) OR (LOWER(email) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(first_name) = $3 AND LOWER(last_name) = $4))
+           WHERE (COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
@@ -460,9 +473,11 @@ exports.getNotifications = async (req, res) => {
         const trnRes = await db.query(
           `SELECT id, reference_number, user_id, qcid, training_id, training_name, applicant_info, status, rejection_reason, revision_notes, created_at, updated_at
            FROM training_applications
-           WHERE qcid = ANY($1::text[]) OR user_id = ANY($1::text[]) OR reference_number = ANY($1::text[])
-              OR (applicant_info::text ILIKE '%' || $2 || '%' AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (applicant_info::text ILIKE '%' || $3 || '%' AND applicant_info::text ILIKE '%' || $4 || '%'))
+           WHERE (COALESCE(qcid::text, '') = ANY($1::text[]) 
+              OR COALESCE(user_id::text, '') = ANY($1::text[]) 
+              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+              OR (COALESCE(applicant_info::text, '') ILIKE '%' || $2 || '%' AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (COALESCE(applicant_info::text, '') ILIKE '%' || $3 || '%' AND COALESCE(applicant_info::text, '') ILIKE '%' || $4 || '%'))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );
@@ -500,8 +515,8 @@ exports.getNotifications = async (req, res) => {
              FROM appointments
              ORDER BY reference_no, created_at DESC
            ) a ON f.application_ref = a.reference_no
-           WHERE f.application_ref = ANY($1::text[]) OR a.reference_no = ANY($1::text[])
-              OR ($2 != '' AND $3 != '' AND (LOWER(f.applicant_name) ILIKE '%' || $2 || '%' AND LOWER(f.applicant_name) ILIKE '%' || $3 || '%'))`,
+           WHERE (COALESCE(f.application_ref::text, '') = ANY($1::text[]) OR COALESCE(a.reference_no::text, '') = ANY($1::text[]))
+              OR ($2 != '' AND $3 != '' AND (LOWER(COALESCE(f.applicant_name, '')) ILIKE '%' || $2 || '%' AND LOWER(COALESCE(f.applicant_name, '')) ILIKE '%' || $3 || '%'))`,
           [identifiers, userFn, userLn]
         );
 
@@ -591,7 +606,6 @@ exports.getNotifications = async (req, res) => {
 // POST /api/notifications
 exports.createNotification = async (req, res) => {
   try {
-    await ensureTables();
     const { userId, title, description, applicationRef } = req.body;
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description are required.' });
@@ -612,7 +626,6 @@ exports.createNotification = async (req, res) => {
 // PATCH /api/notifications/:id/read
 exports.markAsRead = async (req, res) => {
   try {
-    await ensureTables();
     const { id } = req.params;
     const identifiers = extractIdentifiers(req);
     const primaryIdent = identifiers[0] || 'default_user';
@@ -660,7 +673,6 @@ exports.markAsRead = async (req, res) => {
 // PATCH /api/notifications/read-all
 exports.markAllAsRead = async (req, res) => {
   try {
-    await ensureTables();
     const identifiers = extractIdentifiers(req);
     const { notifIds = [] } = req.body;
     const primaryIdent = identifiers[0] || 'default_user';
@@ -706,7 +718,6 @@ exports.markAllAsRead = async (req, res) => {
 // DELETE /api/notifications/:id
 exports.dismissNotification = async (req, res) => {
   try {
-    await ensureTables();
     const { id } = req.params;
     const identifiers = extractIdentifiers(req);
     const primaryIdent = identifiers[0] || 'default_user';
@@ -754,7 +765,6 @@ exports.dismissNotification = async (req, res) => {
 // DELETE /api/notifications/all
 exports.dismissAllNotifications = async (req, res) => {
   try {
-    await ensureTables();
     const identifiers = extractIdentifiers(req);
     const { notifIds = [] } = req.body || req.query;
     const primaryIdent = identifiers[0] || 'default_user';
@@ -809,7 +819,7 @@ exports.dismissAllNotifications = async (req, res) => {
       try {
         await db.query(
           `UPDATE user_notifications SET is_dismissed = true 
-           WHERE user_id = ANY($1::text[]) OR application_ref = ANY($1::text[])`,
+           WHERE COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[])`,
           [identifiers]
         );
       } catch (_) {}
