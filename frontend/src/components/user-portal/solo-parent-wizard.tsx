@@ -1530,7 +1530,7 @@ export default function SoloParentApplicationWizard({
     }
 
     checkEligibility(true)
-    const interval = setInterval(() => checkEligibility(false), 1000)
+    const interval = setInterval(() => checkEligibility(false), 4000)
     const handleUpdate = () => checkEligibility(false)
 
     const unsubscribe = subscribeToRealtimeChanges((event) => {
