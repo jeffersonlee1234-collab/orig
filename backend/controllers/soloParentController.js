@@ -16,7 +16,7 @@ function invalidateSoloCache() {
 function stripLargeDataUrls(obj, depth = 0) {
   if (depth > 6 || obj === null || obj === undefined) return obj;
   if (typeof obj === 'string') {
-    if (obj.length > 300 && (obj.startsWith('data:') || obj.startsWith('blob:'))) {
+    if (obj.length > 300 && obj.startsWith('blob:')) {
       return '';
     }
     return obj;
@@ -27,7 +27,7 @@ function stripLargeDataUrls(obj, depth = 0) {
   if (typeof obj === 'object') {
     const res = {};
     for (const [key, val] of Object.entries(obj)) {
-      if (typeof val === 'string' && val.length > 300 && (val.startsWith('data:') || val.startsWith('blob:'))) {
+      if (typeof val === 'string' && val.length > 300 && val.startsWith('blob:')) {
         res[key] = '';
       } else if (typeof val === 'object' && val !== null) {
         res[key] = stripLargeDataUrls(val, depth + 1);
@@ -83,21 +83,23 @@ function sanitizeDocumentList(docs) {
       (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null) ||
       (cleanDoc.previewUrl && cleanDoc.previewUrl.startsWith('data:') ? cleanDoc.previewUrl : null);
     if (rawData && typeof rawData === 'string' && rawData.startsWith('data:')) {
+      cleanDoc.dataUrl = rawData;
+      cleanDoc.base64 = rawData;
       const savedPath = saveBase64File(rawData, cleanDoc.name || cleanDoc.filename || 'document');
       if (savedPath) {
         cleanDoc.fileUrl = savedPath;
         cleanDoc.previewUrl = savedPath;
+      } else {
+        cleanDoc.fileUrl = rawData;
+        cleanDoc.previewUrl = rawData;
       }
     }
 
-    if (cleanDoc.dataUrl) delete cleanDoc.dataUrl;
-    if (cleanDoc.base64) delete cleanDoc.base64;
-    if (cleanDoc.data) delete cleanDoc.data;
-    if (cleanDoc.content) delete cleanDoc.content;
-
     if (!cleanDoc.fileUrl) {
-      if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && !cleanDoc.previewUrl.startsWith('data:')) {
+      if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string') {
         cleanDoc.fileUrl = cleanDoc.previewUrl;
+      } else if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string') {
+        cleanDoc.fileUrl = cleanDoc.dataUrl;
       } else if (cleanDoc.filename && typeof cleanDoc.filename === 'string') {
         const cleanFn = path.basename(cleanDoc.filename);
         cleanDoc.fileUrl = `/uploads/solo-parent/${cleanFn}`;
@@ -117,15 +119,17 @@ function sanitizeDocumentList(docs) {
           (cleanF.fileUrl && cleanF.fileUrl.startsWith('data:') ? cleanF.fileUrl : null) ||
           (cleanF.previewUrl && cleanF.previewUrl.startsWith('data:') ? cleanF.previewUrl : null);
         if (rawF && typeof rawF === 'string' && rawF.startsWith('data:')) {
+          cleanF.dataUrl = rawF;
+          cleanF.base64 = rawF;
           const savedF = saveBase64File(rawF, cleanF.name || cleanF.filename || 'file');
           if (savedF) {
             cleanF.fileUrl = savedF;
             cleanF.previewUrl = savedF;
+          } else {
+            cleanF.fileUrl = rawF;
+            cleanF.previewUrl = rawF;
           }
         }
-        if (cleanF.dataUrl) delete cleanF.dataUrl;
-        if (cleanF.base64) delete cleanF.base64;
-        if (cleanF.data) delete cleanF.data;
         if (!cleanF.fileUrl && cleanF.filename) {
           const cleanFn = path.basename(cleanF.filename);
           cleanF.fileUrl = `/uploads/solo-parent/${cleanFn}`;

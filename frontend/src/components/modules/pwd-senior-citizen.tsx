@@ -647,27 +647,37 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 function getDocImageUrl(doc: ApplicationDocument | null, app?: ApplicationSubmission | null): string {
   if (!doc) return ""
 
-  // 0. Direct match from app.documents if provided
+  // 0. Prefer direct base64 in doc
+  const docBase64 = (doc as any).dataUrl || (doc as any).base64 || (doc as any).data
+  if (docBase64 && typeof docBase64 === "string" && docBase64.startsWith("data:")) {
+    return docBase64
+  }
+
+  // 1. Direct match from app.documents if provided
   if (app && Array.isArray(app.documents)) {
     const matched = app.documents.find((d: any) =>
       (d?.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
       (d?.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
     )
     if (matched) {
-      const matchCandidate = matched.fileUrl || (matched as any).previewUrl || (matched as any).dataUrl || (matched as any).base64
+      const matchBase64 = (matched as any).dataUrl || (matched as any).base64 || (matched as any).data
+      if (matchBase64 && typeof matchBase64 === "string" && matchBase64.startsWith("data:")) {
+        return matchBase64
+      }
+      const matchCandidate = matched.fileUrl || (matched as any).previewUrl
       if (matchCandidate && typeof matchCandidate === "string" && (matchCandidate.startsWith("data:") || matchCandidate.startsWith("http://") || matchCandidate.startsWith("https://"))) {
         return matchCandidate
       }
     }
   }
   
-  // 1. Direct candidate
+  // 2. Direct candidate
   const candidate =
+    (doc as any).dataUrl ||
+    (doc as any).base64 ||
     doc.fileUrl ||
     (doc as any).previewUrl ||
-    (doc as any).dataUrl ||
     (doc as any).url ||
-    (doc as any).base64 ||
     (doc as any).filePath ||
     (doc as any).path ||
     (doc as any).src
