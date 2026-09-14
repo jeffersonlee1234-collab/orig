@@ -625,7 +625,7 @@ function generateReferenceNumber(qcid?: string) {
 }
 
 export default function PWDApplicationWizard({ onBack, userProfile: propUserProfile, initialIdStatus, onStepChange }: PWDApplicationWizardProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [profile, setProfile] = useState<UserProfile>(() => (propUserProfile || getCurrentUserProfile()) as any)
 
   useEffect(() => {
