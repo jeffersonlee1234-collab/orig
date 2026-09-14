@@ -1454,14 +1454,13 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     const refNum = generateReferenceNumber(userProfile?.qcidNo)
 
     try {
-      const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
       const docItems = await Promise.all(
         Object.keys(uploaded).map(async (k) => {
           const up = uploaded[k]
           let fileUrl = up?.previewUrl || ""
           if (!fileUrl || fileUrl.startsWith("blob:")) {
             if (up?.file) {
-              fileUrl = await readFileAsDataUrl(up.file)
+              fileUrl = await readFileAsDataUrl(up.file, 1000, 0.75)
             }
           }
           return {
@@ -1544,9 +1543,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         documents: docItems,
         status: "pending",
       }
-      localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
 
-      // Send to real backend API so it syncs across all windows, devices, and Incognito mode
+      // 1. Send to real backend API FIRST so it saves directly to PostgreSQL
       try {
         await fetch(`${API_BASE}/api/pwd-senior/applications`, {
           method: "POST",
@@ -1554,13 +1552,36 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           body: JSON.stringify(newApp),
         })
       } catch (err) {
-        console.warn("Backend sync failed, saved locally:", err)
+        console.warn("Backend sync failed:", err)
+      }
+
+      // 2. Safe local storage save with QuotaExceededError protection on mobile devices
+      try {
+        const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing.slice(0, 5)]))
+      } catch (lsErr) {
+        console.warn("LocalStorage full, saving lightweight application:", lsErr)
+        try {
+          const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+          const lightApp = {
+            ...newApp,
+            applicantPhoto: "",
+            photoUrl: "",
+            documents: newApp.documents.map((d: any) => ({
+              ...d,
+              dataUrl: undefined,
+              previewUrl: d.filename,
+              fileUrl: d.filename,
+            })),
+          }
+          localStorage.setItem("pwd_senior_applications", JSON.stringify([lightApp, ...existing.slice(0, 3)]))
+        } catch {}
       }
 
       // Dispatch real-time event to Admin dashboard
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
     } catch (e) {
-      console.error("Failed saving application to localStorage:", e)
+      console.error("Failed submitting application:", e)
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
     }
 

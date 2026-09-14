@@ -829,11 +829,10 @@ export default function SeniorCitizenApplicationWizard({
     const refNum = generateReference(userProfile?.qcidNo)
 
     try {
-      const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
       const documentItems = await Promise.all(
         Object.keys(uploadedFiles).map(async (k) => {
           const f = uploadedFiles[k]?.[0]
-          const dataUrl = f ? await readFileAsDataUrl(f) : ""
+          const dataUrl = f ? await readFileAsDataUrl(f, 1000, 0.75) : ""
           return {
             name: k,
             filename: f?.name || "doc.jpg",
@@ -884,19 +883,37 @@ export default function SeniorCitizenApplicationWizard({
         documents: documentItems,
         status: "pending",
       }
-      localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
 
-      // Send to real backend API so it syncs across all windows, devices, and Incognito mode
-      fetch(`${API_BASE}/api/pwd-senior/applications`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newApp),
-      }).catch((err) => console.warn("Backend sync failed, saved locally:", err))
+      // 1. Send to backend first
+      try {
+        await fetch(`${API_BASE}/api/pwd-senior/applications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newApp),
+        })
+      } catch (err) {
+        console.warn("Backend sync failed, saved locally:", err)
+      }
+
+      // 2. Safe localStorage save
+      try {
+        const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing.slice(0, 5)]))
+      } catch (lsErr) {
+        try {
+          const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+          const lightApp = {
+            ...newApp,
+            documents: newApp.documents.map((d: any) => ({ ...d, fileUrl: d.filename })),
+          }
+          localStorage.setItem("pwd_senior_applications", JSON.stringify([lightApp, ...existing.slice(0, 3)]))
+        } catch {}
+      }
 
       // Dispatch real-time event to Admin dashboard
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
     } catch (e) {
-      console.error("Failed saving senior application to localStorage:", e)
+      console.error("Failed submitting senior application:", e)
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
     }
 
