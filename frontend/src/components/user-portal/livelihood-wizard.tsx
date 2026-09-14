@@ -850,22 +850,13 @@ export default function LivelihoodApplicationWizard({
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Blood type *</label>
-                  <select
-                    value={formData.bloodType}
-                    onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
-                    disabled={!isEditingInfo}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 transition-colors ${
-                      !isEditingInfo
-                        ? "border-gray-200 dark:border-border bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-foreground cursor-not-allowed"
-                        : "border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-950/40 bg-white dark:bg-card text-foreground focus:outline-none"
-                    }`}
-                  >
-                    {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
-                      <option key={bt} value={bt}>
-                        {bt}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={formData.bloodType || "O+"}
+                    readOnly
+                    disabled
+                    className="w-full border border-gray-200 dark:border-border rounded-lg px-3 py-2 text-sm bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-foreground cursor-not-allowed mt-1 font-medium select-none"
+                  />
                 </div>
               </div>
 

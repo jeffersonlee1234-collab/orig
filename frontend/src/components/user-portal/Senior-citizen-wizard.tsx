@@ -1638,15 +1638,13 @@ export default function SeniorCitizenApplicationWizard({
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-700">Blood type *</label>
-                    <select
-                      value={formData.bloodType}
-                      onChange={(e) => handleFieldChange("bloodType", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 transition-colors bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/40 focus:border-[#3b82f6]"
-                    >
-                      {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
-                        <option key={bt} value={bt}>{bt}</option>
-                      ))}
-                    </select>
+                    <input
+                      type="text"
+                      value={formData.bloodType || "O+"}
+                      readOnly
+                      disabled
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-800 cursor-not-allowed mt-1 font-medium select-none"
+                    />
                   </div>
                 </div>
 

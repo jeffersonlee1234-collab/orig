@@ -60,6 +60,7 @@ interface FormData {
   birthMonth: string
   birthDay: string
   birthYear: string
+  bloodType: string
   city: string
   houseNo: string
   street: string
@@ -125,6 +126,7 @@ export function ProfileModal({
       birthMonth: (u?.birthMonth || u?.birth_month || (u?.birthDate ? u.birthDate.split(" ")[0] : "") || "JANUARY").toUpperCase(),
       birthDay: String(u?.birthDay || u?.birth_day || (u?.birthDate ? u.birthDate.split(" ")[1]?.replace(",", "") : "1") || "1"),
       birthYear: String(u?.birthYear || u?.birth_year || (u?.birthDate ? u.birthDate.split(",")[1]?.trim() : "2000") || "2000"),
+      bloodType: (u?.bloodType || u?.blood_type || "O+").toUpperCase(),
       city: (u?.city || u?.addressCity || "QUEZON CITY").toUpperCase(),
       houseNo: u?.houseNo || u?.house_no || u?.addressHouseNo || "",
       street: (u?.street || u?.addressStreet || "").toUpperCase(),
@@ -518,6 +520,7 @@ export function ProfileModal({
           birthMonth: formData.birthMonth,
           birthDay: formData.birthDay,
           birthYear: formData.birthYear,
+          bloodType: formData.bloodType || "O+",
           city: formData.city,
           houseNo: formData.houseNo,
           street: formData.street,
@@ -539,6 +542,7 @@ export function ProfileModal({
         birthMonth: formData.birthMonth,
         birthDay: formData.birthDay,
         birthYear: formData.birthYear,
+        bloodType: formData.bloodType || "O+",
         city: formData.city,
         houseNo: formData.houseNo,
         street: formData.street,
@@ -1047,10 +1051,10 @@ export function ProfileModal({
                 </div>
               </div>
 
-              {/* Birth Date */}
+              {/* Birth Date & Blood Type */}
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("birthDateHeading")}</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
                       {t("month")}
@@ -1112,6 +1116,21 @@ export function ProfileModal({
                           </option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                      Blood Type
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        value={formData.bloodType || "O+"}
+                        disabled={true}
+                        className="w-full h-10 px-3 text-sm bg-gray-100 dark:bg-slate-800/80 text-gray-800 dark:text-slate-200 font-bold border border-gray-200 dark:border-slate-700 rounded-lg cursor-not-allowed"
+                      />
                     </div>
                   </div>
                 </div>

@@ -2682,18 +2682,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field
-                    label={t("pwdBloodTypeLabel")}
-                    required
-                    invalid={attemptedNext && (formData.bloodType || "").trim() === ""}
-                    invalidNote="Required"
-                  >
-                    <TextInput
-                      value={formData.bloodType}
-                      onChange={(v) => updateField("bloodType", v)}
-                      placeholder="e.g. O+, A+, B+"
-                      invalid={attemptedNext && (formData.bloodType || "").trim() === ""}
-                    />
+                  <Field label={t("pwdBloodTypeLabel")}>
+                    <LockedField value={formData.bloodType || "O+"} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -3047,20 +3047,13 @@ export default function SoloParentApplicationWizard({
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-700">Blood type *</label>
-                    <select
+                    <input
+                      type="text"
                       value={formData.bloodType || "O+"}
-                      onChange={(e) => updateField("bloodType", e.target.value)}
-                      disabled={!isEditingInfo}
-                      className={`w-full border rounded-lg px-3 py-2 text-sm mt-1 transition-colors ${
-                        !isEditingInfo
-                          ? "bg-gray-100 text-gray-800 border-gray-200 cursor-not-allowed"
-                          : "bg-white text-gray-900 border-blue-400 ring-2 ring-blue-100"
-                      }`}
-                    >
-                      {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
-                        <option key={bt} value={bt}>{bt}</option>
-                      ))}
-                    </select>
+                      readOnly
+                      disabled
+                      className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-gray-100 text-gray-800 border-gray-200 cursor-not-allowed font-medium select-none"
+                    />
                   </div>
                 </div>
 
