@@ -1278,6 +1278,9 @@ export default function ChildWelfareApplicationWizard({
         application_status: "pending",
         status: "pending",
         created_at: new Date().toISOString(),
+        submittedAt: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
+        dateSubmitted: new Date().toISOString(),
       }
       localStorage.setItem("child_welfare_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
       window.dispatchEvent(new Event("storage"))

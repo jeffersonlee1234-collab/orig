@@ -1764,6 +1764,9 @@ export default function SoloParentApplicationWizard({
         application_status: "pending",
         status: "pending",
         created_at: new Date().toISOString(),
+        submittedAt: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
+        dateSubmitted: new Date().toISOString(),
       }
       localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
       window.dispatchEvent(new Event("storage"))

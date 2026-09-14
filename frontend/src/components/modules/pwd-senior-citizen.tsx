@@ -204,6 +204,32 @@ function isPWD(app: ApplicationSubmission): app is PWDApplicationSubmission {
   return false
 }
 
+function safeDateIso(dateVal: any): string {
+  if (!dateVal) return new Date().toISOString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+}
+
+function formatSafeDate(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleDateString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toLocaleDateString() : d.toLocaleDateString()
+}
+
+function formatSafeTime(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const d = new Date(dateVal)
+  return isNaN(d.getTime())
+    ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+}
+
+function formatSafeDateTime(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString()
+}
+
 function findExistingIdForApplicant(app: ApplicationSubmission, allApps?: ApplicationSubmission[]): string | null {
   const isPwdApp = isPWD(app)
   const candidateFields = isPwdApp
@@ -1738,8 +1764,7 @@ function ApplicationCard({ app, onView, onShowCard }: ApplicationCardProps) {
           </div>
           <p className="gw-mono text-xs mb-1" style={{ color: "var(--ink-faint)" }}>REF {app.referenceNumber}</p>
           <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-            Submitted {new Date(app.submittedAt).toLocaleDateString()} ·{" "}
-            {new Date(app.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            Submitted {formatSafeDate(app.submittedAt)} · {formatSafeTime(app.submittedAt)}
           </p>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -2312,7 +2337,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                       <div>
                         <p className="text-sm font-semibold text-foreground">{doc.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString() : "Uploaded on file"}
+                          {doc.uploadedAt ? formatSafeDateTime(doc.uploadedAt) : "Uploaded on file"}
                         </p>
                       </div>
                     </div>
@@ -2456,7 +2481,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
             <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-200 text-sm space-y-1">
               <p className="font-bold flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-emerald-600" />
-                Approved on {new Date(app.approvedDate || app.submittedAt).toLocaleDateString()} by {app.approvedBy || "Admin Staff"}
+                Approved on {formatSafeDate(app.approvedDate || (app as any).updated_at || app.submittedAt)} by {app.approvedBy || "Admin Staff"}
               </p>
               {isAssistance ? (
                 <div className="pt-2 text-xs space-y-2">
@@ -2629,6 +2654,9 @@ export default function PWDSeniorCitizen() {
         combined = combined.map((a: any) => {
           if (!a) return a
           const isPwd = isPWD(a)
+          const rawDate = a.submittedAt || a.created_at || a.submitted_at || a.dateSubmitted || a.date_submitted || a.updated_at
+          const safeSubmittedAt = safeDateIso(rawDate)
+          let updated = { ...a, submittedAt: safeSubmittedAt }
           const rawAssigned = a.assignedIdNumber || (a as any).assigned_id_number
           if (rawAssigned && typeof rawAssigned === "string") {
             if (isPwd && (rawAssigned.toUpperCase().startsWith("SENIOR-") || rawAssigned.toUpperCase().startsWith("OSCA-"))) {

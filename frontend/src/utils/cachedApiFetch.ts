@@ -1,7 +1,7 @@
 // frontend/src/utils/cachedApiFetch.ts
 // Request deduplication, in-flight locking, and intelligent caching for high-frequency portal API calls
 
-import { API_BASE, getAuthHeaders } from "../config/api"
+import { API_BASE } from "../config/api"
 
 const inFlightMap = new Map<string, Promise<any>>()
 const cacheMap = new Map<string, { data: any; expiresAt: number }>()

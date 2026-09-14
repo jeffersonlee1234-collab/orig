@@ -45,6 +45,23 @@ function resolveFixedAmount(concern) {
 async function initAppointmentTables() {
   try {
     await db.query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id SERIAL PRIMARY KEY,
+        reference_no VARCHAR(100) NOT NULL,
+        module VARCHAR(100) NOT NULL,
+        applicant_name VARCHAR(255) NOT NULL,
+        concern VARCHAR(255) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        scheduled_date VARCHAR(100),
+        scheduled_time VARCHAR(100),
+        office_location VARCHAR(255) DEFAULT 'Quezon City Hall',
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_appointments_ref ON appointments(reference_no);
+      CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+
       CREATE TABLE IF NOT EXISTS deleted_appointments (
         id SERIAL PRIMARY KEY,
         reference_no VARCHAR(100) UNIQUE NOT NULL,
@@ -60,17 +77,21 @@ initAppointmentTables();
 // GET /api/appointments
 exports.getAppointments = async (req, res) => {
   try {
+    await initAppointmentTables();
+
     // 0. Get deleted reference numbers to exclude
     const deletedRes = await db.query('SELECT reference_no FROM deleted_appointments').catch(() => ({ rows: [] }));
     const deletedSet = new Set(deletedRes.rows.map((r) => String(r.reference_no).toLowerCase().trim()));
 
     // Purge any appointments belonging to pending or rejected AICS applications
-    await db.query(`
-      DELETE FROM appointments
-      WHERE module = 'AICS' AND reference_no IN (
-        SELECT reference_no FROM aics_applications WHERE status NOT IN ('approved', 'completed', 'for_release')
-      )
-    `);
+    try {
+      await db.query(`
+        DELETE FROM appointments
+        WHERE module = 'AICS' AND reference_no IN (
+          SELECT reference_no FROM aics_applications WHERE status NOT IN ('approved', 'completed', 'for_release')
+        )
+      `);
+    } catch (_) {}
 
     // Purge any appointments belonging to pending or rejected PWD / Senior applications
     try {
@@ -99,6 +120,32 @@ exports.getAppointments = async (req, res) => {
            OR LOWER(COALESCE(concern, '')) LIKE '%booklet%'
            OR (module IN ('PWD', 'Senior Citizen', 'Solo Parent') AND LOWER(COALESCE(concern, '')) NOT LIKE '%assist%')
       `);
+    } catch (_) {}
+
+    // Auto-populate appointments from approved AICS applications if not yet present and not deleted
+    try {
+      const approvedAics = await db.query(
+        `SELECT reference_no, assistance_type, first_name, middle_name, last_name, suffix 
+         FROM aics_applications 
+         WHERE status IN ('approved', 'completed', 'for_release')`
+      );
+      for (const row of approvedAics.rows) {
+        const refNo = String(row.reference_no || '').trim();
+        if (!refNo || deletedSet.has(refNo.toLowerCase())) continue;
+        const checkAppt = await db.query('SELECT id FROM appointments WHERE reference_no = $1', [refNo]);
+        if (checkAppt.rows.length === 0) {
+          const fullName = [row.first_name, row.middle_name, row.last_name, row.suffix].filter(Boolean).join(' ').trim().toUpperCase() || 'BENEFICIARY';
+          const rawType = (row.assistance_type || 'Medical').replace(/\s*assistance/gi, '').trim();
+          const cleanType = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + ' Assistance';
+          await db.query(
+            `INSERT INTO appointments
+              (reference_no, module, applicant_name, concern, status, office_location, notes)
+             VALUES ($1, 'AICS', $2, $3, 'pending', 'Quezon City Hall', 'Awtomatikong pumasok mula sa na-aprubahang AICS aplikasyon para sa scheduling.')
+             ON CONFLICT DO NOTHING`,
+            [refNo, fullName, cleanType]
+          );
+        }
+      }
     } catch (_) {}
 
     // Auto-populate appointments from approved livelihood applications whose capital assistance is ready for release
@@ -133,7 +180,7 @@ exports.getAppointments = async (req, res) => {
         `SELECT reference_number, category, type, first_name, middle_name, last_name, suffix 
          FROM pwd_senior_applications 
          WHERE status IN ('approved', 'completed', 'for_release') 
-           AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR service ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR extra_data ILIKE '%assist%')`
+           AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR extra_data::text ILIKE '%assist%')`
       );
       for (const row of approvedPwdSenior.rows) {
         const refNo = String(row.reference_number || '').trim();
@@ -157,33 +204,44 @@ exports.getAppointments = async (req, res) => {
       }
     } catch (_) {}
 
-    const result = await db.query(
-      `SELECT a.* FROM appointments a
-       WHERE (
-            (a.reference_no LIKE 'LP-%' AND a.reference_no IN (
-               SELECT reference_number FROM livelihood_assistance 
-               WHERE assistance_status IN ('for_release', 'released', 'FOR RELEASE', 'RELEASED')
-            ))
-         OR (a.module = 'Livelihood' AND a.reference_no IN (
-               SELECT reference_number FROM livelihood_assistance 
-               WHERE assistance_status IN ('for_release', 'released', 'FOR RELEASE', 'RELEASED')
-            ))
-         OR (a.module = 'Child Welfare')
-         OR (a.module IN ('PWD', 'Senior Citizen', 'Solo Parent') AND LOWER(COALESCE(a.concern, '')) LIKE '%assist%')
-         OR a.reference_no IN (
-           SELECT reference_no FROM aics_applications WHERE status IN ('approved', 'completed', 'for_release')
+    let rows = [];
+    try {
+      const result = await db.query(
+        `SELECT a.* FROM appointments a
+         WHERE (
+              (a.reference_no LIKE 'LP-%' AND a.reference_no IN (
+                 SELECT reference_number FROM livelihood_assistance 
+                 WHERE assistance_status IN ('for_release', 'released', 'FOR RELEASE', 'RELEASED')
+              ))
+           OR (a.module = 'Livelihood' AND a.reference_no IN (
+                 SELECT reference_number FROM livelihood_assistance 
+                 WHERE assistance_status IN ('for_release', 'released', 'FOR RELEASE', 'RELEASED')
+              ))
+           OR (a.module = 'Child Welfare')
+           OR (a.module = 'AICS')
+           OR (a.module IN ('PWD', 'Senior Citizen', 'Solo Parent') AND LOWER(COALESCE(a.concern, '')) LIKE '%assist%')
+           OR a.reference_no IN (
+             SELECT reference_no FROM aics_applications WHERE status IN ('approved', 'completed', 'for_release')
+           )
+           OR a.reference_no IN (
+             SELECT reference_number FROM pwd_senior_applications 
+             WHERE status IN ('approved', 'completed', 'for_release')
+               AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR extra_data::text ILIKE '%assist%')
+           )
          )
-         OR a.reference_no IN (
-           SELECT reference_number FROM pwd_senior_applications 
-           WHERE status IN ('approved', 'completed', 'for_release')
-             AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR service ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR extra_data ILIKE '%assist%')
-         )
-       )
-       AND a.reference_no NOT IN (SELECT reference_no FROM deleted_appointments)
-       ORDER BY a.created_at DESC`
-    );
-    res.json({ appointments: result.rows, deletedReferences: Array.from(deletedSet) });
+         AND a.reference_no NOT IN (SELECT reference_no FROM deleted_appointments)
+         ORDER BY a.created_at DESC`
+      );
+      rows = result.rows;
+    } catch (queryErr) {
+      console.warn('[Appointments get fallback]:', queryErr.message);
+      const simple = await db.query('SELECT * FROM appointments ORDER BY id DESC LIMIT 200');
+      rows = simple.rows.filter(r => !deletedSet.has(String(r.reference_no || '').toLowerCase().trim()));
+    }
+
+    res.json({ appointments: rows, deletedReferences: Array.from(deletedSet) });
   } catch (err) {
+    console.error('getAppointments error:', err);
     res.status(500).json({ error: 'Failed to fetch appointments.', details: err.message });
   }
 };

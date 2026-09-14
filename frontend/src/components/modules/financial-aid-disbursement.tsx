@@ -469,15 +469,9 @@ export default function FinancialAidDisbursement() {
       {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-            Financial Aid & Cash Assistance Module
-          </span>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Financial Aid Disbursement
           </h1>
-          <p className="text-sm text-gray-500 max-w-2xl">
-            Automatically synchronized with <strong>Admin Appointments</strong> and <strong>Applications</strong>. Assistance amount is fixed and transitions to <strong>RELEASED</strong> upon payout schedule or confirmation.
-          </p>
         </div>
 
         <button

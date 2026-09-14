@@ -133,6 +133,21 @@ function sanitizeAppRow(row) {
   if (cleanRow.photo_url && typeof cleanRow.photo_url === 'string' && cleanRow.photo_url.startsWith('data:')) {
     cleanRow.photo_url = cleanRow.applicant_photo && !cleanRow.applicant_photo.startsWith('data:') ? cleanRow.applicant_photo : '';
   }
+
+  // Ensure valid submission and creation timestamps
+  const rawDate = cleanRow.created_at || cleanRow.submitted_at || cleanRow.submittedAt || cleanRow.dateSubmitted || cleanRow.updated_at;
+  let validDate = new Date().toISOString();
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) {
+      validDate = parsed.toISOString();
+    }
+  }
+  cleanRow.created_at = cleanRow.created_at || validDate;
+  cleanRow.submittedAt = validDate;
+  cleanRow.submitted_at = validDate;
+  cleanRow.dateSubmitted = validDate;
+
   return stripLargeDataUrls(cleanRow);
 }
 

@@ -400,11 +400,41 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
   return uniqueDocs.length > 0 ? uniqueDocs : docs
 }
 
+function safeDateIso(dateVal: any): string {
+  if (!dateVal) return new Date().toISOString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+}
+
+function formatSafeDate(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleDateString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toLocaleDateString() : d.toLocaleDateString()
+}
+
+function formatSafeTime(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const d = new Date(dateVal)
+  return isNaN(d.getTime())
+    ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+}
+
+function formatSafeDateTime(dateVal: any): string {
+  if (!dateVal) return new Date().toLocaleString()
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString()
+}
+
 function mapSoloParentRow(row: any): SoloParentSubmission {
   if (!row) return {} as any
+  const rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.updated_at
+  const safeSubmittedAt = safeDateIso(rawDate)
+
   if (row.id && String(row.id).startsWith("SP-") && row.category === "Solo Parent") {
     return {
       ...row,
+      submittedAt: safeSubmittedAt,
       documents: (row.uploaded_documents && Array.isArray(row.uploaded_documents) && row.uploaded_documents.length > 0)
         ? mapUploadedDocuments(row, false)
         : (Array.isArray(row.documents) && row.documents.length > 0 ? row.documents : mapUploadedDocuments(row, false)),
@@ -488,7 +518,7 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
 
   return {
     id: `SP-${rawId}`,
-    submittedAt: row.submittedAt || row.created_at || new Date().toISOString(),
+    submittedAt: safeSubmittedAt,
     referenceNumber: row.referenceNumber || row.reference_number || "",
     category: "Solo Parent",
     applicationType: row.applicationType || row.application_type || fdFormData.idStatus || formData.idStatus || "new",
@@ -568,9 +598,13 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
 
 function mapChildWelfareRow(row: any): ChildWelfareSubmission {
   if (!row) return {} as any
+  const rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.updated_at
+  const safeSubmittedAt = safeDateIso(rawDate)
+
   if (row.id && String(row.id).startsWith("CW-") && row.category === "Child Welfare") {
     return {
       ...row,
+      submittedAt: safeSubmittedAt,
       documents: Array.isArray(row.documents) ? row.documents : mapUploadedDocuments(row, true),
     }
   }
@@ -579,7 +613,7 @@ function mapChildWelfareRow(row: any): ChildWelfareSubmission {
 
   return {
     id: `CW-${rawId}`,
-    submittedAt: row.submittedAt || row.created_at || new Date().toISOString(),
+    submittedAt: safeSubmittedAt,
     referenceNumber: row.referenceNumber || row.reference_number || "",
     category: "Child Welfare",
     supportCategory: row.supportCategory || row.category_title || "",
@@ -1286,8 +1320,7 @@ function ApplicationCard({ app, onView, onShowCard, allSubmissions }: CardProps)
           </div>
           <p className="gw-mono text-xs mb-1" style={{ color: "var(--ink-faint)" }}>REF {app.referenceNumber}</p>
           <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-            Submitted {new Date(app.submittedAt).toLocaleDateString()} ·{" "}
-            {new Date(app.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            Submitted {formatSafeDate(app.submittedAt)} · {formatSafeTime(app.submittedAt)}
           </p>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -2397,7 +2430,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allSubmis
   <span style={{ color: "var(--ink-soft)" }}>{docIcon(doc.filename)}</span>
   <div className="min-w-0 flex-1">
     <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>{doc.name}</p>
-    <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{new Date(doc.uploadedAt).toLocaleString()}</p>
+    <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{formatSafeDateTime(doc.uploadedAt || app.submittedAt)}</p>
   </div>
   <span className={`gw-status ${m.text} shrink-0`}>
     <span className={`gw-dot ${m.dot}`} />
@@ -2552,7 +2585,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allSubmis
           {app.status === "approved" && (
             <div className="rounded-lg p-4" style={{ background: "var(--forest-soft)", border: "1px solid var(--forest-line)" }}>
               <p className="text-sm" style={{ color: "var(--forest-ink)" }}>
-                <strong>Approved</strong> on {new Date(app.approvedDate!).toLocaleDateString()} by {app.approvedBy}
+                <strong>Approved</strong> on {formatSafeDate(app.approvedDate || (app as any).updated_at || app.submittedAt)} by {app.approvedBy || "Social Worker Staff"}
               </p>
               {isSoloParent(app) && app.assignedIdNumber && (
                 <p className="text-sm mt-2 gw-mono" style={{ color: "var(--forest-ink)" }}>
@@ -2693,7 +2726,7 @@ export default function SoloParentChildWelfareAdmin() {
         const localSolo = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
         const nextSolo = localSolo.map((a: any) =>
           a.id === app.id || (targetRef && a.referenceNumber === targetRef)
-            ? { ...a, status: "approved", assigned_id_number: value, solo_parent_id_number: value, approved_by: "Social Worker Staff", updated_at: approvedDate }
+            ? { ...a, status: "approved", assigned_id_number: value, solo_parent_id_number: value, approved_by: "Social Worker Staff", updated_at: approvedDate, approved_date: approvedDate, approvedDate, submittedAt: a.submittedAt || a.created_at || approvedDate }
             : a
         )
         localStorage.setItem("solo_parent_applications", JSON.stringify(nextSolo))
@@ -2701,7 +2734,7 @@ export default function SoloParentChildWelfareAdmin() {
         const localChild = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
         const nextChild = localChild.map((a: any) =>
           a.id === app.id || (targetRef && a.referenceNumber === targetRef)
-            ? { ...a, status: "approved", approved_amount: value, approved_by: "Social Worker Staff", updated_at: approvedDate }
+            ? { ...a, status: "approved", approved_amount: value, approved_by: "Social Worker Staff", updated_at: approvedDate, approved_date: approvedDate, approvedDate, submittedAt: a.submittedAt || a.created_at || approvedDate }
             : a
         )
         localStorage.setItem("child_welfare_applications", JSON.stringify(nextChild))
