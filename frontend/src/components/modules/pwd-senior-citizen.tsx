@@ -2481,7 +2481,9 @@ export default function PWDSeniorCitizen() {
         let combined: ApplicationSubmission[] = []
         let backendFetched = false
         try {
-          const res = await fetch(`${API_BASE}/api/pwd-senior/applications`)
+          const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
+            cache: "no-store",
+          })
           if (res.ok) {
             const data = await res.json()
             if (Array.isArray(data)) {

@@ -791,28 +791,58 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           : "new"
 
       const prof = getCurrentUserProfile()
-      const loggedQcid = (getLoggedInUserQcid() || userProfile?.qcidNo || prof?.qcidNo || prof?.qcidNumber || "110000116932100").trim().toLowerCase()
+      const loggedQcid = (getLoggedInUserQcid() || userProfile?.qcidNo || prof?.qcidNo || prof?.qcidNumber || "110000572516915").trim().toLowerCase()
       const email = (userProfile?.email || prof?.email || "").trim().toLowerCase()
       const userLastName = (userProfile?.lastName || prof?.lastName || "").trim().toLowerCase()
       const userFirstName = (userProfile?.firstName || prof?.firstName || "").trim().toLowerCase()
+      const userFullName = `${userFirstName} ${userProfile?.middleName || prof?.middleName || ""} ${userLastName}`.toLowerCase().trim()
+      const currentUid = String(userProfile?.id || (userProfile as any)?.userId || prof?.id || "").trim()
 
       const checkUserMatches = (a: any) => {
         if (!a) return false
         const aEmail = (a.email || "").trim().toLowerCase()
-        const aRef = (a.referenceNumber || a.reference_no || a.qcid || "").trim().toLowerCase()
+        const aRef = (a.referenceNumber || a.reference_no || a.qcid || a.qcidNo || a.qcid_number || a.id || "").trim().toLowerCase()
         const aAssigned = (a.assignedIdNumber || "").trim().toLowerCase()
         const aCat = String(a.category || "").toUpperCase()
         const aLastName = (a.lastName || "").trim().toLowerCase()
         const aFirstName = (a.firstName || "").trim().toLowerCase()
+        const aFullName = (a.applicantName || a.applicant_name || `${aFirstName} ${aLastName}`).trim().toLowerCase()
+        const aUid = String(a.userId || a.user_id || "").trim()
 
         const isPwdCategory = aCat === "PWD" || aCat.includes("DISABILITY") || String(a.service || "").toLowerCase().includes("pwd")
         if (!isPwdCategory) return false
 
-        const isQcidMatch = loggedQcid && (aRef === loggedQcid || aAssigned === loggedQcid || aRef.includes(loggedQcid) || loggedQcid.includes(aRef))
-        const isEmailMatch = email && aEmail && aEmail === email
-        const isNameMatch = userLastName && aLastName && userLastName === aLastName && (!userFirstName || !aFirstName || userFirstName === aFirstName)
+        // 1. User ID match
+        if (currentUid && aUid && currentUid === aUid && currentUid !== "0") return true
 
-        return Boolean(isQcidMatch || isEmailMatch || isNameMatch)
+        // 2. QCID / Reference match
+        if (loggedQcid) {
+          if (aRef === loggedQcid || aAssigned === loggedQcid || aRef.includes(loggedQcid) || loggedQcid.includes(aRef)) return true
+          const userDigits = loggedQcid.replace(/\D/g, "")
+          const appRefDigits = aRef.replace(/\D/g, "")
+          if (userDigits.length >= 8 && (appRefDigits === userDigits || appRefDigits.includes(userDigits) || userDigits.includes(appRefDigits))) return true
+        }
+
+        // 3. Email match
+        if (email && aEmail && aEmail === email) return true
+
+        // 4. Name match (Last name matches + First name matches or contains)
+        if (userLastName && aLastName) {
+          const lastNameMatch = userLastName === aLastName || aLastName.includes(userLastName) || userLastName.includes(aLastName)
+          if (lastNameMatch) {
+            if (!userFirstName || !aFirstName) return true
+            if (userFirstName === aFirstName) return true
+            if (aFirstName.includes(userFirstName) || userFirstName.includes(aFirstName)) return true
+            if (aFullName.includes(userFirstName) || userFullName.includes(aFirstName)) return true
+          }
+        }
+
+        // 5. Full name match
+        if (userFullName && aFullName && (userFullName === aFullName || aFullName.includes(userLastName) && aFullName.includes(userFirstName))) {
+          return true
+        }
+
+        return false
       }
 
       let allUserPwdApps: any[] = []
@@ -820,7 +850,9 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
 
       // Check backend API first
       try {
-        const res = await fetch(`${API_BASE}/api/pwd-senior/applications`)
+        const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
+          cache: "no-store",
+        })
         if (res.ok && isMounted) {
           const apps = await res.json()
           if (Array.isArray(apps)) {
@@ -877,16 +909,16 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
 
       // If user is on "new" application flow:
       if (expectedType === "new") {
-        if (pendingFlow) {
-          setBlockedApp(pendingFlow)
-          setLatestApprovedApp(null)
-          setIsBlocked(true)
-          setActiveAppStatus("pending")
-        } else if (approvedAny) {
+        if (approvedAny) {
           setBlockedApp(approvedAny)
           setLatestApprovedApp(approvedAny)
           setIsBlocked(true)
           setActiveAppStatus("approved")
+        } else if (pendingFlow) {
+          setBlockedApp(pendingFlow)
+          setLatestApprovedApp(null)
+          setIsBlocked(true)
+          setActiveAppStatus("pending")
         } else {
           setBlockedApp(null)
           setLatestApprovedApp(null)

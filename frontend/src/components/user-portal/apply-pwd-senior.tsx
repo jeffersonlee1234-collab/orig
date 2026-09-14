@@ -51,12 +51,13 @@ export default function ApplyPWDSenior() {
     let isMounted = true
 
     const checkActiveApp = async () => {
-      if (bypassedBlockRef.current) return
       try {
         let backendApps: any[] = []
         let backendFetched = false
         try {
-          const res = await fetch(`${API_BASE}/api/pwd-senior/applications`)
+          const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
+            cache: "no-store",
+          })
           if (res.ok) {
             const data = await res.json()
             if (Array.isArray(data)) {
@@ -77,10 +78,16 @@ export default function ApplyPWDSenior() {
         } catch {}
 
         let allApps: any[] = []
-        if (backendFetched) {
+        if (backendFetched && backendApps.length > 0) {
           allApps = [...backendApps]
+          // Merge any newer local statuses if backend had a temporary lag
+          for (const la of localApps) {
+            if (la && !allApps.some((ba) => (ba.id && ba.id === la.id) || (ba.referenceNumber && ba.referenceNumber === la.referenceNumber))) {
+              allApps.push(la)
+            }
+          }
           try {
-            localStorage.setItem("pwd_senior_applications", JSON.stringify(backendApps))
+            localStorage.setItem("pwd_senior_applications", JSON.stringify(allApps))
           } catch {}
         } else {
           allApps = [...localApps]
@@ -91,125 +98,221 @@ export default function ApplyPWDSenior() {
         const currentEmail = (userProf?.email || "").toLowerCase().trim()
         const currentLastName = (userProf?.lastName || "").toLowerCase().trim()
         const currentFirstName = (userProf?.firstName || "").toLowerCase().trim()
+        const currentFullName = `${currentFirstName} ${userProf?.middleName || ""} ${currentLastName}`.toLowerCase().trim()
+        const currentUid = String(userProf?.id || (userProf as any)?.userId || "").trim()
 
-        const isMatchForCurrentService = (a: any) => {
+        const isUserMatch = (a: any) => {
           if (!a) return false
 
-          const appCategory = String(a.category || "").toLowerCase()
-          const appType = String(a.type || a.assistanceType || a.service || "").toLowerCase()
-          const appService = String(a.service || "").toLowerCase()
-          const isSeniorCat = appCategory.includes("senior") || appService.includes("senior")
-          const isPwdCat = appCategory.includes("pwd") || appCategory.includes("disability") || appService.includes("pwd") || (!isSeniorCat && (appCategory === "pwd" || appCategory === "disability"))
-
-          if (isAssistance) {
-            // PWD Social Assistance
-            if (isSeniorCat) return false
-            const isAssistanceType =
-              appType === "assistance" ||
-              appType === "social-assistance" ||
-              appCategory.includes("assistance") ||
-              appService.includes("assistance") ||
-              (isPwdCat && (appType === "assistance" || appType === "social-assistance")) ||
-              (a.documents || []).some((d: any) => String(d.name || "").toLowerCase().includes("indigency") || String(d.name || "").toLowerCase().includes("pwdqcid"))
-            if (!isAssistanceType) return false
-          } else if (isSeniorSocial) {
-            // Senior Social Assistance
-            if (!isSeniorCat) return false
-            const isSeniorSocialType =
-              (isSeniorCat && (appType === "social-assistance" || appType === "assistance")) ||
-              appService.includes("senior social")
-            if (!isSeniorSocialType) return false
-          } else if (isSeniorMedicine) {
-            if (!isSeniorCat || !(appType === "medicine-booklet" || appType.includes("medicine"))) return false
-          } else if (isSeniorMovie) {
-            if (!isSeniorCat || !(appType === "movie-booklet" || appType.includes("movie"))) return false
-          } else if (isSeniorId) {
-            if (!isSeniorCat || appType.includes("assistance") || appType.includes("booklet") || appType.includes("medicine") || appType.includes("movie") || appService.includes("assistance")) return false
-            if (urlType === "loss") {
-              if (appType !== "loss" && appType !== "replacement") return false
-            } else if (urlType === "renewal") {
-              if (appType !== "renewal") return false
-            } else {
-              if (appType === "loss" || appType === "replacement" || appType === "renewal") return false
-            }
-          } else {
-            // PWD ID
-            if (isSeniorCat || !isPwdCat || appType.includes("assistance") || appCategory.includes("assistance") || appService.includes("assistance") || appType.includes("booklet") || appType.includes("medicine") || appType.includes("movie")) return false
-            if (urlType === "loss") {
-              if (appType !== "loss" && appType !== "replacement") return false
-            } else if (urlType === "renewal") {
-              if (appType !== "renewal") return false
-            } else {
-              if (appType === "loss" || appType === "replacement" || appType === "renewal") return false
-            }
-          }
-
-          const appRef = String(a.referenceNumber || a.reference_number || a.qc_id || a.qcid || "").trim()
+          const appRef = String(a.referenceNumber || a.reference_number || a.reference_no || a.id || "").toLowerCase().trim()
+          const appQcid = String(a.qcid || a.qc_id || a.qcidNo || a.qcidNumber || a.qcid_number || "").toLowerCase().trim()
+          const appAssigned = String(a.assignedIdNumber || a.assigned_id_number || "").toLowerCase().trim()
           const appEmail = String(a.email || "").toLowerCase().trim()
           const appLastName = String(a.lastName || a.last_name || "").toLowerCase().trim()
           const appFirstName = String(a.firstName || a.first_name || "").toLowerCase().trim()
+          const appFullName = String(a.applicantName || a.applicant_name || `${appFirstName} ${appLastName}`).toLowerCase().trim()
+          const appUid = String(a.userId || a.user_id || "").trim()
 
-          const matchUser =
-            (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid)) || a.qcid === currentQcid || a.qc_id === currentQcid)) ||
-            (currentEmail && appEmail && currentEmail === appEmail) ||
-            (currentLastName && appLastName && currentFirstName && appFirstName && currentLastName === appLastName && currentFirstName === appFirstName)
+          // 1. User ID match
+          if (currentUid && appUid && currentUid === appUid && currentUid !== "0") return true
 
-          return Boolean(matchUser)
-        }
-
-        const isApprovedMatch = (a: any) => {
-          if (!a) return false
-          const appCategory = String(a.category || "").toLowerCase()
-          const appType = String(a.type || a.assistanceType || a.service || "").toLowerCase()
-          const appService = String(a.service || "").toLowerCase()
-          const appStatus = String(a.status || "").toLowerCase()
-
-          if (appStatus !== "approved" && appStatus !== "completed" && appStatus !== "for_release") return false
-
-          const isSeniorCat = appCategory.includes("senior") || appService.includes("senior")
-          const isPwdCat = appCategory.includes("pwd") || appCategory.includes("disability") || appService.includes("pwd")
-
-          if (isSenior) {
-            if (!isSeniorCat) return false
-          } else {
-            if (isSeniorCat || !isPwdCat || appType.includes("assistance") || appService.includes("assistance")) return false
+          // 2. QCID / Reference match
+          const qcidClean = currentQcid.toLowerCase().trim()
+          if (qcidClean) {
+            if (appRef === qcidClean || appQcid === qcidClean || appAssigned === qcidClean) return true
+            if (qcidClean.length >= 8 && (appRef.includes(qcidClean) || appQcid.includes(qcidClean) || appAssigned.includes(qcidClean))) return true
+            if (appRef.length >= 8 && qcidClean.includes(appRef)) return true
+            const userDigits = qcidClean.replace(/\D/g, "")
+            const appRefDigits = appRef.replace(/\D/g, "")
+            const appQcidDigits = appQcid.replace(/\D/g, "")
+            if (userDigits.length >= 8 && (appRefDigits === userDigits || appQcidDigits === userDigits || appRefDigits.includes(userDigits) || userDigits.includes(appRefDigits))) return true
           }
 
-          const appRef = String(a.referenceNumber || a.reference_number || a.id || a.qc_id || a.qcid || "").trim().toLowerCase()
-          const appAssigned = String(a.assignedIdNumber || "").trim().toLowerCase()
-          const appEmail = String(a.email || "").toLowerCase().trim()
-          const qcidClean = (currentQcid || "").toLowerCase()
+          // 3. Email match
+          if (currentEmail && appEmail && currentEmail === appEmail) return true
 
-          return (
-            (qcidClean && (appRef === qcidClean || appRef.includes(qcidClean) || qcidClean.includes(appRef) || appAssigned === qcidClean)) ||
-            (currentEmail && appEmail && currentEmail === appEmail)
-          )
+          // 4. Name match (Last name matches + First name matches or contains)
+          if (currentLastName && appLastName) {
+            const lastNameMatch = currentLastName === appLastName || appLastName.includes(currentLastName) || currentLastName.includes(appLastName)
+            if (lastNameMatch) {
+              if (!currentFirstName || !appFirstName) return true
+              if (currentFirstName === appFirstName) return true
+              if (appFirstName.includes(currentFirstName) || currentFirstName.includes(appFirstName)) return true
+              if (appFullName.includes(currentFirstName) || currentFullName.includes(appFirstName)) return true
+            }
+          }
+
+          // 5. Full name match
+          if (currentFullName && appFullName && (currentFullName === appFullName || appFullName.includes(currentLastName) && appFullName.includes(currentFirstName))) {
+            return true
+          }
+
+          return false
         }
 
-        const userMatchingApps = allApps.filter(isMatchForCurrentService)
-        const matchedApproved = userMatchingApps.find((a) => {
-          const s = String(a.status || "").toLowerCase()
-          return s === "approved" || s === "completed" || s === "for_release"
-        })
-        const matchedPending = userMatchingApps.find((a) => {
-          const s = String(a.status || "pending").toLowerCase()
-          return (s === "pending" || s === "under_review") && (!matchedApproved || a.id !== matchedApproved.id)
-        })
-        const matchedApprovedGlobal = allApps.find(isApprovedMatch)
+        // Filter all applications belonging to this user
+        const userApps = allApps.filter(isUserMatch)
 
-        if (isMounted && !bypassedBlockRef.current) {
-          const isNewApp = urlType === "new" || !urlType;
-          if (isNewApp && matchedApproved) {
-            setIsBlocked(true)
-            setBlockedApp(matchedApproved)
-          } else if (matchedPending) {
-            setIsBlocked(true)
-            setBlockedApp(matchedPending)
-          } else {
-            setIsBlocked(false)
-            setBlockedApp(null)
+        // Classify applications for Senior Citizen vs PWD
+        const seniorApps = userApps.filter((a) => {
+          const cat = String(a.category || "").toLowerCase()
+          const srv = String(a.service || "").toLowerCase()
+          return cat.includes("senior") || srv.includes("senior")
+        })
+
+        const pwdApps = userApps.filter((a) => {
+          const cat = String(a.category || "").toLowerCase()
+          const srv = String(a.service || "").toLowerCase()
+          const isSeniorCat = cat.includes("senior") || srv.includes("senior")
+          return !isSeniorCat && (cat.includes("pwd") || cat.includes("disability") || srv.includes("pwd") || cat === "pwd")
+        })
+
+        const relevantApps = isSenior ? seniorApps : pwdApps
+
+        // Check for specific sub-services
+        if (isSeniorMedicine) {
+          const medApps = seniorApps.filter((a) => {
+            const t = String(a.type || a.service || "").toLowerCase()
+            return t.includes("medicine")
+          })
+          const approvedMed = medApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
+          const pendingMed = medApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          if (isMounted) {
+            if (approvedMed) {
+              setIsBlocked(true)
+              setBlockedApp(approvedMed)
+            } else if (pendingMed) {
+              setIsBlocked(true)
+              setBlockedApp(pendingMed)
+            } else {
+              setIsBlocked(false)
+              setBlockedApp(null)
+            }
           }
-          setHasApprovedApp(Boolean(matchedApprovedGlobal && isNewApp))
+        } else if (isSeniorMovie) {
+          const movieApps = seniorApps.filter((a) => {
+            const t = String(a.type || a.service || "").toLowerCase()
+            return t.includes("movie")
+          })
+          const approvedMovie = movieApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
+          const pendingMovie = movieApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          if (isMounted) {
+            if (approvedMovie) {
+              setIsBlocked(true)
+              setBlockedApp(approvedMovie)
+            } else if (pendingMovie) {
+              setIsBlocked(true)
+              setBlockedApp(pendingMovie)
+            } else {
+              setIsBlocked(false)
+              setBlockedApp(null)
+            }
+          }
+        } else if (isSeniorSocial) {
+          const socialApps = seniorApps.filter((a) => {
+            const t = String(a.type || a.service || a.assistanceType || "").toLowerCase()
+            return t.includes("assistance") || t.includes("social")
+          })
+          const approvedSocial = socialApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
+          const pendingSocial = socialApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          if (isMounted) {
+            if (approvedSocial) {
+              setIsBlocked(true)
+              setBlockedApp(approvedSocial)
+            } else if (pendingSocial) {
+              setIsBlocked(true)
+              setBlockedApp(pendingSocial)
+            } else {
+              setIsBlocked(false)
+              setBlockedApp(null)
+            }
+          }
+        } else if (isAssistance) {
+          const pwdAssistanceApps = pwdApps.filter((a) => {
+            const t = String(a.type || a.service || a.assistanceType || "").toLowerCase()
+            return t.includes("assistance") || t.includes("social") || (a.documents || []).some((d: any) => String(d.name || "").toLowerCase().includes("indigency"))
+          })
+          const approvedAssistance = pwdAssistanceApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
+          const pendingAssistance = pwdAssistanceApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          if (isMounted) {
+            if (approvedAssistance) {
+              setIsBlocked(true)
+              setBlockedApp(approvedAssistance)
+            } else if (pendingAssistance) {
+              setIsBlocked(true)
+              setBlockedApp(pendingAssistance)
+            } else {
+              setIsBlocked(false)
+              setBlockedApp(null)
+            }
+          }
+        } else {
+          // ID Cards (Senior Citizen ID or PWD ID)
+          const idApps = relevantApps.filter((a) => {
+            const t = String(a.type || a.service || "").toLowerCase()
+            const isSub = t.includes("booklet") || t.includes("medicine") || t.includes("movie") || t.includes("assistance")
+            return !isSub
+          })
+
+          // Check if user has ANY approved ID application
+          const anyApprovedId = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            return s === "approved" || s === "completed" || s === "for_release"
+          })
+
+          // Check for pending applications matching current sub-flow
+          const pendingNew = idApps.find((a) => {
+            const s = String(a.status || "pending").toLowerCase()
+            const t = String(a.type || "new").toLowerCase()
+            return (s === "pending" || s === "under_review") && t !== "renewal" && t !== "loss" && t !== "replacement"
+          })
+          const pendingRenewal = idApps.find((a) => {
+            const s = String(a.status || "pending").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "pending" || s === "under_review") && t === "renewal"
+          })
+          const pendingLoss = idApps.find((a) => {
+            const s = String(a.status || "pending").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "pending" || s === "under_review") && (t === "loss" || t === "replacement")
+          })
+
+          if (isMounted) {
+            if (urlType === "new" || !urlType) {
+              // On New Application: if user ALREADY has an approved ID, STRICTLY block and show Approved ID
+              if (anyApprovedId) {
+                setIsBlocked(true)
+                setBlockedApp(anyApprovedId)
+                setHasApprovedApp(true)
+              } else if (pendingNew) {
+                setIsBlocked(true)
+                setBlockedApp(pendingNew)
+                setHasApprovedApp(false)
+              } else {
+                setIsBlocked(false)
+                setBlockedApp(null)
+                setHasApprovedApp(false)
+              }
+            } else if (urlType === "renewal") {
+              if (pendingRenewal) {
+                setIsBlocked(true)
+                setBlockedApp(pendingRenewal)
+              } else {
+                setIsBlocked(false)
+                setBlockedApp(null)
+              }
+              setHasApprovedApp(Boolean(anyApprovedId))
+            } else if (urlType === "loss") {
+              if (pendingLoss) {
+                setIsBlocked(true)
+                setBlockedApp(pendingLoss)
+              } else {
+                setIsBlocked(false)
+                setBlockedApp(null)
+              }
+              setHasApprovedApp(Boolean(anyApprovedId))
+            }
+          }
         }
       } catch (err) {
         console.warn("Eligibility check skipped/offline:", err)
@@ -217,7 +320,7 @@ export default function ApplyPWDSenior() {
     }
 
     checkActiveApp()
-    const pollInterval = setInterval(checkActiveApp, 5000)
+    const pollInterval = setInterval(checkActiveApp, 1500)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       checkActiveApp()
@@ -374,8 +477,8 @@ export default function ApplyPWDSenior() {
   ]
 
   // Render blocked active application UI directly (for PWD, Senior, Booklets, and Assistance wizards)
-  if (isBlocked && !bypassedBlock) {
-    const isAppApproved = String(blockedApp?.status || "").toLowerCase() === "approved" || String(blockedApp?.status || "").toLowerCase() === "completed" || String(blockedApp?.status || "").toLowerCase() === "for_release"
+  const isAppApproved = String(blockedApp?.status || "").toLowerCase() === "approved" || String(blockedApp?.status || "").toLowerCase() === "completed" || String(blockedApp?.status || "").toLowerCase() === "for_release"
+  if (isBlocked && (!bypassedBlock || isAppApproved)) {
     const displayRef = blockedApp?.referenceNumber || blockedApp?.reference_no || blockedApp?.reference_number || blockedApp?.id || blockedApp?.qc_id || blockedApp?.qcid || getLoggedInUserQcid() || "110000572516915"
     const assignedBookletNo = blockedApp?.assignedIdNumber || blockedApp?.assigned_id_number || blockedApp?.bookletNumber || blockedApp?.existingBookletNumber
     const displayDate = blockedApp?.created_at || blockedApp?.submittedAt || blockedApp?.dateSubmitted
