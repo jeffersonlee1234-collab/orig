@@ -663,6 +663,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           email: p.email || prev.email,
           bloodType: p.bloodType || prev.bloodType || "O+",
           permanentAddress: prev.permanentAddress || p.permanentAddress || fullAddr,
+          presentAddress: prev.presentAddress || p.presentAddress || p.permanentAddress || fullAddr,
           emergencyFirstName: prev.emergencyFirstName || p.emergencyFirstName || "",
           emergencyLastName: prev.emergencyLastName || p.emergencyLastName || "",
           emergencyContactNo: prev.emergencyContactNo || p.emergencyContactNo || (p.contactNo ? String(p.contactNo).replace(/\s+/g, "") : ""),
@@ -770,6 +771,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       email: prof.email || "",
       bloodType: prof.bloodType || (prof as any).blood_type || "O+",
       permanentAddress: prof.permanentAddress || fullAddr,
+      presentAddress: prof.presentAddress || prof.permanentAddress || fullAddr,
       emergencyFirstName: prof.emergencyFirstName || "",
       emergencyLastName: prof.emergencyLastName || "",
       emergencyContactNo: prof.emergencyContactNo || (prof.contactNo ? String(prof.contactNo).replace(/\s+/g, "") : ""),
@@ -2713,21 +2715,39 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field
-                    label={t("pwdPermanentAddressLabel")}
-                    required
-                    invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
-                    invalidNote="Required"
-                  >
-                    <TextInput
-                      value={formData.permanentAddress}
-                      onChange={(v) => updateField("permanentAddress", v)}
-                      placeholder="Permanent Address"
-                      invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
+                  <Field label={`${t("pwdPermanentAddressLabel")} *`}>
+                    <LockedField
+                      value={
+                        formData.permanentAddress ||
+                        userProfile?.permanentAddress ||
+                        [
+                          formData.addressHouseNo || userProfile?.addressHouseNo || (userProfile as any)?.houseNo,
+                          formData.addressStreet || userProfile?.addressStreet || (userProfile as any)?.street,
+                          formData.addressBarangay || userProfile?.addressBarangay || (userProfile as any)?.barangay || "Sauyo",
+                          formData.addressCity || userProfile?.addressCity || (userProfile as any)?.city || "QUEZON CITY",
+                        ]
+                          .filter(Boolean)
+                          .join(", ")
+                      }
                     />
                   </Field>
                   <Field label={t("pwdPresentAddressLabel")}>
-                    <TextInput value={formData.presentAddress} onChange={(v) => updateField("presentAddress", v)} placeholder="Present Address (kung iba sa permanent)" />
+                    <LockedField
+                      value={
+                        formData.presentAddress ||
+                        formData.permanentAddress ||
+                        userProfile?.presentAddress ||
+                        userProfile?.permanentAddress ||
+                        [
+                          formData.addressHouseNo || userProfile?.addressHouseNo || (userProfile as any)?.houseNo,
+                          formData.addressStreet || userProfile?.addressStreet || (userProfile as any)?.street,
+                          formData.addressBarangay || userProfile?.addressBarangay || (userProfile as any)?.barangay || "Sauyo",
+                          formData.addressCity || userProfile?.addressCity || (userProfile as any)?.city || "QUEZON CITY",
+                        ]
+                          .filter(Boolean)
+                          .join(", ")
+                      }
+                    />
                   </Field>
                 </div>
               </div>
