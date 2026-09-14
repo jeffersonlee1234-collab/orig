@@ -1025,11 +1025,11 @@ export default function SoloParentApplicationWizard({
       const apps = await fetchAllSoloParentApps()
       const prof = getCurrentUserProfile()
 
-      // 1. Find Solo Parent applications from local cache & user apps
+      // 1. Find Solo Parent applications from local cache & user apps (must be APPROVED)
       const soloApps = apps.filter((a) => {
         if (!a) return false
         const cat = String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase()
-        return (
+        const isSoloParent =
           cat.includes("solo") ||
           cat.includes("parent") ||
           Boolean(a.solo_parent_id_number) ||
@@ -1038,10 +1038,11 @@ export default function SoloParentApplicationWizard({
           Boolean(a.family_members) ||
           Boolean(a.familyMembers) ||
           Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
-        )
+        const isApproved = a.status === "approved" || a.status === "completed" || a.status === "for_release"
+        return isSoloParent && isApproved
       })
 
-      // Match against approved or existing user records
+      // Match against approved user records
       let matchedApp = soloApps.find((a) => {
         const aAssignedDigits = String(a.assigned_id_number || a.assignedIdNumber || "").replace(/\D/g, "")
         const aSoloIdDigits = String(a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
@@ -1061,11 +1062,6 @@ export default function SoloParentApplicationWizard({
         return Boolean(matchDigits || matchExactString)
       })
 
-      // If user has any solo parent record in account, use that as base
-      if (!matchedApp && soloApps.length > 0) {
-        matchedApp = soloApps[0]
-      }
-
       // 2. Direct backend query fallback if not in local cache
       if (!matchedApp) {
         try {
@@ -1076,14 +1072,17 @@ export default function SoloParentApplicationWizard({
           if (resVerify.ok) {
             const dataVerify = await resVerify.json()
             if (dataVerify.verified && dataVerify.application) {
-              matchedApp = dataVerify.application
+              const isApproved = dataVerify.application.status === "approved" || dataVerify.application.status === "completed" || dataVerify.application.status === "for_release"
+              if (isApproved) {
+                matchedApp = dataVerify.application
+              }
             }
           }
         } catch {}
       }
 
-      // If valid Solo Parent ID format (digits >= 6) or matched application
-      if (matchedApp || cleanDigits.length >= 6) {
+      // If matched approved Solo Parent application
+      if (matchedApp) {
         setIsIdVerified(true)
         setVerifyError("")
         const applicantName = `${matchedApp?.first_name || matchedApp?.firstName || prof.firstName || userProfile?.firstName || ""} ${matchedApp?.last_name || matchedApp?.lastName || prof.lastName || userProfile?.lastName || ""}`.trim() || "SOLO PARENT APPLICANT"
