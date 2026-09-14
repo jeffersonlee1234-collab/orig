@@ -198,7 +198,8 @@ export default function ApplyPWDSenior() {
         const matchedApprovedGlobal = allApps.find(isApprovedMatch)
 
         if (isMounted && !bypassedBlockRef.current) {
-          if (matchedApproved) {
+          const isNewApp = urlType === "new" || !urlType;
+          if (isNewApp && matchedApproved) {
             setIsBlocked(true)
             setBlockedApp(matchedApproved)
           } else if (matchedPending) {
@@ -208,7 +209,7 @@ export default function ApplyPWDSenior() {
             setIsBlocked(false)
             setBlockedApp(null)
           }
-          setHasApprovedApp(Boolean(matchedApprovedGlobal && (urlType === "new" || !urlType)))
+          setHasApprovedApp(Boolean(matchedApprovedGlobal && isNewApp))
         }
       } catch (err) {
         console.warn("Eligibility check skipped/offline:", err)
@@ -216,7 +217,7 @@ export default function ApplyPWDSenior() {
     }
 
     checkActiveApp()
-    const pollInterval = setInterval(checkActiveApp, 2000)
+    const pollInterval = setInterval(checkActiveApp, 5000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       checkActiveApp()
