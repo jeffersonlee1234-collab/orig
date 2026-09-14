@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Search,
   MapPin,
-  Trash2,
 } from "lucide-react"
 import {
   syncAppointmentToFinancialAid,
@@ -205,12 +204,12 @@ function AppointmentCard({
   appt,
   onSchedule,
   onMarkCompleted: _onMarkCompleted,
-  onDelete,
+  onDelete: _onDelete,
 }: {
   appt: AppointmentRequest
   onSchedule: (a: AppointmentRequest) => void
   onMarkCompleted?: (id: string) => void
-  onDelete: (id: string, ref: string) => void
+  onDelete?: (id: string, ref: string) => void
 }) {
   const st = getAppointmentStatusTheme(appt.status)
   return (
@@ -253,13 +252,6 @@ function AppointmentCard({
               {st?.icon}
               {st?.label}
             </span>
-            <button
-              onClick={() => onDelete(appt.id, appt.referenceNo)}
-              className="p-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-              title="Burahin ang appointment request na ito"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
           </div>
 
           {appt.status === "pending" && (
