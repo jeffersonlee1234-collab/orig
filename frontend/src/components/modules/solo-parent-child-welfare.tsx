@@ -1060,17 +1060,13 @@ function getDocumentCandidateUrls(doc: ApplicationDocument, app?: WelfareSubmiss
     }
   } catch {}
 
-  // 4. Server filename variations across backend uploads directories
+  // 4. Server filename URL
   if (doc.filename && !doc.filename.toLowerCase().startsWith("sample")) {
     const fn = doc.filename.replace(/^.*[\\\/]/, "").trim()
     if (fn) {
-      add(`${API_BASE}/uploads/solo-parent/${fn}`)
-      add(`${API_BASE}/uploads/solo-parent/${encodeURIComponent(fn)}`)
-      add(`${API_BASE}/uploads/solo-parent/${fn.replace(/\s+/g, '_')}`)
-      add(`${API_BASE}/uploads/solo-parent/${fn.replace(/[^a-zA-Z0-9_.-]/g, '_')}`)
-      add(`${API_BASE}/uploads/child-welfare/${fn}`)
-      add(`${API_BASE}/uploads/${fn}`)
-      add(`${API_BASE}/uploads/${fn.replace(/[^a-zA-Z0-9_.-]/g, '_')}`)
+      const folder = isChild ? "child-welfare" : "solo-parent"
+      add(`${API_BASE}/uploads/${folder}/${encodeURIComponent(fn)}`)
+      add(`${API_BASE}/uploads/${encodeURIComponent(fn)}`)
     }
   }
 
