@@ -957,7 +957,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           setActiveAppStatus("pending")
         } else {
           setBlockedApp(null)
-          setLatestApprovedApp(approvedAny || null)
+          setLatestApprovedApp(null)
           setIsBlocked(false)
           setActiveAppStatus(null)
 
@@ -1646,8 +1646,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     )
   }
 
-  // ---- APPROVED state ----
-  if (latestApprovedApp) {
+  // ---- APPROVED state (Only blocks New ID applications if user already has an active approved ID) ----
+  if (latestApprovedApp && initialIdStatus !== "renewal" && initialIdStatus !== "loss") {
     const targetApp = blockedApp || latestApprovedApp
     const isAppApproved =
       String(targetApp?.status || "").toLowerCase() === "approved" ||
