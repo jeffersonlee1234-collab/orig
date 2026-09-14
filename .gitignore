@@ -1,0 +1,16 @@
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+.env
+backend/.env
+frontend/.env
+dist/
+build/
+
+# Block Docker/Nginx files permanently
+Dockerfile
+docker-compose.yml
+docker-compose*.yml
+.dockerignore
+nginx.conf*
+start.sh
