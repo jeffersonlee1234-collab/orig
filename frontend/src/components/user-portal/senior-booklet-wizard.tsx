@@ -936,7 +936,7 @@ export default function SeniorBookletWizard({
       submittedAt: new Date().toISOString(),
       documents: await Promise.all(
         Object.entries(uploadedFiles).map(async ([id, file]) => {
-          const dataUrl = file ? await readFileAsDataUrl(file) : ""
+          const dataUrl = file ? await readFileAsDataUrl(file, 1000, 0.75) : ""
           return {
             id,
             name: file.name,
@@ -952,18 +952,26 @@ export default function SeniorBookletWizard({
     }
 
     try {
-      // 1. Save to localStorage
-      const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
-      localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
-      localStorage.setItem(isMedicine ? "last_medicine_booklet_ref" : "last_movie_booklet_ref", refNum)
-      localStorage.setItem(isMedicine ? "last_medicine_booklet_app_id" : "last_movie_booklet_app_id", appId)
-
-      // 2. Submit to backend API
+      // 1. Submit to backend API first
       await fetch(`${API_BASE}/api/pwd-senior/applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newApp),
       })
+
+      // 2. Save to localStorage safely
+      try {
+        const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing.slice(0, 5)]))
+        localStorage.setItem(isMedicine ? "last_medicine_booklet_ref" : "last_movie_booklet_ref", refNum)
+        localStorage.setItem(isMedicine ? "last_medicine_booklet_app_id" : "last_movie_booklet_app_id", appId)
+      } catch {
+        const lightApp = {
+          ...newApp,
+          documents: newApp.documents.map((d: any) => ({ ...d, fileUrl: d.filename })),
+        }
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([lightApp]))
+      }
 
       // Dispatch real-time event
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)

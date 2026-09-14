@@ -22,6 +22,7 @@ import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
 import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import { readFileAsDataUrl } from "../../utils/fileUpload"
 
 function generateReference(_status?: string | null, qcid?: string) {
   if (qcid && (qcid || "").trim() && qcid !== "110000116932100") return (qcid || "").trim()
@@ -1666,13 +1667,12 @@ export default function SoloParentApplicationWizard({
       [docId]: [fileToUpload],
     }))
 
-    // Read as Base64 Data URL for persistent instant preview & database fallback
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      setUploadedDocsBase64((prev) => ({ ...prev, [docId]: dataUrl }))
-    }
-    reader.readAsDataURL(fileToUpload)
+    // Read as Base64 Data URL with mobile-friendly compression
+    readFileAsDataUrl(fileToUpload, 1000, 0.75).then((dataUrl) => {
+      if (dataUrl) {
+        setUploadedDocsBase64((prev) => ({ ...prev, [docId]: dataUrl }))
+      }
+    })
   }
 
   const handleRemoveFile = (docId: string, fileIndex: number) => {
@@ -1699,8 +1699,11 @@ export default function SoloParentApplicationWizard({
     setBlockReason("pending")
     setBlockedReference(fallbackRef)
 
-    const emFirst = (formData.emergencyFirstName || "").trim()
-    const emLast = (formData.emergencyLastName || "").trim()
+    // Construct submission payloads
+    const userId = (userProfile as any)?.id || (userProfile as any)?.userId || "0"
+    const isRenewalOrLoss = idStatus === "renewal" || idStatus === "loss"
+    const emFirst = isRenewalOrLoss ? formData.emergencyFirstName : ((userProfile as any)?.emergencyFirstName || formData.emergencyFirstName || "")
+    const emLast = isRenewalOrLoss ? formData.emergencyLastName : ((userProfile as any)?.emergencyLastName || formData.emergencyLastName || "")
     const emCombined = [emFirst, emLast].filter(Boolean).join(" ")
 
     // Extract uploaded 2x2 photo Base64
@@ -1711,6 +1714,13 @@ export default function SoloParentApplicationWizard({
 
     const finalFormData = {
       ...formData,
+      isResident,
+      idStatus,
+      selectedCategoryId,
+      selectedCategory,
+      existingIdNumber,
+      isIdVerified,
+      familyMembers,
       applicantPhoto: applicantPhoto || undefined,
       idPhoto: applicantPhoto || undefined,
       photoUrl: applicantPhoto || undefined,
@@ -1739,7 +1749,7 @@ export default function SoloParentApplicationWizard({
       })),
     }))
 
-    // Instant local cache sync for 0ms display on user portal and admin
+    // Instant local cache sync with safe quota limit handling
     try {
       const stored = JSON.parse(localStorage.getItem("solo_parent_applications") || "[]")
       const localRecord = {
@@ -1767,7 +1777,18 @@ export default function SoloParentApplicationWizard({
         submitted_at: new Date().toISOString(),
         dateSubmitted: new Date().toISOString(),
       }
-      localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
+      try {
+        localStorage.setItem("solo_parent_applications", JSON.stringify([localRecord, ...stored.slice(0, 10)]))
+      } catch {
+        const lightRecord = {
+          ...localRecord,
+          applicantPhoto: "",
+          photoUrl: "",
+          idPhoto: "",
+          documents: newDocItems.map((d: any) => ({ ...d, files: d.files.map((f: any) => ({ ...f, dataUrl: undefined, previewUrl: f.filename })) })),
+        }
+        localStorage.setItem("solo_parent_applications", JSON.stringify([lightRecord, ...stored.slice(0, 3)]))
+      }
       window.dispatchEvent(new Event("storage"))
       notifyApplicationChange("APPLICATION_SUBMITTED", "solo_parent", fallbackRef)
     } catch {}

@@ -768,7 +768,7 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
       documents: await Promise.all(
         Object.keys(uploadedFiles).map(async (k) => {
           const f = uploadedFiles[k]
-          const dataUrl = f ? await readFileAsDataUrl(f) : ""
+          const dataUrl = f ? await readFileAsDataUrl(f, 1000, 0.75) : ""
           return {
             name: k,
             filename: f?.name || "doc.jpg",
@@ -782,14 +782,25 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
     }
 
     try {
-      const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
-      localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing]))
-      window.dispatchEvent(new Event("pwd_senior_applications_updated"))
-      fetch(`${API_BASE}/api/pwd-senior/applications`, {
+      // 1. Submit to backend API first
+      await fetch(`${API_BASE}/api/pwd-senior/applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newApp),
-      }).catch(() => {})
+      })
+
+      // 2. Safe localStorage
+      try {
+        const existing = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([newApp, ...existing.slice(0, 5)]))
+      } catch {
+        const lightApp = {
+          ...newApp,
+          documents: newApp.documents.map((d: any) => ({ ...d, fileUrl: d.filename })),
+        }
+        localStorage.setItem("pwd_senior_applications", JSON.stringify([lightApp]))
+      }
+      window.dispatchEvent(new Event("pwd_senior_applications_updated"))
 
       // Dispatch real-time event to Admin dashboard
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", qcid)

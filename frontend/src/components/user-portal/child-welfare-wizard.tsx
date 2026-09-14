@@ -21,6 +21,7 @@ import { useLanguage } from "../ui/language-context"
 import { getCurrentUserProfile } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
+import { readFileAsDataUrl } from "../../utils/fileUpload"
 import DocumentCameraModal from "../ui/document-camera-modal"
 
 function generateReference(qcid?: string) {
@@ -958,14 +959,11 @@ export default function ChildWelfareApplicationWizard({
 
     const file = fileArray[0]
     if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string
+      readFileAsDataUrl(file, 1000, 0.75).then((base64) => {
         if (base64) {
           setUploadedFilesBase64((prev) => ({ ...prev, [docId]: base64 }))
         }
-      }
-      reader.readAsDataURL(file)
+      })
     }
   }
 
@@ -1282,7 +1280,16 @@ export default function ChildWelfareApplicationWizard({
         submitted_at: new Date().toISOString(),
         dateSubmitted: new Date().toISOString(),
       }
-      localStorage.setItem("child_welfare_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
+      try {
+        localStorage.setItem("child_welfare_applications", JSON.stringify([localRecord, ...stored.slice(0, 10)]))
+      } catch {
+        const lightRecord = {
+          ...localRecord,
+          documents: newDocItems.map((d: any) => ({ ...d, files: d.files.map((f: any) => ({ ...f, dataUrl: undefined, previewUrl: f.filename })) })),
+          uploaded_documents: newDocItems.map((d: any) => ({ ...d, files: d.files.map((f: any) => ({ ...f, dataUrl: undefined, previewUrl: f.filename })) })),
+        }
+        localStorage.setItem("child_welfare_applications", JSON.stringify([lightRecord, ...stored.slice(0, 3)]))
+      }
       window.dispatchEvent(new Event("storage"))
     } catch {}
 
