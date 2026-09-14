@@ -1389,7 +1389,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     (formData.permanentAddress || "").trim() !== "" &&
     (formData.emergencyLastName || "").trim() !== "" &&
     (formData.emergencyFirstName || "").trim() !== "" &&
-    (formData.emergencyContactNo || "").replace(/\D/g, "").length >= 10 &&
+    (formData.emergencyContactNo || "").replace(/\D/g, "").startsWith("09") &&
+    (formData.emergencyContactNo || "").replace(/\D/g, "").length === 11 &&
     (formData.emergencyRelationship || "").trim() !== "" &&
     (formData.emergencyAddress || "").trim() !== "" &&
     (formData.heightCm || "").trim() !== "" &&
@@ -2743,16 +2744,34 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   <Field
                     label={t("pwdContactNoLabel")}
                     required
-                    invalid={attemptedNext && (formData.emergencyContactNo || "").replace(/\D/g, "").length < 10}
-                    invalidNote="10-11 digits required (09XXXXXXXXX)"
+                    invalid={
+                      attemptedNext &&
+                      (!formData.emergencyContactNo ||
+                        formData.emergencyContactNo.replace(/\D/g, "").length !== 11 ||
+                        !formData.emergencyContactNo.replace(/\D/g, "").startsWith("09"))
+                    }
+                    invalidNote={
+                      formData.emergencyContactNo && !formData.emergencyContactNo.replace(/\D/g, "").startsWith("09")
+                        ? (language === "tl" ? "Dapat magsimula sa 09 ang numero." : "Must start with 09.")
+                        : (language === "tl" ? "Kailangan ng 11 digits simula sa 09 (09XXXXXXXXX)." : "11 digits required starting with 09 (09XXXXXXXXX).")
+                    }
                   >
                     <TextInput
                       value={formData.emergencyContactNo}
-                      onChange={(v) => updateField("emergencyContactNo", v)}
+                      onChange={(v) => {
+                        const cleaned = v.replace(/\D/g, "").slice(0, 11)
+                        updateField("emergencyContactNo", cleaned)
+                      }}
                       placeholder="09XXXXXXXXX"
                       numbersOnly
                       maxLength={11}
-                      invalid={attemptedNext && (formData.emergencyContactNo || "").replace(/\D/g, "").length < 10}
+                      invalid={
+                        (attemptedNext &&
+                          (!formData.emergencyContactNo ||
+                            formData.emergencyContactNo.replace(/\D/g, "").length !== 11 ||
+                            !formData.emergencyContactNo.replace(/\D/g, "").startsWith("09"))) ||
+                        (formData.emergencyContactNo.length >= 2 && !formData.emergencyContactNo.startsWith("09"))
+                      }
                     />
                   </Field>
                   <Field

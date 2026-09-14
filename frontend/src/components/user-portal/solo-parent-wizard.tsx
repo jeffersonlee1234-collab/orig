@@ -1870,7 +1870,8 @@ export default function SoloParentApplicationWizard({
       : true) &&
     (formData.emergencyFirstName || "").trim() !== "" &&
     (formData.emergencyLastName || "").trim() !== "" &&
-    (formData.emergencyContactNo || "").replace(/\D/g, "").length >= 10 &&
+    (formData.emergencyContactNo || "").replace(/\D/g, "").startsWith("09") &&
+    (formData.emergencyContactNo || "").replace(/\D/g, "").length === 11 &&
     (formData.emergencyRelationship || "").trim() !== "" &&
     (formData.emergencyAddress || "").trim() !== "" &&
     (formData.bloodType || "").trim() !== ""
@@ -3186,21 +3187,25 @@ export default function SoloParentApplicationWizard({
                       />
                     </div>
                     <div>
-                      <label className={`block text-xs font-semibold mb-1.5 ${attemptedNext && (formData.emergencyContactNo || "").replace(/\D/g, "").length < 10 ? "text-red-600" : "text-gray-700"}`}>
+                      <label className={`block text-xs font-semibold mb-1.5 ${attemptedNext && (!formData.emergencyContactNo || formData.emergencyContactNo.replace(/\D/g, "").length !== 11 || !formData.emergencyContactNo.replace(/\D/g, "").startsWith("09")) ? "text-red-600" : "text-gray-700"}`}>
                         {t("phoneNumberLabel") || "Phone number"} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         maxLength={11}
                         value={formData.emergencyContactNo}
-                        onChange={(e) => updateField("emergencyContactNo", e.target.value.replace(/\D/g, ""))}
+                        onChange={(e) => updateField("emergencyContactNo", e.target.value.replace(/\D/g, "").slice(0, 11))}
                         placeholder="09XXXXXXXXX"
                         className={`w-full h-11 rounded-lg border px-3.5 text-sm font-mono transition-colors ${
-                          attemptedNext && (formData.emergencyContactNo || "").replace(/\D/g, "").length < 10
-                            ? "border-red-400 focus:ring-red-300 bg-red-50"
+                          (attemptedNext && (!formData.emergencyContactNo || formData.emergencyContactNo.replace(/\D/g, "").length !== 11 || !formData.emergencyContactNo.replace(/\D/g, "").startsWith("09"))) ||
+                          (formData.emergencyContactNo && formData.emergencyContactNo.length >= 2 && !formData.emergencyContactNo.startsWith("09"))
+                            ? "border-red-400 focus:ring-red-300 bg-red-50 text-red-900"
                             : "border-gray-300 bg-white focus:ring-[#3b82f6]/40 focus:border-[#3b82f6]"
                         }`}
                       />
+                      {formData.emergencyContactNo && formData.emergencyContactNo.length >= 2 && !formData.emergencyContactNo.startsWith("09") && (
+                        <p className="text-[11px] text-red-500 mt-1">Dapat magsimula sa 09 ang contact number.</p>
+                      )}
                     </div>
                     <div>
                       <label className={`block text-xs font-semibold mb-1.5 ${attemptedNext && !(formData.emergencyRelationship || "").trim() ? "text-red-600" : "text-gray-700"}`}>
