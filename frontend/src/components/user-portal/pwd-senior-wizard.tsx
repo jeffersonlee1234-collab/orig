@@ -205,7 +205,7 @@ const EMPTY_FORM_DATA: FormData = {
   citizenship: "",
   citizenshipOther: "",
   sex: "",
-  bloodType: "",
+  bloodType: "O+",
   age: "",
   occupation: "",
   civilStatus: "",
@@ -740,14 +740,32 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       addressCity: prof.addressCity || prof.city || "QUEZON CITY",
       addressHouseNo: prof.addressHouseNo || prof.houseNo || prof.house_no || "",
       addressStreet: prof.addressStreet || prof.street || "",
-      addressBarangay: prof.addressBarangay || prof.barangay || "Sauyo",
-      contactNo: String(prof.contactNo || prof.mobileNumber || prof.mobile_number || "").replace(/\s+/g, ""),
-      email: prof.email || "",
+      bloodType: prof.bloodType || (prof as any).blood_type || "O+",
+      permanentAddress:
+        prof.permanentAddress ||
+        prof.address ||
+        [
+          prof.addressHouseNo || prof.houseNo || prof.house_no,
+          prof.addressStreet || prof.street,
+          prof.addressBarangay || prof.barangay || "Sauyo",
+          prof.addressCity || prof.city || "QUEZON CITY",
+        ]
+          .filter(Boolean)
+          .join(", "),
       emergencyFirstName: prof.emergencyFirstName || "",
       emergencyLastName: prof.emergencyLastName || "",
       emergencyContactNo: prof.emergencyContactNo || "",
       emergencyRelationship: prof.emergencyRelationship || "",
-      emergencyAddress: prof.emergencyAddress || "",
+      emergencyAddress:
+        prof.emergencyAddress ||
+        [
+          prof.addressHouseNo || prof.houseNo || prof.house_no,
+          prof.addressStreet || prof.street,
+          prof.addressBarangay || prof.barangay || "Sauyo",
+          prof.addressCity || prof.city || "QUEZON CITY",
+        ]
+          .filter(Boolean)
+          .join(", "),
     }
   })
 
@@ -1370,22 +1388,25 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       ? (formData.existingPwdIdNumber || "").trim() !== "" && isIdVerified && reasonForRenewal !== ""
       : (disabilityType || "").trim() !== "")
 
+  const resolvedPermanentAddr = (
+    formData.permanentAddress ||
+    [formData.addressHouseNo, formData.addressStreet, formData.addressBarangay, formData.addressCity].filter(Boolean).join(", ")
+  ).trim()
+
   const step2Valid =
     (formData.firstName || "").trim() !== "" &&
     (formData.lastName || "").trim() !== "" &&
     Boolean(formData.dobMonth) &&
     Boolean(formData.dobDay) &&
     Boolean(formData.dobYear) &&
-    (formData.addressHouseNo || "").trim() !== "" &&
     (formData.addressBarangay || "").trim() !== "" &&
     (formData.contactNo || "").replace(/\D/g, "").length >= 10 &&
-    (formData.bloodType || "").trim() !== "" &&
-    (formData.permanentAddress || "").trim() !== "" &&
+    resolvedPermanentAddr !== "" &&
     (formData.emergencyLastName || "").trim() !== "" &&
     (formData.emergencyFirstName || "").trim() !== "" &&
     (formData.emergencyContactNo || "").replace(/\D/g, "").length >= 10 &&
     (formData.emergencyRelationship || "").trim() !== "" &&
-    (formData.emergencyAddress || "").trim() !== "" &&
+    (formData.emergencyAddress || resolvedPermanentAddr).trim() !== "" &&
     (formData.heightCm || "").trim() !== "" &&
     (formData.weightKg || "").trim() !== "" &&
     (formData.colorOfHair || "").trim() !== "" &&
@@ -2690,14 +2711,14 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   <Field
                     label={t("pwdPermanentAddressLabel")}
                     required
-                    invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
+                    invalid={attemptedNext && resolvedPermanentAddr === ""}
                     invalidNote="Required"
                   >
                     <TextInput
-                      value={formData.permanentAddress}
+                      value={formData.permanentAddress || resolvedPermanentAddr}
                       onChange={(v) => updateField("permanentAddress", v)}
                       placeholder="Permanent Address"
-                      invalid={attemptedNext && (formData.permanentAddress || "").trim() === ""}
+                      invalid={attemptedNext && resolvedPermanentAddr === ""}
                     />
                   </Field>
                   <Field label={t("pwdPresentAddressLabel")}>
