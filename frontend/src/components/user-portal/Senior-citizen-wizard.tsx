@@ -239,7 +239,7 @@ export default function SeniorCitizenApplicationWizard({
   initialIdStatus = "new",
   onStepChange,
 }: SeniorCitizenApplicationWizardProps) {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [profile, setProfile] = useState<UserProfile>(() => (propUserProfile || getCurrentUserProfile()) as any)
 
   useEffect(() => {
