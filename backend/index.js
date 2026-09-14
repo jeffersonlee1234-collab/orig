@@ -86,6 +86,26 @@ app.use('/uploads', (req, res, next) => {
       if (fs.existsSync(nestedCandidate)) {
         return res.sendFile(nestedCandidate);
       }
+
+      // Check prefix / pattern match in subfolder (e.g. originalName vs multer name)
+      const subDir = path.join(uploadsDir, sub);
+      if (fs.existsSync(subDir)) {
+        try {
+          const ext = path.extname(filename);
+          const baseClean = path.basename(filename, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+          if (baseClean && baseClean.length > 3) {
+            const files = fs.readdirSync(subDir);
+            const matchedFile = files.find((f) => {
+              const fLower = f.toLowerCase();
+              const bLower = baseClean.toLowerCase();
+              return fLower.startsWith(bLower) || fLower.includes(bLower);
+            });
+            if (matchedFile) {
+              return res.sendFile(path.join(subDir, matchedFile));
+            }
+          }
+        } catch {}
+      }
     }
   } catch (err) {
     console.warn('Upload fallback search error:', err);

@@ -401,7 +401,9 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
   if (row.id && String(row.id).startsWith("SP-") && row.category === "Solo Parent") {
     return {
       ...row,
-      documents: Array.isArray(row.documents) ? row.documents : mapUploadedDocuments(row, false),
+      documents: (row.uploaded_documents && Array.isArray(row.uploaded_documents) && row.uploaded_documents.length > 0)
+        ? mapUploadedDocuments(row, false)
+        : (Array.isArray(row.documents) && row.documents.length > 0 ? row.documents : mapUploadedDocuments(row, false)),
     }
   }
 
