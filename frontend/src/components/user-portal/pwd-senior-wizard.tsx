@@ -2414,18 +2414,24 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                               type="button"
                               onClick={handleVerifyId}
                               disabled={!(formData.existingPwdIdNumber || "").trim() || isVerifying}
-                              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                              className={`px-5 py-2.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 ${
+                                isIdVerified
+                                  ? "bg-emerald-600 hover:bg-emerald-700"
+                                  : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              }`}
                             >
                               {isVerifying ? (
                                 <>
                                   <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                   <span>Verifying...</span>
                                 </>
-                              ) : (
+                              ) : isIdVerified ? (
                                 <>
                                   <Check className="w-3.5 h-3.5" />
-                                  <span>VERIFY PWD ID</span>
+                                  <span>VERIFIED</span>
                                 </>
+                              ) : (
+                                <span>VERIFY PWD ID</span>
                               )}
                             </button>
                           </div>
