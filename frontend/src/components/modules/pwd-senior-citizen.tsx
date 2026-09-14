@@ -618,10 +618,21 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function getDocImageUrl(doc: ApplicationDocument | null): string {
+function getDocImageUrl(doc: ApplicationDocument | null, app?: ApplicationSubmission | null): string {
   if (!doc) return ""
-  const candidate = doc.fileUrl || (doc as any).previewUrl || (doc as any).dataUrl || (doc as any).url || (doc as any).base64 || (doc as any).filePath || (doc as any).path
-  if (candidate && typeof candidate === "string") {
+  
+  // 1. Direct candidate
+  const candidate =
+    doc.fileUrl ||
+    (doc as any).previewUrl ||
+    (doc as any).dataUrl ||
+    (doc as any).url ||
+    (doc as any).base64 ||
+    (doc as any).filePath ||
+    (doc as any).path ||
+    (doc as any).src
+
+  if (candidate && typeof candidate === "string" && !candidate.toLowerCase().includes("sample")) {
     if (candidate.startsWith("data:") || candidate.startsWith("http://") || candidate.startsWith("https://")) {
       return candidate
     }
@@ -630,15 +641,55 @@ function getDocImageUrl(doc: ApplicationDocument | null): string {
       if (alt && typeof alt === "string" && (alt.startsWith("data:") || alt.startsWith("http"))) {
         return alt
       }
-      return ""
+      return candidate
     }
     if (candidate.startsWith("/")) {
-      return candidate
+      return `${API_BASE}${candidate}`
     }
     if (candidate.startsWith("uploads/")) {
       return `${API_BASE}/${candidate}`
     }
+    return `${API_BASE}/uploads/${candidate}`
   }
+
+  // 2. Check filename if available
+  const fn = doc.filename || doc.name
+  if (fn && typeof fn === "string" && !fn.toLowerCase().includes("sample")) {
+    if (fn.startsWith("data:") || fn.startsWith("http://") || fn.startsWith("https://")) return fn
+    if (fn.startsWith("/")) return `${API_BASE}${fn}`
+    if (fn.startsWith("uploads/")) return `${API_BASE}/${fn}`
+    return `${API_BASE}/uploads/pwd-senior/${fn}`
+  }
+
+  // 3. Fallback to localStorage check
+  try {
+    const localKeys = ["pwd_senior_applications", "all_user_applications", "applications", "userProfile", "currentUser"]
+    for (const k of localKeys) {
+      const raw = localStorage.getItem(k)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (!item) continue
+            if (Array.isArray(item.documents)) {
+              const matchedDoc = item.documents.find((d: any) =>
+                (d.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
+                (d.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
+              )
+              if (matchedDoc) {
+                const rawUrl = matchedDoc.dataUrl || matchedDoc.fileUrl || matchedDoc.previewUrl || matchedDoc.base64
+                if (rawUrl && typeof rawUrl === "string" && (rawUrl.startsWith("data:") || rawUrl.startsWith("http"))) {
+                  return rawUrl
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+
   return ""
 }
 
@@ -948,14 +999,56 @@ export function ApplicantPhotoDisplay({
 
 function DocumentViewerModal({
   doc,
+  app,
   onClose,
 }: {
   doc: ApplicationDocument | null
+  app?: ApplicationSubmission | null
   onClose: () => void
 }) {
   if (!doc) return null
-  const src = getDocImageUrl(doc)
+  const [src, setSrc] = useState<string>(() => getDocImageUrl(doc, app))
+  const [retryStep, setRetryStep] = useState(0)
+
+  useEffect(() => {
+    setSrc(getDocImageUrl(doc, app))
+    setRetryStep(0)
+  }, [doc, app])
+
   const isImage = /\.(jpe?g|png|webp|avif|gif)$/i.test(doc.filename || doc.name || src) || (src && src.startsWith("data:image"))
+
+  const handleImageError = () => {
+    const rawFilename = (doc.filename || doc.name || src.split("/").pop() || "").split("/").pop() || ""
+    if (retryStep === 0 && rawFilename && !src.includes("/uploads/pwd-senior/")) {
+      setRetryStep(1)
+      setSrc(`${API_BASE}/uploads/pwd-senior/${rawFilename}`)
+    } else if (retryStep <= 1 && rawFilename && !src.includes("/uploads/solo-parent/")) {
+      setRetryStep(2)
+      setSrc(`${API_BASE}/uploads/solo-parent/${rawFilename}`)
+    } else if (retryStep <= 2 && rawFilename && !src.includes("/uploads/")) {
+      setRetryStep(3)
+      setSrc(`${API_BASE}/uploads/${rawFilename}`)
+    } else {
+      // Check local storage for original uploaded base64 data
+      try {
+        const local = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        for (const item of local) {
+          if (Array.isArray(item.documents)) {
+            const matched = item.documents.find((d: any) =>
+              (d.name && doc.name && d.name.toLowerCase() === doc.name.toLowerCase()) ||
+              (d.filename && doc.filename && d.filename.toLowerCase() === doc.filename.toLowerCase())
+            )
+            const backup = matched?.dataUrl || matched?.fileUrl || matched?.previewUrl || matched?.base64
+            if (backup && typeof backup === "string" && (backup.startsWith("data:") || backup.startsWith("http"))) {
+              setSrc(backup)
+              return
+            }
+          }
+        }
+      } catch {}
+      setSrc("")
+    }
+  }
 
   return (
     <div
@@ -985,21 +1078,9 @@ function DocumentViewerModal({
               <img
                 src={src}
                 alt={doc.name}
+                crossOrigin="anonymous"
                 className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
-                onError={(e) => {
-                  const target = e.target as HTMLElement
-                  target.style.display = "none"
-                  const parent = target.parentElement
-                  if (parent) {
-                    parent.innerHTML = `
-                      <div class="text-center p-8 text-gray-400 flex flex-col items-center">
-                        <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <p class="font-semibold text-sm text-gray-700">Hindi ma-load ang litrato ng aplikante</p>
-                        <p class="text-xs text-gray-500 mt-1">Ang in-upload na file ay wala sa server o sira ang link.</p>
-                      </div>
-                    `
-                  }
-                }}
+                onError={handleImageError}
               />
             ) : (
               <div className="text-center p-8">
@@ -2458,7 +2539,7 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
         </div>
       </div>
 
-      {previewDoc && <DocumentViewerModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
+      {previewDoc && <DocumentViewerModal doc={previewDoc} app={app} onClose={() => setPreviewDoc(null)} />}
     </div>
   )
 }

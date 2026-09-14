@@ -21,7 +21,6 @@ import {
   Banknote,
   Wrench,
   Plus,
-  Trash2,
   AlertTriangle,
   RotateCcw,
   ShieldAlert,

@@ -123,33 +123,87 @@ function stripLargeDataUrls(obj, depth = 0) {
   return obj;
 }
 
+const fs = require('fs');
+const path = require('path');
+
+function saveBase64File(base64Data, filenamePrefix = 'pwd-senior') {
+  if (!base64Data || typeof base64Data !== 'string' || !base64Data.startsWith('data:')) return '';
+  try {
+    const matches = base64Data.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return '';
+    const mimeType = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    let ext = '.jpg';
+    if (mimeType.includes('png')) ext = '.png';
+    else if (mimeType.includes('webp')) ext = '.webp';
+    else if (mimeType.includes('pdf')) ext = '.pdf';
+
+    const dir = path.join(__dirname, '..', 'uploads', 'pwd-senior');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    const safeFilename = `${filenamePrefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+    const filePath = path.join(dir, safeFilename);
+    fs.writeFileSync(filePath, buffer);
+    return `/uploads/pwd-senior/${safeFilename}`;
+  } catch (err) {
+    console.warn('Error saving base64 file:', err.message);
+    return '';
+  }
+}
+
 function sanitizeDocumentList(docs) {
   if (!Array.isArray(docs)) return [];
   return docs.map((doc) => {
     if (!doc || typeof doc !== 'object') return doc;
     const cleanDoc = { ...doc };
+
+    // Save base64 image if present to physical disk
+    const rawData = cleanDoc.dataUrl || cleanDoc.base64 || cleanDoc.data || (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null);
+    if (rawData && typeof rawData === 'string' && rawData.startsWith('data:')) {
+      const savedPath = saveBase64File(rawData, cleanDoc.name || 'document');
+      if (savedPath) {
+        cleanDoc.fileUrl = savedPath;
+        cleanDoc.previewUrl = savedPath;
+      }
+    }
+
     if (cleanDoc.dataUrl) delete cleanDoc.dataUrl;
     if (cleanDoc.base64) delete cleanDoc.base64;
     if (cleanDoc.data) delete cleanDoc.data;
     if (cleanDoc.content) delete cleanDoc.content;
-    if (cleanDoc.fileUrl && typeof cleanDoc.fileUrl === 'string' && cleanDoc.fileUrl.startsWith('data:')) {
-      cleanDoc.fileUrl = '';
+
+    // Ensure valid fileUrl
+    if (!cleanDoc.fileUrl) {
+      if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && !cleanDoc.previewUrl.startsWith('data:')) {
+        cleanDoc.fileUrl = cleanDoc.previewUrl;
+      } else if (cleanDoc.filename && typeof cleanDoc.filename === 'string') {
+        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanDoc.filename}`;
+      }
+    } else if (typeof cleanDoc.fileUrl === 'string') {
+      if (!cleanDoc.fileUrl.startsWith('/') && !cleanDoc.fileUrl.startsWith('http') && !cleanDoc.fileUrl.startsWith('data:')) {
+        cleanDoc.fileUrl = `/uploads/pwd-senior/${cleanDoc.fileUrl}`;
+      }
     }
-    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:')) {
-      cleanDoc.previewUrl = cleanDoc.fileUrl || '';
-    }
+
     if (Array.isArray(cleanDoc.files)) {
       cleanDoc.files = cleanDoc.files.map((f) => {
         if (!f || typeof f !== 'object') return f;
         const cleanF = { ...f };
+        const rawF = cleanF.dataUrl || cleanF.base64 || (cleanF.fileUrl && cleanF.fileUrl.startsWith('data:') ? cleanF.fileUrl : null);
+        if (rawF && typeof rawF === 'string' && rawF.startsWith('data:')) {
+          const savedF = saveBase64File(rawF, cleanF.name || 'file');
+          if (savedF) {
+            cleanF.fileUrl = savedF;
+            cleanF.previewUrl = savedF;
+          }
+        }
         if (cleanF.dataUrl) delete cleanF.dataUrl;
         if (cleanF.base64) delete cleanF.base64;
         if (cleanF.data) delete cleanF.data;
-        if (cleanF.fileUrl && typeof cleanF.fileUrl === 'string' && cleanF.fileUrl.startsWith('data:')) {
-          cleanF.fileUrl = '';
-        }
-        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:')) {
-          cleanF.previewUrl = cleanF.fileUrl || '';
+        if (!cleanF.fileUrl && cleanF.filename) {
+          cleanF.fileUrl = `/uploads/pwd-senior/${cleanF.filename}`;
+        } else if (typeof cleanF.fileUrl === 'string' && !cleanF.fileUrl.startsWith('/') && !cleanF.fileUrl.startsWith('http') && !cleanF.fileUrl.startsWith('data:')) {
+          cleanF.fileUrl = `/uploads/pwd-senior/${cleanF.fileUrl}`;
         }
         return cleanF;
       });
@@ -323,8 +377,16 @@ exports.createApplication = async (req, res) => {
     const emRel = body.emergencyRelationship || body.relationshipToApplicant || '';
     const emAddr = body.emergencyAddress || body.emergencyResidentialAddress || '';
 
-    const photoDoc = (body.documents || []).find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
-    const resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
+    const cleanDocs = sanitizeDocumentList(body.documents || []);
+
+    const photoDoc = cleanDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
+    let resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
+    if (resolvedPhoto && typeof resolvedPhoto === 'string' && resolvedPhoto.startsWith('data:')) {
+      const savedPhoto = saveBase64File(resolvedPhoto, 'applicant-photo');
+      if (savedPhoto) {
+        resolvedPhoto = savedPhoto;
+      }
+    }
 
     const newApp = {
       ...body,
@@ -351,7 +413,7 @@ exports.createApplication = async (req, res) => {
       disabilityClass: body.disabilityClass || '',
       causeOfDisability: body.causeOfDisability || '',
       applyingFor: body.applyingFor || 'myself',
-      documents: body.documents || [],
+      documents: cleanDocs,
       status: 'pending',
       assignedIdNumber: body.assignedIdNumber || null,
       approvedBy: null,

@@ -52,8 +52,9 @@ const soloParentDir = path.join(uploadsDir, 'solo-parent');
 const childWelfareDir = path.join(uploadsDir, 'child-welfare');
 const aicsDir = path.join(uploadsDir, 'aics');
 const livelihoodDir = path.join(uploadsDir, 'livelihood');
+const pwdSeniorDir = path.join(uploadsDir, 'pwd-senior');
 
-[uploadsDir, soloParentDir, childWelfareDir, aicsDir, livelihoodDir].forEach((dir) => {
+[uploadsDir, soloParentDir, childWelfareDir, aicsDir, livelihoodDir, pwdSeniorDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
