@@ -720,12 +720,12 @@ export default function PWDSocialAssistanceWizard({
       disabilityType: "",
       causeOfDisability: initialCauseOfDisability || "Congenital / Inborn",
       disabilityDescription: initialDesc || "",
-      contactNumber: String(userProfile.contactNo || userProfile.mobileNumber || "").replace(/\s+/g, ""),
+      contactNumber: String(userProfile.contactNo || (userProfile as any).mobileNumber || "").replace(/\s+/g, ""),
       email: userProfile.email || "",
-      houseNo: userProfile.addressHouseNo || userProfile.houseNo || "",
-      street: userProfile.addressStreet || userProfile.street || "",
-      barangay: userProfile.addressBarangay || userProfile.barangay || "Sauyo",
-      cityMunicipality: userProfile.addressCityMunicipality || userProfile.city || "QUEZON CITY",
+      houseNo: userProfile.addressHouseNo || (userProfile as any).houseNo || "",
+      street: userProfile.addressStreet || (userProfile as any).street || "",
+      barangay: userProfile.addressBarangay || (userProfile as any).barangay || "Sauyo",
+      cityMunicipality: userProfile.addressCityMunicipality || (userProfile as any).city || "QUEZON CITY",
     }
   })
 

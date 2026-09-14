@@ -20,7 +20,7 @@ import { API_BASE } from "../../config/api"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
-
+import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 
 export interface UserProfile {
   userId?: string
@@ -43,15 +43,6 @@ export interface UserProfile {
   contactNo?: string
   email?: string
 }
-
-const MOCK_USER_PROFILE: UserProfile = {
-  qcid: "110000116932100",
-  firstName: "Resident",
-  lastName: "User",
-  addressStreet: "",
-  addressBarangay: "SAUYO",
-  addressCityMunicipality: "QUEZON CITY",
-} as any
 
 export interface SeniorAssistanceWizardProps {
   onBack?: () => void
