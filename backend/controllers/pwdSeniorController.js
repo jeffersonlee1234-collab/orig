@@ -96,26 +96,60 @@ function invalidateAppsCache() {
   lastCacheTime = 0;
 }
 
+function stripLargeDataUrls(obj, depth = 0) {
+  if (depth > 6 || obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    if (obj.length > 300 && (obj.startsWith('data:') || obj.startsWith('blob:'))) {
+      return '';
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => stripLargeDataUrls(item, depth + 1));
+  }
+  if (typeof obj === 'object') {
+    const res = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'string' && val.length > 300 && (val.startsWith('data:') || val.startsWith('blob:'))) {
+        res[key] = '';
+      } else if (typeof val === 'object' && val !== null) {
+        res[key] = stripLargeDataUrls(val, depth + 1);
+      } else {
+        res[key] = val;
+      }
+    }
+    return res;
+  }
+  return obj;
+}
+
 function sanitizeDocumentList(docs) {
   if (!Array.isArray(docs)) return [];
   return docs.map((doc) => {
     if (!doc || typeof doc !== 'object') return doc;
     const cleanDoc = { ...doc };
-    if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string' && cleanDoc.dataUrl.length > 500) {
-      delete cleanDoc.dataUrl;
+    if (cleanDoc.dataUrl) delete cleanDoc.dataUrl;
+    if (cleanDoc.base64) delete cleanDoc.base64;
+    if (cleanDoc.data) delete cleanDoc.data;
+    if (cleanDoc.content) delete cleanDoc.content;
+    if (cleanDoc.fileUrl && typeof cleanDoc.fileUrl === 'string' && cleanDoc.fileUrl.startsWith('data:')) {
+      cleanDoc.fileUrl = '';
     }
-    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:') && cleanDoc.previewUrl.length > 500) {
-      cleanDoc.previewUrl = cleanDoc.fileUrl || undefined;
+    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:')) {
+      cleanDoc.previewUrl = cleanDoc.fileUrl || '';
     }
     if (Array.isArray(cleanDoc.files)) {
       cleanDoc.files = cleanDoc.files.map((f) => {
         if (!f || typeof f !== 'object') return f;
         const cleanF = { ...f };
-        if (cleanF.dataUrl && typeof cleanF.dataUrl === 'string' && cleanF.dataUrl.length > 500) {
-          delete cleanF.dataUrl;
+        if (cleanF.dataUrl) delete cleanF.dataUrl;
+        if (cleanF.base64) delete cleanF.base64;
+        if (cleanF.data) delete cleanF.data;
+        if (cleanF.fileUrl && typeof cleanF.fileUrl === 'string' && cleanF.fileUrl.startsWith('data:')) {
+          cleanF.fileUrl = '';
         }
-        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:') && cleanF.previewUrl.length > 500) {
-          cleanF.previewUrl = cleanF.fileUrl || undefined;
+        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:')) {
+          cleanF.previewUrl = cleanF.fileUrl || '';
         }
         return cleanF;
       });
@@ -262,7 +296,7 @@ exports.getAllApplications = async (req, res) => {
         photoUrl: cleanPhoto,
         isArchived: row.is_archived || false,
       };
-    });
+    }).map((item) => stripLargeDataUrls(item));
     cachedApps = mapped;
     lastCacheTime = Date.now();
     return res.json(mapped);

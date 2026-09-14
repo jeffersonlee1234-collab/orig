@@ -13,26 +13,60 @@ function invalidateSoloCache() {
   lastSoloCacheTime = 0;
 }
 
+function stripLargeDataUrls(obj, depth = 0) {
+  if (depth > 6 || obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    if (obj.length > 300 && (obj.startsWith('data:') || obj.startsWith('blob:'))) {
+      return '';
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => stripLargeDataUrls(item, depth + 1));
+  }
+  if (typeof obj === 'object') {
+    const res = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'string' && val.length > 300 && (val.startsWith('data:') || val.startsWith('blob:'))) {
+        res[key] = '';
+      } else if (typeof val === 'object' && val !== null) {
+        res[key] = stripLargeDataUrls(val, depth + 1);
+      } else {
+        res[key] = val;
+      }
+    }
+    return res;
+  }
+  return obj;
+}
+
 function sanitizeDocumentList(docs) {
   if (!Array.isArray(docs)) return [];
   return docs.map((doc) => {
     if (!doc || typeof doc !== 'object') return doc;
     const cleanDoc = { ...doc };
-    if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string' && cleanDoc.dataUrl.length > 500) {
-      delete cleanDoc.dataUrl;
+    if (cleanDoc.dataUrl) delete cleanDoc.dataUrl;
+    if (cleanDoc.base64) delete cleanDoc.base64;
+    if (cleanDoc.data) delete cleanDoc.data;
+    if (cleanDoc.content) delete cleanDoc.content;
+    if (cleanDoc.fileUrl && typeof cleanDoc.fileUrl === 'string' && cleanDoc.fileUrl.startsWith('data:')) {
+      cleanDoc.fileUrl = '';
     }
-    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:') && cleanDoc.previewUrl.length > 500) {
-      cleanDoc.previewUrl = cleanDoc.fileUrl || undefined;
+    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:')) {
+      cleanDoc.previewUrl = cleanDoc.fileUrl || '';
     }
     if (Array.isArray(cleanDoc.files)) {
       cleanDoc.files = cleanDoc.files.map((f) => {
         if (!f || typeof f !== 'object') return f;
         const cleanF = { ...f };
-        if (cleanF.dataUrl && typeof cleanF.dataUrl === 'string' && cleanF.dataUrl.length > 500) {
-          delete cleanF.dataUrl;
+        if (cleanF.dataUrl) delete cleanF.dataUrl;
+        if (cleanF.base64) delete cleanF.base64;
+        if (cleanF.data) delete cleanF.data;
+        if (cleanF.fileUrl && typeof cleanF.fileUrl === 'string' && cleanF.fileUrl.startsWith('data:')) {
+          cleanF.fileUrl = '';
         }
-        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:') && cleanF.previewUrl.length > 500) {
-          cleanF.previewUrl = cleanF.fileUrl || undefined;
+        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:')) {
+          cleanF.previewUrl = cleanF.fileUrl || '';
         }
         return cleanF;
       });
@@ -44,10 +78,10 @@ function sanitizeDocumentList(docs) {
 function sanitizeFormData(formData) {
   if (!formData || typeof formData !== 'object') return formData;
   const clean = { ...formData };
-  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:') && clean.applicantPhoto.length > 500) {
+  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:')) {
     clean.applicantPhoto = clean.photoUrl || (clean.applicant_photo && !clean.applicant_photo.startsWith('data:') ? clean.applicant_photo : undefined);
   }
-  if (clean.photoUrl && typeof clean.photoUrl === 'string' && clean.photoUrl.startsWith('data:') && clean.photoUrl.length > 500) {
+  if (clean.photoUrl && typeof clean.photoUrl === 'string' && clean.photoUrl.startsWith('data:')) {
     clean.photoUrl = undefined;
   }
   if (Array.isArray(clean.documents)) {
@@ -59,13 +93,13 @@ function sanitizeFormData(formData) {
   if (Array.isArray(clean.uploaded_documents)) {
     clean.uploaded_documents = sanitizeDocumentList(clean.uploaded_documents);
   }
-  return clean;
+  return stripLargeDataUrls(clean);
 }
 
 function sanitizeExtraData(extraData) {
   if (!extraData || typeof extraData !== 'object') return extraData;
   const clean = { ...extraData };
-  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:') && clean.applicantPhoto.length > 500) {
+  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:')) {
     clean.applicantPhoto = clean.photoUrl || (clean.applicant_photo && !clean.applicant_photo.startsWith('data:') ? clean.applicant_photo : undefined);
   }
   if (clean.formData) {
@@ -74,12 +108,12 @@ function sanitizeExtraData(extraData) {
   if (Array.isArray(clean.documents)) {
     clean.documents = sanitizeDocumentList(clean.documents);
   }
-  return clean;
+  return stripLargeDataUrls(clean);
 }
 
 function sanitizeAppRow(row) {
   if (!row) return row;
-  const cleanRow = { ...row };
+  let cleanRow = { ...row };
   
   if (cleanRow.uploaded_documents) {
     const raw = typeof cleanRow.uploaded_documents === 'string' ? (() => { try { return JSON.parse(cleanRow.uploaded_documents); } catch { return []; } })() : cleanRow.uploaded_documents;
@@ -93,13 +127,13 @@ function sanitizeAppRow(row) {
     const raw = typeof cleanRow.extra_data === 'string' ? (() => { try { return JSON.parse(cleanRow.extra_data); } catch { return {}; } })() : cleanRow.extra_data;
     cleanRow.extra_data = sanitizeExtraData(raw);
   }
-  if (cleanRow.applicant_photo && typeof cleanRow.applicant_photo === 'string' && cleanRow.applicant_photo.startsWith('data:') && cleanRow.applicant_photo.length > 500) {
+  if (cleanRow.applicant_photo && typeof cleanRow.applicant_photo === 'string' && cleanRow.applicant_photo.startsWith('data:')) {
     cleanRow.applicant_photo = cleanRow.photo_url && !cleanRow.photo_url.startsWith('data:') ? cleanRow.photo_url : '';
   }
-  if (cleanRow.photo_url && typeof cleanRow.photo_url === 'string' && cleanRow.photo_url.startsWith('data:') && cleanRow.photo_url.length > 500) {
+  if (cleanRow.photo_url && typeof cleanRow.photo_url === 'string' && cleanRow.photo_url.startsWith('data:')) {
     cleanRow.photo_url = cleanRow.applicant_photo && !cleanRow.applicant_photo.startsWith('data:') ? cleanRow.applicant_photo : '';
   }
-  return cleanRow;
+  return stripLargeDataUrls(cleanRow);
 }
 
 function generateReference(qcid) {
