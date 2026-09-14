@@ -196,11 +196,11 @@ function sanitizeAppRow(row) {
     const raw = typeof cleanRow.extra_data === 'string' ? (() => { try { return JSON.parse(cleanRow.extra_data); } catch { return {}; } })() : cleanRow.extra_data;
     cleanRow.extra_data = sanitizeExtraData(raw);
   }
-  if (cleanRow.applicant_photo && typeof cleanRow.applicant_photo === 'string' && cleanRow.applicant_photo.startsWith('data:')) {
-    cleanRow.applicant_photo = cleanRow.photo_url && !cleanRow.photo_url.startsWith('data:') ? cleanRow.photo_url : '';
+  if (!cleanRow.applicant_photo && cleanRow.photo_url) {
+    cleanRow.applicant_photo = cleanRow.photo_url;
   }
-  if (cleanRow.photo_url && typeof cleanRow.photo_url === 'string' && cleanRow.photo_url.startsWith('data:')) {
-    cleanRow.photo_url = cleanRow.applicant_photo && !cleanRow.applicant_photo.startsWith('data:') ? cleanRow.applicant_photo : '';
+  if (!cleanRow.photo_url && cleanRow.applicant_photo) {
+    cleanRow.photo_url = cleanRow.applicant_photo;
   }
 
   // Ensure valid submission and creation timestamps

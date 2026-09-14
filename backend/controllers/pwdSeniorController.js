@@ -279,12 +279,10 @@ exports.getAllApplications = async (req, res) => {
 
       const rawPhoto = extra.applicantPhoto || extra.photoUrl || row.applicant_photo || (() => {
         const p = cleanDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
-        return p ? (p.fileUrl || p.previewUrl || '') : '';
+        return p ? (p.dataUrl || p.base64 || p.fileUrl || p.previewUrl || '') : '';
       })();
 
-      const cleanPhoto = (typeof rawPhoto === 'string' && rawPhoto.startsWith('data:') && rawPhoto.length > 500)
-        ? (row.photo_url && !row.photo_url.startsWith('data:') ? row.photo_url : '')
-        : rawPhoto;
+      const cleanPhoto = rawPhoto;
 
       return {
         id: row.id,
@@ -400,12 +398,9 @@ exports.createApplication = async (req, res) => {
     const cleanDocs = sanitizeDocumentList(body.documents || []);
 
     const photoDoc = cleanDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
-    let resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
+    let resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.base64 || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
     if (resolvedPhoto && typeof resolvedPhoto === 'string' && resolvedPhoto.startsWith('data:')) {
-      const savedPhoto = saveBase64File(resolvedPhoto, 'applicant-photo');
-      if (savedPhoto) {
-        resolvedPhoto = savedPhoto;
-      }
+      saveBase64File(resolvedPhoto, 'applicant-photo');
     }
 
     const newApp = {
