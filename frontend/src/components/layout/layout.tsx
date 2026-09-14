@@ -2,33 +2,15 @@ import { useState, useEffect } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
+import { getInitialTheme, applyTheme } from "../../utils/theme"
 
 export default function SocialServicesLayout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [dark, setDark] = useState(() => {
-    try {
-      const saved = localStorage.getItem("theme")
-      if (saved === "dark") return true
-      document.documentElement.classList.remove("dark")
-      return false
-    } catch {
-      return false
-    }
-  })
+  const [dark, setDark] = useState(() => getInitialTheme())
 
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark")
-      try {
-        localStorage.setItem("theme", "dark")
-      } catch {}
-    } else {
-      document.documentElement.classList.remove("dark")
-      try {
-        localStorage.setItem("theme", "light")
-      } catch {}
-    }
+    applyTheme(dark, true)
   }, [dark])
 
   return (

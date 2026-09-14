@@ -1,4 +1,3 @@
-// src/pages/landing/LandingPage.tsx
 import { useState, useEffect } from 'react';
 import {
   ArrowRight,
@@ -10,6 +9,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
+import { getInitialTheme, applyTheme } from '../utils/theme';
 
 // 5 capability cards — matches docx §8 "Landing Page Feature Cards".
 // Layout: row 1 = 3 cards, row 2 = 2 cards (centered), each card offset
@@ -78,10 +78,10 @@ const FLOATING = [
 
 export function LandingPage() {
   const typewriterText = useTypewriter(TYPEWRITER_WORDS);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => getInitialTheme());
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
+    applyTheme(dark, true);
   }, [dark]);
 
   return (

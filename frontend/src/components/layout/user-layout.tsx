@@ -27,6 +27,7 @@ import { getSavedProfilePhoto } from "../../utils/profilePhoto"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { API_BASE } from "../../config/api"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import { getInitialTheme, applyTheme } from "../../utils/theme"
 
 function WheelchairIcon({ className, ...props }: React.ComponentProps<"svg">) {
   return (
@@ -995,29 +996,10 @@ export default function UserLayout() {
   const { t } = useLanguage()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [dark, setDark] = useState(() => {
-    try {
-      const saved = localStorage.getItem("theme")
-      if (saved === "dark") return true
-      document.documentElement.classList.remove("dark")
-      return false
-    } catch {
-      return false
-    }
-  })
+  const [dark, setDark] = useState(() => getInitialTheme())
 
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark")
-      try {
-        localStorage.setItem("theme", "dark")
-      } catch {}
-    } else {
-      document.documentElement.classList.remove("dark")
-      try {
-        localStorage.setItem("theme", "light")
-      } catch {}
-    }
+    applyTheme(dark, true)
   }, [dark])
 
   useEffect(() => {
