@@ -979,19 +979,17 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     }
   }, [userProfile?.qcidNo, userProfile?.email, initialIdStatus])
 
-  // Auto-redirect to pending status screen after 1 second on submitted
+  // Auto-redirect to My Applications after submission
   useEffect(() => {
     if (submitStatus !== "submitted") return
 
-    setRedirectCountdown(1)
+    setRedirectCountdown(4)
     const interval = setInterval(() => {
       setRedirectCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          setIsBlocked(true)
-          setSubmitStatus("idle")
-          setStep(1)
-          setReturnToReview(false)
+          ;(window as any).__isFormDirty = false
+          window.location.href = "/portal/my-applications"
           return 0
         }
         return prev - 1
@@ -999,7 +997,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [submitStatus, initialIdStatus])
+  }, [submitStatus])
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -1572,8 +1570,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     }, 1000)
   }
 
+  // ---- BLOCKED / ACTIVE / PENDING APPLICATION STATES ----
+  const targetApp = blockedApp || latestApprovedApp
+  const isAppApproved =
+    String(targetApp?.status || "").toLowerCase() === "approved" ||
+    String(targetApp?.status || "").toLowerCase() === "completed" ||
+    String(targetApp?.status || "").toLowerCase() === "for_release"
+
   // ---- PENDING STATE (Identical to Solo Parent) ----
-  if (isBlocked && !latestApprovedApp) {
+  if (isBlocked && !isAppApproved) {
     const serviceTitle =
       initialIdStatus === "renewal"
         ? "PWD ID Renewal"
@@ -1581,26 +1586,81 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         ? "PWD ID Replacement"
         : "PWD ID"
 
+    const displayRef =
+      targetApp?.referenceNumber ||
+      targetApp?.reference_no ||
+      targetApp?.reference_number ||
+      targetApp?.id ||
+      referenceNumber ||
+      userProfile?.qcidNo ||
+      formData.existingPwdIdNumber ||
+      "110000572516915"
+
+    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
+      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+
     return (
-      <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4">
+      <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">
         {onBack && (
           <button
             onClick={onBack}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5 cursor-pointer mb-2"
           >
             ← Back
           </button>
         )}
-        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col items-center text-center gap-3">
-          <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-            <Info className="h-7 w-7 text-amber-500" />
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center gap-4">
+          <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+            <Info className="h-8 w-8 text-amber-500" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">
-            You Have an Existing Pending Application
-          </h2>
-          <p className="text-sm text-gray-500 max-w-sm">
-            You already have a pending application for {serviceTitle}. Please wait for the evaluation before submitting a new application.
-          </p>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              You Have an Existing Pending Application
+            </h2>
+            <p className="text-sm text-gray-500 max-w-md mt-1 leading-relaxed">
+              You already have a pending application for <strong>{serviceTitle}</strong>. Please wait for an assessment before submitting a new application.
+            </p>
+          </div>
+
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2.5 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">Application Reference No.:</span>
+              <span className="font-mono font-bold text-blue-600">{displayRef}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">Status:</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Under Review (Pending)
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Date Filed:</span>
+              <span className="font-semibold text-gray-700">{displayDate}</span>
+            </div>
+          </div>
+
+          <div className="w-full pt-2 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                ;(window as any).__isFormDirty = false
+                window.location.href = "/portal/my-applications"
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
+            >
+              View in My Applications
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1846,10 +1906,33 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
             </p>
           </div>
 
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                ;(window as any).__isFormDirty = false
+                window.location.href = "/portal/my-applications"
+              }}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+            >
+              Tingnan sa Aking mga Aplikasyon
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                ;(window as any).__isFormDirty = false
+                window.location.href = "/portal"
+              }}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+            >
+              Bumalik sa Home
+            </button>
+          </div>
+
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
             <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3b82f6]" />
             <span>
-              Awtomatikong lilipat sa application status sa loob ng {redirectCountdown} segundo...
+              Awtomatikong lilipat sa inyong application history sa loob ng {redirectCountdown} segundo...
             </span>
           </div>
         </div>
