@@ -1799,8 +1799,6 @@ export default function SeniorCitizenApplicationWizard({
                         <option value="Sibling">{t("relationSibling") || "Sibling"}</option>
                         <option value="Relative">{t("relationRelative") || "Relative"}</option>
                         <option value="Caregiver">{t("relationCaregiver") || "Caregiver / Guardian"}</option>
-                        <option value="Friend">{t("relationFriend") || "Friend / Neighbor"}</option>
-                        <option value="Others">{t("relationOthers") || "Others"}</option>
                       </select>
                     </div>
                   </div>
