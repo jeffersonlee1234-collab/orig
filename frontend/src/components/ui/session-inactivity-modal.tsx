@@ -65,10 +65,13 @@ export function SessionInactivityWatcher() {
     } catch {}
   }, []);
 
+  const isVerifyingRef = useRef(false);
+
   // Check if account was logged into on another device (Single Active Session rule)
   const verifyConcurrentSession = useCallback(async () => {
     if (!checkIsAuth() && !sessionStorage.getItem("session_terminated_reason")) return;
     if (expiryReason) return;
+    if (isVerifyingRef.current) return;
 
     const email = getCurrentUserEmail();
     const token = getSessionToken();
@@ -76,6 +79,7 @@ export function SessionInactivityWatcher() {
     if (!email || !token) return;
 
     try {
+      isVerifyingRef.current = true;
       const res = await fetch(`${API_BASE}/api/auth/verify-session?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`, {
         method: "GET",
         headers: {
@@ -84,34 +88,33 @@ export function SessionInactivityWatcher() {
           "x-session-token": token,
         },
       });
-      const data = await res.json();
-      if (data && data.isSessionTerminated) {
-        let devStr = "";
-        if (data.newDevice) {
-          const dev = data.newDevice;
-          devStr = `${dev.device_name || dev.device_type || 'Another Device'}`;
-          setNewDeviceInfo(devStr);
-          sessionStorage.setItem("terminated_new_device", devStr);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.isSessionTerminated) {
+          let devStr = "";
+          if (data.newDevice) {
+            const dev = data.newDevice;
+            devStr = `${dev.device_name || dev.device_type || 'Another Device'}`;
+            setNewDeviceInfo(devStr);
+            sessionStorage.setItem("terminated_new_device", devStr);
+          }
+          sessionStorage.setItem("session_terminated_reason", "concurrent");
+          clearAuthSession();
+          setExpiryReason("concurrent");
         }
-        sessionStorage.setItem("session_terminated_reason", "concurrent");
-        clearAuthSession();
-        setExpiryReason("concurrent");
       }
     } catch (err) {
       console.warn("Session verification network warning:", err);
+    } finally {
+      isVerifyingRef.current = false;
     }
   }, [checkIsAuth, expiryReason, getCurrentUserEmail, getSessionToken, clearAuthSession]);
 
   const handleUserActivity = useCallback(() => {
     if (!expiryReason) {
       lastActivityRef.current = Date.now();
-      const now = Date.now();
-      if (now - lastVerifyTimeRef.current >= 1500) {
-        lastVerifyTimeRef.current = now;
-        verifyConcurrentSession();
-      }
     }
-  }, [expiryReason, verifyConcurrentSession]);
+  }, [expiryReason]);
 
   useEffect(() => {
     if (!checkIsAuth() && !sessionStorage.getItem("session_terminated_reason")) {
@@ -120,13 +123,13 @@ export function SessionInactivityWatcher() {
 
     lastActivityRef.current = Date.now();
 
-    // Listen to user interaction events for 15-minute inactivity tracker and mobile gestures
+    // Listen to user interaction events for 15-minute inactivity tracker
     const events = ["mousemove", "mousedown", "keydown", "touchstart", "touchend", "scroll", "click"];
     events.forEach((evt) => {
       window.addEventListener(evt, handleUserActivity, { passive: true });
     });
 
-    // Check every 5 seconds for 15-minute inactivity
+    // Check every 10 seconds for 15-minute inactivity
     timerRef.current = setInterval(() => {
       if (checkIsAuth()) {
         const elapsed = Date.now() - lastActivityRef.current;
@@ -136,15 +139,15 @@ export function SessionInactivityWatcher() {
           setExpiryReason("inactivity");
         }
       }
-    }, 5000);
+    }, 10000);
 
     // Initial check for concurrent session immediately
     verifyConcurrentSession();
 
-    // Real-time periodic check every 1 second for concurrent device login
+    // Balanced periodic check every 30 seconds for concurrent device login
     verifyIntervalRef.current = setInterval(() => {
       verifyConcurrentSession();
-    }, 1000);
+    }, 30000);
 
     // Also check immediately when window gains focus or tab becomes visible
     const handleVisibilityOrFocus = () => {
