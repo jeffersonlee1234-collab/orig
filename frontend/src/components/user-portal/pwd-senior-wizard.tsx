@@ -2765,11 +2765,23 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                     invalid={attemptedNext && (formData.emergencyRelationship || "").trim() === ""}
                     invalidNote="Required"
                   >
-                    <TextInput
+                    <select
                       value={formData.emergencyRelationship}
-                      onChange={(v) => updateField("emergencyRelationship", v)}
-                      invalid={attemptedNext && (formData.emergencyRelationship || "").trim() === ""}
-                    />
+                      onChange={(e) => updateField("emergencyRelationship", e.target.value)}
+                      className={`w-full h-10 rounded-lg border px-3 text-sm text-foreground bg-white focus:outline-none focus:ring-2 ${
+                        attemptedNext && (formData.emergencyRelationship || "").trim() === ""
+                          ? "border-red-400 focus:ring-red-300 bg-red-50"
+                          : "border-border focus:ring-blue-400"
+                      }`}
+                    >
+                      <option value="">{t("selectRelationshipOption") || "Select Relationship"}</option>
+                      <option value="Parent">{t("relationParent") || "Parent"}</option>
+                      <option value="Spouse">{t("relationSpouse") || "Spouse"}</option>
+                      <option value="Child">{t("relationChild") || "Child"}</option>
+                      <option value="Sibling">{t("relationSibling") || "Sibling"}</option>
+                      <option value="Relative">{t("relationRelative") || "Relative"}</option>
+                      <option value="Caregiver">{t("relationCaregiver") || "Caregiver / Guardian"}</option>
+                    </select>
                   </Field>
                 </div>
                 <Field
