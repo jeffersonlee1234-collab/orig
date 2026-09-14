@@ -1082,6 +1082,28 @@ export default function ChildWelfareApplicationWizard({
         const headers: Record<string, string> = {}
         if (token) headers["Authorization"] = `Bearer ${token}`
 
+        // 1. Instant check from localStorage
+        try {
+          const stored = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+          const localMatch = stored.find((a: any) => {
+            if (!a) return false
+            const aCatId = String(a.category_id || a.selectedCategoryId || "")
+            const aTitle = String(a.category_title || a.classification_title || "").toLowerCase().trim()
+            const progId = String(selectedProgram.id)
+            const progTitle = selectedProgram.title.toLowerCase().trim()
+            const progKey = selectedProgram.key.toLowerCase().trim()
+            return aCatId === progId || aTitle.includes(progTitle) || progTitle.includes(aTitle) || aTitle === progKey
+          })
+          if (localMatch && active && !isReapplying) {
+            setSubmissionStage("pending")
+            setAppStatus((localMatch.application_status || localMatch.status || "pending") as any)
+            if (localMatch.reference_number || localMatch.referenceNumber) {
+              setReference(localMatch.reference_number || localMatch.referenceNumber)
+            }
+          }
+        } catch {}
+
+        // 2. Fetch fresh status from backend
         if (uid && uid !== "0") {
           const res = await fetch(`${API_BASE}/api/child-welfare/user/${uid}`, { headers })
           if (res.ok) {
@@ -1109,9 +1131,6 @@ export default function ChildWelfareApplicationWizard({
                   const st = Array.isArray(matched.support_types) ? matched.support_types[0] : matched.support_types
                   setSelectedAssistanceType(st)
                 }
-                return
-              } else {
-                setSubmissionStage("form")
               }
             }
           }
@@ -1196,6 +1215,7 @@ export default function ChildWelfareApplicationWizard({
     setReference(ref)
     setShowConfirmModal(false)
     setSubmissionStage("pending")
+    setAppStatus("pending")
     try {
       ;(window as any).__isFormDirty = false
     } catch {}
@@ -1261,7 +1281,6 @@ export default function ChildWelfareApplicationWizard({
       }
       localStorage.setItem("child_welfare_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
       window.dispatchEvent(new Event("storage"))
-      notifyApplicationChange("APPLICATION_SUBMITTED", "child_welfare", ref)
     } catch {}
 
     const payload = {
