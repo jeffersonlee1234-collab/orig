@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { toPng } from "html-to-image"
 import { API_BASE } from "../../config/api"
+import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { useLanguage } from "../ui/language-context"
 import {
@@ -694,19 +695,17 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
   let backendFetched = false
 
   try {
-    const [soloRes, childRes] = await Promise.all([
-      fetch(`${API_BASE}/api/solo-parent/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
-      fetch(`${API_BASE}/api/child-welfare/admin/all?limit=200&_t=${Date.now()}`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
+    const [soloData, childData] = await Promise.all([
+      cachedApiFetch<any>(`${API_BASE}/api/solo-parent/admin/all?limit=200`, { headers: authHeaders() }, 4000).catch(() => null),
+      cachedApiFetch<any>(`${API_BASE}/api/child-welfare/admin/all?limit=200`, { headers: authHeaders() }, 4000).catch(() => null),
     ])
 
-    if (soloRes && soloRes.ok) {
-      const soloData = await soloRes.json()
+    if (soloData) {
       const rawSolo = Array.isArray(soloData) ? soloData : soloData.applications || []
       soloApps = rawSolo.map(mapSoloParentRow)
       backendFetched = true
     }
-    if (childRes && childRes.ok) {
-      const childData = await childRes.json()
+    if (childData) {
       const rawChild = Array.isArray(childData) ? childData : childData.applications || []
       childApps = rawChild.map(mapChildWelfareRow)
       backendFetched = true
@@ -2650,7 +2649,7 @@ export default function SoloParentChildWelfareAdmin() {
 
     const interval = setInterval(() => {
       loadApplications(true)
-    }, 1500)
+    }, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       loadApplications(true)

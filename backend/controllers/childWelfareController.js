@@ -3,6 +3,79 @@ const db = require('../config/db');
 const fs = require('fs').promises;
 const path = require('path');
 
+// In-memory cache for ultra-fast response times
+let cachedChildApps = null;
+let lastChildCacheTime = 0;
+const CHILD_CACHE_TTL = 4000; // 4 seconds cache
+
+function invalidateChildCache() {
+  cachedChildApps = null;
+  lastChildCacheTime = 0;
+}
+
+function sanitizeDocumentList(docs) {
+  if (!Array.isArray(docs)) return [];
+  return docs.map((doc) => {
+    if (!doc || typeof doc !== 'object') return doc;
+    const cleanDoc = { ...doc };
+    if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string' && cleanDoc.dataUrl.length > 500) {
+      delete cleanDoc.dataUrl;
+    }
+    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:') && cleanDoc.previewUrl.length > 500) {
+      cleanDoc.previewUrl = cleanDoc.fileUrl || undefined;
+    }
+    if (Array.isArray(cleanDoc.files)) {
+      cleanDoc.files = cleanDoc.files.map((f) => {
+        if (!f || typeof f !== 'object') return f;
+        const cleanF = { ...f };
+        if (cleanF.dataUrl && typeof cleanF.dataUrl === 'string' && cleanF.dataUrl.length > 500) {
+          delete cleanF.dataUrl;
+        }
+        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:') && cleanF.previewUrl.length > 500) {
+          cleanF.previewUrl = cleanF.fileUrl || undefined;
+        }
+        return cleanF;
+      });
+    }
+    return cleanDoc;
+  });
+}
+
+function sanitizeFormData(formData) {
+  if (!formData || typeof formData !== 'object') return formData;
+  const clean = { ...formData };
+  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:') && clean.applicantPhoto.length > 500) {
+    clean.applicantPhoto = clean.photoUrl || undefined;
+  }
+  if (clean.photoUrl && typeof clean.photoUrl === 'string' && clean.photoUrl.startsWith('data:') && clean.photoUrl.length > 500) {
+    clean.photoUrl = undefined;
+  }
+  if (Array.isArray(clean.documents)) {
+    clean.documents = sanitizeDocumentList(clean.documents);
+  }
+  if (Array.isArray(clean.uploadedDocuments)) {
+    clean.uploadedDocuments = sanitizeDocumentList(clean.uploadedDocuments);
+  }
+  if (Array.isArray(clean.uploaded_documents)) {
+    clean.uploaded_documents = sanitizeDocumentList(clean.uploaded_documents);
+  }
+  return clean;
+}
+
+function sanitizeAppRow(row) {
+  if (!row) return row;
+  const cleanRow = { ...row };
+  if (cleanRow.uploaded_documents) {
+    const raw = typeof cleanRow.uploaded_documents === 'string' ? (() => { try { return JSON.parse(cleanRow.uploaded_documents); } catch { return []; } })() : cleanRow.uploaded_documents;
+    cleanRow.uploaded_documents = sanitizeDocumentList(raw);
+  }
+  if (cleanRow.form_data) {
+    const raw = typeof cleanRow.form_data === 'string' ? (() => { try { return JSON.parse(cleanRow.form_data); } catch { return {}; } })() : cleanRow.form_data;
+    cleanRow.form_data = sanitizeFormData(raw);
+  }
+  return cleanRow;
+}
+
 function generateReference(qcid) {
   if (qcid && String(qcid).trim()) return String(qcid).trim();
   return '110000116932100';
@@ -262,6 +335,7 @@ exports.createApplication = async (req, res) => {
       }).catch(() => {});
     } catch {}
 
+    invalidateChildCache();
     res.status(201).json({
       success: true,
       message: 'Application created successfully',
@@ -331,6 +405,7 @@ exports.uploadDocuments = async (req, res) => {
       } catch (e) {}
     }
 
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'Documents uploaded successfully', files: uploadedFiles });
   } catch (error) {
     console.error('Error uploading documents:', error);
@@ -372,6 +447,7 @@ exports.removeDocument = async (req, res) => {
           [JSON.stringify(uploadedDocuments), applicationId]
         );
 
+        invalidateChildCache();
         return res.status(200).json({ success: true, message: 'File removed successfully' });
       }
     }
@@ -400,6 +476,7 @@ exports.submitApplication = async (req, res) => {
       [applicationId]
     );
 
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'Application submitted successfully', referenceNumber: application.reference_number });
   } catch (error) {
     console.error('Error submitting application:', error);
@@ -455,7 +532,8 @@ exports.getUserApplications = async (req, res) => {
       `SELECT * FROM child_welfare_applications WHERE ${orClauses.join(' OR ')} ORDER BY created_at DESC`,
       params
     );
-    res.status(200).json({ success: true, applications: result.rows });
+    const cleanRows = (result.rows || []).map(sanitizeAppRow);
+    res.status(200).json({ success: true, applications: cleanRows });
   } catch (error) {
     console.warn('Error fetching child welfare user applications:', error.message);
     res.status(200).json({ success: true, applications: [] });
@@ -466,34 +544,53 @@ exports.getUserApplications = async (req, res) => {
 exports.getAllApplications = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
+    const numLimit = parseInt(limit, 10) || 10;
+    const numPage = parseInt(page, 10) || 1;
+
+    // Check fast in-memory cache if standard unfiltered request
+    const isStandardList = (!status || status === 'all') && numPage === 1 && numLimit >= 100;
+    if (isStandardList && cachedChildApps && (Date.now() - lastChildCacheTime < CHILD_CACHE_TTL)) {
+      return res.status(200).json({
+        success: true,
+        applications: cachedChildApps,
+        pagination: { total: cachedChildApps.length, page: 1, pages: 1 },
+      });
+    }
 
     let query = 'SELECT * FROM child_welfare_applications';
     const params = [];
 
-    if (status) {
+    if (status && status !== 'all') {
       params.push(status);
       query += ` WHERE application_status = $${params.length}`;
     }
 
     query += ' ORDER BY created_at DESC';
 
-    const offset = (page - 1) * limit;
-    params.push(limit, offset);
+    const offset = (numPage - 1) * numLimit;
+    params.push(numLimit, offset);
     query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
     const result = await db.query(query, params);
 
-    const countParams = status ? [status] : [];
-    const countQuery = status
+    const countParams = (status && status !== 'all') ? [status] : [];
+    const countQuery = (status && status !== 'all')
       ? 'SELECT COUNT(*) FROM child_welfare_applications WHERE application_status = $1'
       : 'SELECT COUNT(*) FROM child_welfare_applications';
     const countResult = await db.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count, 10);
 
+    const cleanRows = (result.rows || []).map(sanitizeAppRow);
+
+    if (isStandardList) {
+      cachedChildApps = cleanRows;
+      lastChildCacheTime = Date.now();
+    }
+
     res.status(200).json({
       success: true,
-      applications: result.rows,
-      pagination: { total, page: parseInt(page, 10), pages: Math.ceil(total / limit) },
+      applications: cleanRows,
+      pagination: { total, page: numPage, pages: Math.ceil(total / numLimit) },
     });
   } catch (error) {
     console.error('Error fetching applications:', error);
@@ -683,6 +780,7 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'Application status updated', application: app });
   } catch (error) {
     console.error('Error updating application:', error);
@@ -702,6 +800,7 @@ exports.cancelApplication = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only pending applications can be cancelled' });
     }
     await db.query(`UPDATE child_welfare_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -714,6 +813,7 @@ exports.deleteApplication = async (req, res) => {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
       await db.query('DELETE FROM child_welfare_applications');
+      invalidateChildCache();
       return res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^CW-/, '').trim();
@@ -721,6 +821,7 @@ exports.deleteApplication = async (req, res) => {
       'DELETE FROM child_welfare_applications WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 RETURNING id',
       [cleanId, applicationId]
     );
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'Child welfare application deleted successfully' });
   } catch (error) {
     console.error('Error deleting child welfare application:', error);
@@ -732,6 +833,7 @@ exports.deleteApplication = async (req, res) => {
 exports.clearApplications = async (req, res) => {
   try {
     await db.query('DELETE FROM child_welfare_applications');
+    invalidateChildCache();
     res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
   } catch (error) {
     console.error('Error clearing child welfare applications:', error);

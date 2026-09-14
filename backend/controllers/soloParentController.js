@@ -3,6 +3,105 @@ const db = require('../config/db');
 const fs = require('fs').promises;
 const path = require('path');
 
+// In-memory cache for ultra-fast response times
+let cachedSoloApps = null;
+let lastSoloCacheTime = 0;
+const SOLO_CACHE_TTL = 4000; // 4 seconds cache
+
+function invalidateSoloCache() {
+  cachedSoloApps = null;
+  lastSoloCacheTime = 0;
+}
+
+function sanitizeDocumentList(docs) {
+  if (!Array.isArray(docs)) return [];
+  return docs.map((doc) => {
+    if (!doc || typeof doc !== 'object') return doc;
+    const cleanDoc = { ...doc };
+    if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string' && cleanDoc.dataUrl.length > 500) {
+      delete cleanDoc.dataUrl;
+    }
+    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:') && cleanDoc.previewUrl.length > 500) {
+      cleanDoc.previewUrl = cleanDoc.fileUrl || undefined;
+    }
+    if (Array.isArray(cleanDoc.files)) {
+      cleanDoc.files = cleanDoc.files.map((f) => {
+        if (!f || typeof f !== 'object') return f;
+        const cleanF = { ...f };
+        if (cleanF.dataUrl && typeof cleanF.dataUrl === 'string' && cleanF.dataUrl.length > 500) {
+          delete cleanF.dataUrl;
+        }
+        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:') && cleanF.previewUrl.length > 500) {
+          cleanF.previewUrl = cleanF.fileUrl || undefined;
+        }
+        return cleanF;
+      });
+    }
+    return cleanDoc;
+  });
+}
+
+function sanitizeFormData(formData) {
+  if (!formData || typeof formData !== 'object') return formData;
+  const clean = { ...formData };
+  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:') && clean.applicantPhoto.length > 500) {
+    clean.applicantPhoto = clean.photoUrl || (clean.applicant_photo && !clean.applicant_photo.startsWith('data:') ? clean.applicant_photo : undefined);
+  }
+  if (clean.photoUrl && typeof clean.photoUrl === 'string' && clean.photoUrl.startsWith('data:') && clean.photoUrl.length > 500) {
+    clean.photoUrl = undefined;
+  }
+  if (Array.isArray(clean.documents)) {
+    clean.documents = sanitizeDocumentList(clean.documents);
+  }
+  if (Array.isArray(clean.uploadedDocuments)) {
+    clean.uploadedDocuments = sanitizeDocumentList(clean.uploadedDocuments);
+  }
+  if (Array.isArray(clean.uploaded_documents)) {
+    clean.uploaded_documents = sanitizeDocumentList(clean.uploaded_documents);
+  }
+  return clean;
+}
+
+function sanitizeExtraData(extraData) {
+  if (!extraData || typeof extraData !== 'object') return extraData;
+  const clean = { ...extraData };
+  if (clean.applicantPhoto && typeof clean.applicantPhoto === 'string' && clean.applicantPhoto.startsWith('data:') && clean.applicantPhoto.length > 500) {
+    clean.applicantPhoto = clean.photoUrl || (clean.applicant_photo && !clean.applicant_photo.startsWith('data:') ? clean.applicant_photo : undefined);
+  }
+  if (clean.formData) {
+    clean.formData = sanitizeFormData(clean.formData);
+  }
+  if (Array.isArray(clean.documents)) {
+    clean.documents = sanitizeDocumentList(clean.documents);
+  }
+  return clean;
+}
+
+function sanitizeAppRow(row) {
+  if (!row) return row;
+  const cleanRow = { ...row };
+  
+  if (cleanRow.uploaded_documents) {
+    const raw = typeof cleanRow.uploaded_documents === 'string' ? (() => { try { return JSON.parse(cleanRow.uploaded_documents); } catch { return []; } })() : cleanRow.uploaded_documents;
+    cleanRow.uploaded_documents = sanitizeDocumentList(raw);
+  }
+  if (cleanRow.form_data) {
+    const raw = typeof cleanRow.form_data === 'string' ? (() => { try { return JSON.parse(cleanRow.form_data); } catch { return {}; } })() : cleanRow.form_data;
+    cleanRow.form_data = sanitizeFormData(raw);
+  }
+  if (cleanRow.extra_data) {
+    const raw = typeof cleanRow.extra_data === 'string' ? (() => { try { return JSON.parse(cleanRow.extra_data); } catch { return {}; } })() : cleanRow.extra_data;
+    cleanRow.extra_data = sanitizeExtraData(raw);
+  }
+  if (cleanRow.applicant_photo && typeof cleanRow.applicant_photo === 'string' && cleanRow.applicant_photo.startsWith('data:') && cleanRow.applicant_photo.length > 500) {
+    cleanRow.applicant_photo = cleanRow.photo_url && !cleanRow.photo_url.startsWith('data:') ? cleanRow.photo_url : '';
+  }
+  if (cleanRow.photo_url && typeof cleanRow.photo_url === 'string' && cleanRow.photo_url.startsWith('data:') && cleanRow.photo_url.length > 500) {
+    cleanRow.photo_url = cleanRow.applicant_photo && !cleanRow.applicant_photo.startsWith('data:') ? cleanRow.applicant_photo : '';
+  }
+  return cleanRow;
+}
+
 function generateReference(qcid) {
   if (qcid && String(qcid).trim()) return String(qcid).trim();
   return '110000116932100';
@@ -328,6 +427,7 @@ exports.createApplication = async (req, res) => {
       }).catch(() => {});
     } catch {}
 
+    invalidateSoloCache();
     return res.status(201).json({
       success: true,
       message: 'Application created successfully',
@@ -336,6 +436,7 @@ exports.createApplication = async (req, res) => {
     });
   } catch (error) {
     console.error('Fatal createApplication error:', error);
+    invalidateSoloCache();
     return res.status(200).json({
       success: true,
       message: 'Application received and processed',
@@ -416,6 +517,7 @@ exports.uploadDocuments = async (req, res) => {
       }
     }
 
+    invalidateSoloCache();
     res.status(200).json({
       success: true,
       message: 'Documents uploaded successfully',
@@ -462,6 +564,7 @@ exports.removeDocument = async (req, res) => {
           [JSON.stringify(uploadedDocuments), applicationId]
         );
 
+        invalidateSoloCache();
         return res.status(200).json({ success: true, message: 'File removed successfully' });
       }
     }
@@ -490,6 +593,7 @@ exports.submitApplication = async (req, res) => {
       [applicationId]
     );
 
+    invalidateSoloCache();
     res.status(200).json({
       success: true,
       message: 'Application submitted successfully',
@@ -566,7 +670,8 @@ exports.getUserApplications = async (req, res) => {
 
     if (orClauses.length === 0) {
       const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
-      return res.status(200).json({ success: true, applications: fallback.rows || [] });
+      const cleanRows = (fallback.rows || []).map(sanitizeAppRow);
+      return res.status(200).json({ success: true, applications: cleanRows });
     }
 
     const result = await db.query(
@@ -577,12 +682,14 @@ exports.getUserApplications = async (req, res) => {
       params
     );
 
-    res.status(200).json({ success: true, applications: result.rows });
+    const cleanRows = (result.rows || []).map(sanitizeAppRow);
+    res.status(200).json({ success: true, applications: cleanRows });
   } catch (error) {
     console.warn('Error fetching user applications:', error.message);
     try {
       const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
-      return res.status(200).json({ success: true, applications: fallback.rows || [] });
+      const cleanRows = (fallback.rows || []).map(sanitizeAppRow);
+      return res.status(200).json({ success: true, applications: cleanRows });
     } catch {
       res.status(200).json({ success: true, applications: [] });
     }
@@ -594,6 +701,23 @@ exports.getAllApplications = async (req, res) => {
   try {
     await initSoloParentColumns();
     const { status, page = 1, limit = 200 } = req.query;
+
+    const numLimit = parseInt(limit, 10) || 200;
+    const numPage = parseInt(page, 10) || 1;
+
+    // Check fast in-memory cache if standard unfiltered or default request
+    const isStandardList = (!status || status === 'all') && numPage === 1 && numLimit >= 100;
+    if (isStandardList && cachedSoloApps && (Date.now() - lastSoloCacheTime < SOLO_CACHE_TTL)) {
+      return res.status(200).json({
+        success: true,
+        applications: cachedSoloApps,
+        pagination: {
+          total: cachedSoloApps.length,
+          page: 1,
+          pages: 1,
+        },
+      });
+    }
 
     let query = 'SELECT * FROM solo_parent_applications';
     const params = [];
@@ -607,8 +731,6 @@ exports.getAllApplications = async (req, res) => {
 
     query += ' ORDER BY id DESC';
 
-    const numLimit = parseInt(limit, 10) || 200;
-    const numPage = parseInt(page, 10) || 1;
     const offset = (numPage - 1) * numLimit;
     params.push(numLimit, offset);
     query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
@@ -623,22 +745,30 @@ exports.getAllApplications = async (req, res) => {
       rows = simple.rows || [];
     }
 
+    const cleanRows = rows.map(sanitizeAppRow);
+
+    if (isStandardList) {
+      cachedSoloApps = cleanRows;
+      lastSoloCacheTime = Date.now();
+    }
+
     return res.status(200).json({
       success: true,
-      applications: rows,
+      applications: cleanRows,
       pagination: {
-        total: rows.length,
+        total: cleanRows.length,
         page: numPage,
-        pages: Math.ceil(rows.length / numLimit) || 1,
+        pages: Math.ceil(cleanRows.length / numLimit) || 1,
       },
     });
   } catch (error) {
     console.error('Error fetching applications:', error);
     try {
       const emergency = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 200');
+      const cleanRows = (emergency.rows || []).map(sanitizeAppRow);
       return res.status(200).json({
         success: true,
-        applications: emergency.rows || [],
+        applications: cleanRows,
       });
     } catch (err) {
       return res.status(200).json({ success: true, applications: [] });
@@ -780,6 +910,7 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
+    invalidateSoloCache();
     return res.status(200).json({
       success: true,
       message: 'Application status updated',
@@ -812,6 +943,7 @@ exports.cancelApplication = async (req, res) => {
 
     await db.query(`UPDATE solo_parent_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
 
+    invalidateSoloCache();
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });
   } catch (error) {
     console.error('Error cancelling application:', error);
@@ -1001,6 +1133,7 @@ exports.updateApplicationData = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
+    invalidateSoloCache();
     res.status(200).json({ success: true, message: 'Application data updated' });
   } catch (error) {
     console.error('Error updating application data:', error);
@@ -1014,6 +1147,7 @@ exports.deleteApplication = async (req, res) => {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
       await db.query('DELETE FROM solo_parent_applications');
+      invalidateSoloCache();
       return res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^SP-/, '').trim();
@@ -1021,6 +1155,7 @@ exports.deleteApplication = async (req, res) => {
       'DELETE FROM solo_parent_applications WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 RETURNING id',
       [cleanId, applicationId]
     );
+    invalidateSoloCache();
     res.status(200).json({ success: true, message: 'Solo Parent application deleted successfully' });
   } catch (error) {
     console.error('Error deleting solo parent application:', error);
@@ -1032,6 +1167,7 @@ exports.deleteApplication = async (req, res) => {
 exports.clearApplications = async (req, res) => {
   try {
     await db.query('DELETE FROM solo_parent_applications');
+    invalidateSoloCache();
     res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
   } catch (error) {
     console.error('Error clearing solo parent applications:', error);

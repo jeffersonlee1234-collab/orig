@@ -9,34 +9,44 @@ const cacheMap = new Map<string, { data: any; expiresAt: number }>()
 const DEFAULT_CACHE_MS = 2000 // 2 seconds
 
 export async function deduplicatedFetch(url: string, cacheTtlMs: number = DEFAULT_CACHE_MS): Promise<any> {
+  return cachedApiFetch(url, undefined, cacheTtlMs)
+}
+
+export async function cachedApiFetch<T = any>(
+  url: string,
+  options?: RequestInit,
+  cacheTtlMs: number = DEFAULT_CACHE_MS
+): Promise<T> {
   const now = Date.now()
-  const cached = cacheMap.get(url)
+  const cacheKey = `${url}_${JSON.stringify(options?.headers || {})}`
+  const cached = cacheMap.get(cacheKey)
   if (cached && cached.expiresAt > now) {
-    return cached.data
+    return cached.data as T
   }
 
-  if (inFlightMap.has(url)) {
-    return inFlightMap.get(url)
+  if (inFlightMap.has(cacheKey)) {
+    return inFlightMap.get(cacheKey) as Promise<T>
   }
 
   const promise = (async () => {
     try {
       const separator = url.includes("?") ? "&" : "?"
       const res = await fetch(`${url}${separator}_t=${Date.now()}`, {
+        ...options,
         cache: "no-store",
       })
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
       }
       const data = await res.json()
-      cacheMap.set(url, { data, expiresAt: Date.now() + cacheTtlMs })
-      return data
+      cacheMap.set(cacheKey, { data, expiresAt: Date.now() + cacheTtlMs })
+      return data as T
     } finally {
-      inFlightMap.delete(url)
+      inFlightMap.delete(cacheKey)
     }
   })()
 
-  inFlightMap.set(url, promise)
+  inFlightMap.set(cacheKey, promise)
   return promise
 }
 
