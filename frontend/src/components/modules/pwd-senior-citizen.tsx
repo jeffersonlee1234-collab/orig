@@ -2688,19 +2688,19 @@ export default function PWDSeniorCitizen() {
           if (rawAssigned && typeof rawAssigned === "string") {
             if (isPwd && (rawAssigned.toUpperCase().startsWith("SENIOR-") || rawAssigned.toUpperCase().startsWith("OSCA-"))) {
               return {
-                ...a,
+                ...updated,
                 assignedIdNumber: rawAssigned.replace(/^(SENIOR|OSCA)-/i, "PWD-"),
                 assigned_id_number: rawAssigned.replace(/^(SENIOR|OSCA)-/i, "PWD-"),
               }
             } else if (!isPwd && !String(a.type || "").includes("booklet") && rawAssigned.toUpperCase().startsWith("PWD-")) {
               return {
-                ...a,
+                ...updated,
                 assignedIdNumber: rawAssigned.replace(/^PWD-/i, "SENIOR-"),
                 assigned_id_number: rawAssigned.replace(/^PWD-/i, "SENIOR-"),
               }
             }
           }
-          return a
+          return updated
         })
 
         if (isMounted) {
