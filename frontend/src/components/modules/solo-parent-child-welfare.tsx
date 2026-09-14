@@ -724,12 +724,8 @@ async function fetchAllSubmissions(): Promise<WelfareSubmission[]> {
   // If backend returned data, save fresh copy to localStorage
   if (backendFetched) {
     try {
-      if (soloApps.length > 0) {
-        localStorage.setItem("solo_parent_applications", JSON.stringify(soloApps))
-      }
-      if (childApps.length > 0) {
-        localStorage.setItem("child_welfare_applications", JSON.stringify(childApps))
-      }
+      localStorage.setItem("solo_parent_applications", JSON.stringify(soloApps))
+      localStorage.setItem("child_welfare_applications", JSON.stringify(childApps))
     } catch {}
   } else {
     // Only use localStorage if backend was completely offline
