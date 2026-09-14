@@ -921,6 +921,55 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         setLatestApprovedApp(null)
         setIsBlocked(false)
         setActiveAppStatus(null)
+
+        if (approvedAny && isMounted) {
+          setApprovedPwdRecord(approvedAny)
+          setIsIdVerified(true)
+          if (approvedAny.disabilityType) setDisabilityType(approvedAny.disabilityType)
+          if (approvedAny.disabilityClass) setDisabilityClass(approvedAny.disabilityClass)
+
+          const officialId = approvedAny.assignedIdNumber || approvedAny.assigned_id_number || approvedAny.existingIdNumber || approvedAny.referenceNumber || ""
+
+          setFormData((prev) => ({
+            ...prev,
+            existingPwdIdNumber: prev.existingPwdIdNumber || officialId,
+            firstName: approvedAny.firstName || prev.firstName,
+            middleName: approvedAny.middleName !== undefined ? approvedAny.middleName : prev.middleName,
+            lastName: approvedAny.lastName || prev.lastName,
+            suffix: approvedAny.suffix !== undefined ? approvedAny.suffix : prev.suffix,
+            citizenship: approvedAny.nationality || approvedAny.citizenship || prev.citizenship || "FILIPINO",
+            dobMonth: approvedAny.dobMonth || prev.dobMonth,
+            dobDay: approvedAny.dobDay || prev.dobDay,
+            dobYear: approvedAny.dobYear || prev.dobYear,
+            age: String(approvedAny.age || prev.age || ""),
+            sex: approvedAny.sex || prev.sex,
+            civilStatus: approvedAny.civilStatus || prev.civilStatus,
+            contactNo: (approvedAny.contactNo || approvedAny.cellphoneNo || prev.contactNo || "").replace(/\s+/g, ""),
+            email: approvedAny.email || prev.email,
+            addressHouseNo: approvedAny.houseNo || approvedAny.addressHouseNo || prev.addressHouseNo,
+            addressStreet: approvedAny.street || approvedAny.addressStreet || prev.addressStreet,
+            addressBarangay: approvedAny.barangay || approvedAny.addressBarangay || prev.addressBarangay,
+            addressCity: approvedAny.city || approvedAny.addressCity || prev.addressCity,
+            pobCity: prev.pobCity || approvedAny.pobCity || approvedAny.placeOfBirthCity || "",
+            pobProvince: prev.pobProvince || approvedAny.pobProvince || approvedAny.placeOfBirthProvince || "",
+            bloodType: prev.bloodType || approvedAny.bloodType || "",
+            permanentAddress: prev.permanentAddress || approvedAny.permanentAddress || approvedAny.address || "",
+            presentAddress: prev.presentAddress || approvedAny.presentAddress || approvedAny.address || "",
+            emergencyLastName: prev.emergencyLastName || approvedAny.emergencyLastName || "",
+            emergencyFirstName: prev.emergencyFirstName || approvedAny.emergencyFirstName || "",
+            emergencyMiddleName: prev.emergencyMiddleName || approvedAny.emergencyMiddleName || "",
+            emergencyContactNo: prev.emergencyContactNo || (approvedAny.emergencyContactNo || approvedAny.emergencyPhone || "").replace(/\s+/g, ""),
+            emergencyRelationship: prev.emergencyRelationship || approvedAny.emergencyRelationship || approvedAny.relationshipToApplicant || "",
+            emergencyAddress: prev.emergencyAddress || approvedAny.emergencyAddress || approvedAny.emergencyResidentialAddress || "",
+            heightCm: prev.heightCm || approvedAny.heightCm || "",
+            weightKg: prev.weightKg || approvedAny.weightKg || "",
+            colorOfHair: prev.colorOfHair || approvedAny.colorOfHair || "",
+            colorOfEyes: prev.colorOfEyes || approvedAny.colorOfEyes || "",
+            otherMarks: prev.otherMarks || approvedAny.otherMarks || approvedAny.otherIdentifyingMarks || "",
+            causeOfDisability: prev.causeOfDisability || approvedAny.causeOfDisability || "",
+            specificDisability: prev.specificDisability || approvedAny.specificDisability || "",
+          }))
+        }
       }
     }
 
