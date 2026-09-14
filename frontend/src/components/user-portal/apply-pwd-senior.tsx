@@ -238,6 +238,22 @@ export default function ApplyPWDSenior() {
             const s = String(a.status || "").toLowerCase()
             return s === "approved" || s === "completed" || s === "for_release"
           })
+          // Check for approved applications matching current sub-flow
+          const approvedNew = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "new").toLowerCase()
+            return (s === "approved" || s === "completed" || s === "for_release") && t !== "renewal" && t !== "loss" && t !== "replacement"
+          })
+          const approvedRenewal = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "approved" || s === "completed" || s === "for_release") && t === "renewal"
+          })
+          const approvedLoss = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "approved" || s === "completed" || s === "for_release") && (t === "loss" || t === "replacement")
+          })
 
           // Check for pending applications matching current sub-flow
           const pendingNew = idApps.find((a) => {
@@ -259,9 +275,9 @@ export default function ApplyPWDSenior() {
           if (isMounted) {
             if (urlType === "new" || !urlType) {
               // On New Application: if user ALREADY has an approved ID, STRICTLY block and show Approved ID
-              if (anyApprovedId) {
+              if (approvedNew || anyApprovedId) {
                 setIsBlocked(true)
-                setBlockedApp(anyApprovedId)
+                setBlockedApp(approvedNew || anyApprovedId)
                 setHasApprovedApp(true)
               } else if (pendingNew) {
                 setIsBlocked(true)
@@ -273,23 +289,33 @@ export default function ApplyPWDSenior() {
                 setHasApprovedApp(false)
               }
             } else if (urlType === "renewal") {
-              if (pendingRenewal) {
+              if (approvedRenewal) {
+                setIsBlocked(true)
+                setBlockedApp(approvedRenewal)
+                setHasApprovedApp(true)
+              } else if (pendingRenewal) {
                 setIsBlocked(true)
                 setBlockedApp(pendingRenewal)
+                setHasApprovedApp(false)
               } else {
                 setIsBlocked(false)
                 setBlockedApp(null)
+                setHasApprovedApp(false)
               }
-              setHasApprovedApp(Boolean(anyApprovedId))
             } else if (urlType === "loss") {
-              if (pendingLoss) {
+              if (approvedLoss) {
+                setIsBlocked(true)
+                setBlockedApp(approvedLoss)
+                setHasApprovedApp(true)
+              } else if (pendingLoss) {
                 setIsBlocked(true)
                 setBlockedApp(pendingLoss)
+                setHasApprovedApp(false)
               } else {
                 setIsBlocked(false)
                 setBlockedApp(null)
+                setHasApprovedApp(false)
               }
-              setHasApprovedApp(Boolean(anyApprovedId))
             }
           }
         }

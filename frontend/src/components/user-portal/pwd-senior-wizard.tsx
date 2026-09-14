@@ -960,40 +960,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           setLatestApprovedApp(null)
           setIsBlocked(false)
           setActiveAppStatus(null)
-
-          // Auto-verify and pre-fill approved PWD ID record for renewal/replacement
-          if (approvedAny && !isIdVerified) {
-            const rawId = String(
-              approvedAny.assignedIdNumber ||
-              approvedAny.assigned_id_number ||
-              approvedAny.referenceNumber ||
-              approvedAny.reference_no ||
-              ""
-            ).trim()
-            const cleanId = rawId.replace(/^PWD-?/i, "").trim()
-            if (cleanId) {
-              setFormData((prev) => ({
-                ...prev,
-                existingPwdIdNumber: cleanId,
-                hasExistingPwdId: "Yes",
-              }))
-              setIsResident(true)
-              setHasDisability(true)
-              setIsIdVerified(true)
-              setApprovedPwdRecord(approvedAny)
-              setVerifyError(null)
-
-              const finalDisabilityType =
-                approvedAny.disabilityType ||
-                approvedAny.disability_type ||
-                approvedAny.typeOfDisability ||
-                "Visual Disability"
-
-              setDisabilityType(finalDisabilityType)
-              const isApparent = finalDisabilityType === "Physical Disability" || finalDisabilityType === "Orthopedic Disability"
-              setDisabilityClass(isApparent ? "apparent" : "non-apparent")
-            }
-          }
         }
       }
     }
