@@ -81,6 +81,22 @@ function extractIdentifiers(req) {
   );
 }
 
+function formatManilaTime(dateInput) {
+  if (!dateInput) return new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+  return d.toLocaleString('en-US', {
+    timeZone: 'Asia/Manila',
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+}
+
 // GET /api/notifications
 // Aggregates real-time notifications for user across all services and syncs read/dismissed state
 exports.getNotifications = async (req, res) => {
@@ -222,7 +238,7 @@ exports.getNotifications = async (req, res) => {
             id: notifId,
             title: r.title,
             desc: r.description,
-            time: new Date(r.created_at).toLocaleString('en-US'),
+            time: formatManilaTime(r.created_at),
             unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : !r.is_read,
             reference_no: r.application_ref || null,
             created_at: r.created_at,
@@ -253,7 +269,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title: isApproved ? 'AICS Assistance Application: Approved' : 'AICS Assistance Application: Not Approved',
                 desc: `${app.assistance_type || 'AICS Financial Aid'} — Ref: ${app.reference_no || app.qc_id}`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: app.reference_no || app.qc_id,
@@ -309,7 +325,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title,
                 desc: `${serviceLabel} — Ref: ${app.assigned_id_number || app.reference_number || app.id}`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: app.assigned_id_number || app.reference_number || app.id,
@@ -356,7 +372,7 @@ exports.getNotifications = async (req, res) => {
                 desc: isApproved
                   ? `Congratulations! Your Solo Parent ID application (ID No. ${idNum}) has been approved and forwarded to Appointments for claiming schedule.`
                   : `Solo Parent Application: ${app.rejection_reason || 'Not approved'} (Ref: ${app.reference_number})`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: idNum,
@@ -392,7 +408,7 @@ exports.getNotifications = async (req, res) => {
                 desc: isApproved
                   ? `Congratulations! Your application for ${app.support_category || 'Child Welfare Assistance'} has been approved and forwarded to Appointments.`
                   : `Child Welfare Assistance: ${app.rejection_reason || 'Not approved'} (Ref: ${app.reference_number})`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: app.reference_number,
@@ -426,7 +442,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title: isApproved ? 'Livelihood & Training Application: Approved' : st === 'needs_revision' ? 'Livelihood Application: Needs Revision' : 'Livelihood & Training Application: Not Approved',
                 desc: `${app.livelihood_type || 'Livelihood Program'} — Ref: ${app.reference_number}`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: app.reference_number,
@@ -461,7 +477,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title: isApproved ? 'Gov Services Training: Approved' : appStatus === 'needs_revision' ? 'Gov Services Training: Needs Revision' : 'Gov Services Training: Not Approved',
                 desc: `${app.training_name || 'Skills Training'} — Ref: ${app.reference_number || app.qcid}`,
-                time: new Date(appDate).toLocaleString('en-US'),
+                time: formatManilaTime(appDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reason: app.rejection_reason || null,
                 reference_no: app.reference_number || app.qcid,
@@ -503,7 +519,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title: 'Payout Appointment Scheduled',
                 desc: `Scheduled on ${apptDate} ${apptTime ? `at ${apptTime}` : ''} at ${venue} (Ref: ${d.application_ref})`,
-                time: new Date(disbDate).toLocaleString('en-US'),
+                time: formatManilaTime(disbDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reference_no: d.application_ref,
                 created_at: disbDate,
@@ -520,7 +536,7 @@ exports.getNotifications = async (req, res) => {
                 id: notifId,
                 title: 'Financial Aid Released',
                 desc: `₱${Number(d.fixed_amount || 15000).toLocaleString()} financial aid officially released at ${venue}.`,
-                time: new Date(relDate).toLocaleString('en-US'),
+                time: formatManilaTime(relDate),
                 unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
                 reference_no: d.application_ref,
                 created_at: relDate,

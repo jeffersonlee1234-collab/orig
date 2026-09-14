@@ -696,11 +696,23 @@ function ResidentHeader({
                     translatedTitle = t("notifLivelihoodRejectedTitle") || n.title
                   }
 
+                  const formattedNotifTime = n.created_at && !isNaN(new Date(n.created_at).getTime())
+                    ? new Date(n.created_at).toLocaleString(language === "en" ? "en-US" : "fil-PH", {
+                        month: "numeric",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })
+                    : n.time || new Date().toLocaleString(language === "en" ? "en-US" : "fil-PH")
+
                   items.push({
                     id: n.id,
                     title: translatedTitle,
                     desc: n.desc || n.description,
-                    time: n.time || new Date(n.created_at || Date.now()).toLocaleString(language === "en" ? "en-US" : "fil-PH"),
+                    time: formattedNotifTime,
                     unread: !readIds.includes(n.id) && Boolean(n.unread),
                     reason: n.reason || null,
                   })
