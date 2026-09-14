@@ -21,12 +21,12 @@ if (connectionString) {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   };
-} else {
+  const dbPass = process.env.PGPASSWORD || process.env.DB_PASSWORD;
   poolConfig = {
     host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.PGPORT || process.env.DB_PORT || '5432', 10),
     user: process.env.PGUSER || process.env.DB_USER || 'postgres',
-    password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || '').trim(),
+    ...(dbPass ? { password: String(dbPass).trim() } : {}),
     database: process.env.PGDATABASE || process.env.DB_NAME || 'railway',
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     max: 20,
