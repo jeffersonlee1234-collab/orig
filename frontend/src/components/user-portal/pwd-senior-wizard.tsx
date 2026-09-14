@@ -1265,6 +1265,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           }
         }
 
+        const profAny = userProfile as any
         const house = matchedApp.houseNo || matchedApp.addressHouseNo || richApp?.houseNo || richApp?.addressHouseNo || userProfile?.addressHouseNo || "11"
         const str = matchedApp.street || matchedApp.addressStreet || richApp?.street || richApp?.addressStreet || userProfile?.addressStreet || "NOICA ST."
         const bgy = matchedApp.barangay || matchedApp.addressBarangay || richApp?.barangay || richApp?.addressBarangay || userProfile?.addressBarangay || "Sauyo"
@@ -1273,15 +1274,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         const permAddr = matchedApp.permanentAddress || richApp?.permanentAddress || fullAddr
         const presAddr = matchedApp.presentAddress || richApp?.presentAddress || fullAddr
 
-        const hCm = matchedApp.heightCm || matchedApp.height_cm || matchedApp.height || richApp?.heightCm || richApp?.height_cm || userProfile?.heightCm || "165"
-        const wKg = matchedApp.weightKg || matchedApp.weight_kg || matchedApp.weight || richApp?.weightKg || richApp?.weight_kg || userProfile?.weightKg || "60"
-        const cHair = matchedApp.colorOfHair || matchedApp.color_of_hair || matchedApp.hairColor || richApp?.colorOfHair || richApp?.color_of_hair || userProfile?.colorOfHair || "Black"
-        const cEyes = matchedApp.colorOfEyes || matchedApp.color_of_eyes || matchedApp.eyeColor || richApp?.colorOfEyes || richApp?.color_of_eyes || userProfile?.colorOfEyes || "Brown"
-        const oMarks = matchedApp.otherMarks || matchedApp.other_marks || matchedApp.otherIdentifyingMarks || richApp?.otherMarks || richApp?.other_marks || userProfile?.otherMarks || "None"
+        const hCm = matchedApp.heightCm || matchedApp.height_cm || matchedApp.height || richApp?.heightCm || richApp?.height_cm || profAny?.heightCm || "165"
+        const wKg = matchedApp.weightKg || matchedApp.weight_kg || matchedApp.weight || richApp?.weightKg || richApp?.weight_kg || profAny?.weightKg || "60"
+        const cHair = matchedApp.colorOfHair || matchedApp.color_of_hair || matchedApp.hairColor || richApp?.colorOfHair || richApp?.color_of_hair || profAny?.colorOfHair || "Black"
+        const cEyes = matchedApp.colorOfEyes || matchedApp.color_of_eyes || matchedApp.eyeColor || richApp?.colorOfEyes || richApp?.color_of_eyes || profAny?.colorOfEyes || "Brown"
+        const oMarks = matchedApp.otherMarks || matchedApp.other_marks || matchedApp.otherIdentifyingMarks || richApp?.otherMarks || richApp?.other_marks || profAny?.otherMarks || "None"
 
-        const pCity = matchedApp.pobCity || matchedApp.pob_city || matchedApp.placeOfBirthCity || matchedApp.place_of_birth_city || richApp?.pobCity || richApp?.pob_city || richApp?.placeOfBirthCity || userProfile?.placeOfBirthCity || userProfile?.pobCity || "QUEZON CITY"
-        const pProv = matchedApp.pobProvince || matchedApp.pob_province || matchedApp.placeOfBirthProvince || matchedApp.place_of_birth_province || richApp?.pobProvince || richApp?.pob_province || richApp?.placeOfBirthProvince || userProfile?.placeOfBirthProvince || userProfile?.pobProvince || "METRO MANILA"
-        const bType = matchedApp.bloodType || matchedApp.blood_type || richApp?.bloodType || richApp?.blood_type || userProfile?.bloodType || "O+"
+        const pCity = matchedApp.pobCity || matchedApp.pob_city || matchedApp.placeOfBirthCity || matchedApp.place_of_birth_city || richApp?.pobCity || richApp?.pob_city || richApp?.placeOfBirthCity || profAny?.placeOfBirthCity || profAny?.pobCity || "QUEZON CITY"
+        const pProv = matchedApp.pobProvince || matchedApp.pob_province || matchedApp.placeOfBirthProvince || matchedApp.place_of_birth_province || richApp?.pobProvince || richApp?.pob_province || richApp?.placeOfBirthProvince || profAny?.placeOfBirthProvince || profAny?.pobProvince || "METRO MANILA"
+        const bType = matchedApp.bloodType || matchedApp.blood_type || richApp?.bloodType || richApp?.blood_type || profAny?.bloodType || "O+"
         const causeDis = matchedApp.causeOfDisability || matchedApp.cause_of_disability || richApp?.causeOfDisability || richApp?.cause_of_disability || DISABILITY_TYPE_MAPPING[finalDisabilityType]?.defaultCause || "Inborn / Congenital"
         const specDis = matchedApp.specificDisability || matchedApp.specific_disability || richApp?.specificDisability || richApp?.specific_disability || ""
 
