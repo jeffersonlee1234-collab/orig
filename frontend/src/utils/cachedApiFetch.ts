@@ -1,12 +1,13 @@
 // frontend/src/utils/cachedApiFetch.ts
-// Request deduplication & in-flight lock for high-frequency portal API calls
+// Request deduplication, in-flight locking, and intelligent caching for high-frequency portal API calls
 
-import { API_BASE } from "../config/api"
+import { API_BASE, getAuthHeaders } from "../config/api"
 
 const inFlightMap = new Map<string, Promise<any>>()
 const cacheMap = new Map<string, { data: any; expiresAt: number }>()
 
-const DEFAULT_CACHE_MS = 2000 // 2 seconds
+const DEFAULT_CACHE_MS = 3000 // 3 seconds default cache
+const REQUEST_TIMEOUT_MS = 9000 // 9s timeout to prevent hanging pending sockets
 
 export async function deduplicatedFetch(url: string, cacheTtlMs: number = DEFAULT_CACHE_MS): Promise<any> {
   return cachedApiFetch(url, undefined, cacheTtlMs)
@@ -29,19 +30,29 @@ export async function cachedApiFetch<T = any>(
   }
 
   const promise = (async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
     try {
       const separator = url.includes("?") ? "&" : "?"
-      const res = await fetch(`${url}${separator}_t=${Date.now()}`, {
+      // Only append _t if cacheTtlMs is 0, otherwise use cache-friendly url
+      const reqUrl = cacheTtlMs > 0 ? url : `${url}${separator}_t=${Date.now()}`
+
+      const res = await fetch(reqUrl, {
         ...options,
-        cache: "no-store",
+        signal: options?.signal || controller.signal,
       })
+
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
       }
       const data = await res.json()
-      cacheMap.set(cacheKey, { data, expiresAt: Date.now() + cacheTtlMs })
+      if (cacheTtlMs > 0) {
+        cacheMap.set(cacheKey, { data, expiresAt: Date.now() + cacheTtlMs })
+      }
       return data as T
     } finally {
+      clearTimeout(timeoutId)
       inFlightMap.delete(cacheKey)
     }
   })()
@@ -64,10 +75,11 @@ export function clearApiCache(urlPattern?: string) {
 
 export async function fetchPwdSeniorApplications(): Promise<any[]> {
   try {
-    const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 2000)
+    const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 4000)
     return Array.isArray(data) ? data : []
   } catch (err) {
     console.warn("Could not fetch PWD/Senior applications:", err)
     return []
   }
 }
+

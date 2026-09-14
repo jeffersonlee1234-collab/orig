@@ -344,7 +344,7 @@ export default function Reports() {
   // Live polling and event listeners
   useEffect(() => {
     fetchLiveAnalytics(false)
-    const interval = setInterval(() => fetchLiveAnalytics(true), 3500)
+    const interval = setInterval(() => fetchLiveAnalytics(true), 8000)
 
     const handleUpdate = () => fetchLiveAnalytics(true)
     window.addEventListener("storage", handleUpdate)

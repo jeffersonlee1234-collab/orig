@@ -2187,7 +2187,7 @@ export default function LivelihoodApplicationsAdmin() {
 
   useEffect(() => {
     fetchApps()
-    const interval = setInterval(fetchApps, 3000)
+    const interval = setInterval(fetchApps, 8000)
     window.addEventListener("livelihood_status_updated", fetchApps)
     window.addEventListener("storage", fetchApps)
 

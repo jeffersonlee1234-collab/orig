@@ -248,8 +248,8 @@ export default function ApplyLivelihood() {
 
     fetchApp()
 
-    // Poll every 2 seconds so status automatically syncs across all devices
-    const interval = setInterval(fetchApp, 2000)
+    // Poll every 8 seconds so status automatically syncs across all devices
+    const interval = setInterval(fetchApp, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       fetchApp()

@@ -411,10 +411,10 @@ export default function FinancialAidDisbursement() {
 
     syncAll()
 
-    // Interval checker every 2s to auto-release when exact appointment time is reached and sync across devices
+    // Interval checker every 8s to auto-release when exact appointment time is reached and sync across devices
     const autoReleaseInterval = setInterval(() => {
       syncAll()
-    }, 2000)
+    }, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       syncAll()

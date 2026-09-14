@@ -661,7 +661,7 @@ const canProceedPersonal = Boolean(
     }
 
     checkActiveAicsApplication()
-    const interval = setInterval(checkActiveAicsApplication, 3000)
+    const interval = setInterval(checkActiveAicsApplication, 8000)
 
     const handleUpdate = () => checkActiveAicsApplication()
     window.addEventListener("aics_applications_updated", handleUpdate)
@@ -694,7 +694,7 @@ const canProceedPersonal = Boolean(
     }
 
     checkStatus()
-    const interval = setInterval(checkStatus, 4000)
+    const interval = setInterval(checkStatus, 8000)
     return () => clearInterval(interval)
   }, [step, reference, appStatus])
 

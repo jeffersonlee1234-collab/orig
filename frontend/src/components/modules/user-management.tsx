@@ -594,7 +594,7 @@ export default function UserManagement() {
   useEffect(() => {
     loadUsers(false)
 
-    const interval = setInterval(() => loadUsers(true), 3500)
+    const interval = setInterval(() => loadUsers(true), 8000)
     const handleSync = () => loadUsers(true)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {

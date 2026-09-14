@@ -2463,40 +2463,49 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
   )
 }
 
+import { deduplicatedFetch, clearApiCache } from "../../utils/cachedApiFetch"
+
 export default function PWDSeniorCitizen() {
-  const [applications, setApplications] = useState<ApplicationSubmission[]>([])
+  const [applications, setApplications] = useState<ApplicationSubmission[]>(() => {
+    try {
+      const raw = localStorage.getItem("pwd_senior_applications")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+    return []
+  })
   const [filterCategory, setFilterCategory] = useState<"all" | "PWD" | "Senior Citizen">("all")
   const [filterType, setFilterType] = useState<"all" | "new" | "renewal" | "loss" | "assistance">("all")
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedApp, setSelectedApp] = useState<ApplicationSubmission | null>(null)
   const [cardApp, setCardApp] = useState<ApplicationSubmission | null>(null)
+  const isFetchingRef = useRef(false)
 
   // Fetch applications from backend and localStorage in real-time
   useEffect(() => {
     let isMounted = true
 
     const fetchApps = async () => {
+      if (isFetchingRef.current) return
+      isFetchingRef.current = true
       try {
         let combined: ApplicationSubmission[] = []
         let backendFetched = false
         try {
-          const res = await fetch(`${API_BASE}/api/pwd-senior/applications?_t=${Date.now()}`, {
-            cache: "no-store",
-          })
-          if (res.ok) {
-            const data = await res.json()
-            if (Array.isArray(data)) {
-              combined = data.filter((a: any) =>
-                a &&
-                !["APP-PWD-2026-001", "APP-PWD-2026-002", "APP-PWD-2026-003"].includes(a.id) &&
-                !["PWD-QC-2026-4891", "PWD-QC-2026-3109", "PWD-QC-2026-5520"].includes(a.referenceNumber)
-              )
-              backendFetched = true
-              try {
-                localStorage.setItem("pwd_senior_applications", JSON.stringify(combined))
-              } catch { }
-            }
+          const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 4000)
+          if (Array.isArray(data)) {
+            combined = data.filter((a: any) =>
+              a &&
+              !["APP-PWD-2026-001", "APP-PWD-2026-002", "APP-PWD-2026-003"].includes(a.id) &&
+              !["PWD-QC-2026-4891", "PWD-QC-2026-3109", "PWD-QC-2026-5520"].includes(a.referenceNumber)
+            )
+            backendFetched = true
+            try {
+              localStorage.setItem("pwd_senior_applications", JSON.stringify(combined))
+            } catch { }
           }
         } catch (err) {
           console.warn("Could not fetch PWD/Senior applications from backend:", err)
@@ -2546,11 +2555,13 @@ export default function PWDSeniorCitizen() {
         }
       } catch (err) {
         console.warn("Error syncing applications:", err)
+      } finally {
+        isFetchingRef.current = false
       }
     }
 
     fetchApps()
-    const interval = setInterval(fetchApps, 1500)
+    const interval = setInterval(fetchApps, 8000)
     const unsubscribe = subscribeToRealtimeChanges(fetchApps)
     window.addEventListener("focus", fetchApps)
 
@@ -2580,6 +2591,7 @@ export default function PWDSeniorCitizen() {
     const targetIdentifier = id || refNo
     const approvedDate = new Date().toISOString()
 
+    clearApiCache("/api/pwd-senior/applications")
     // Strict 1-application update only: match by exact unique application id
     updateApplications((prev) =>
       prev.map((app) =>
@@ -2610,6 +2622,7 @@ export default function PWDSeniorCitizen() {
           category: targetApp.category,
         }),
       })
+      clearApiCache("/api/pwd-senior/applications")
     } catch (err) {
       console.warn("Failed updating backend status:", err)
     }
@@ -2795,6 +2808,7 @@ export default function PWDSeniorCitizen() {
       })
     }
 
+    clearApiCache("/api/pwd-senior/applications")
     // Sync rejection to backend database
     try {
       await fetch(`${API_BASE}/api/pwd-senior/applications/${id}/status`, {
@@ -2805,6 +2819,7 @@ export default function PWDSeniorCitizen() {
           rejectionReason: reason,
         }),
       })
+      clearApiCache("/api/pwd-senior/applications")
     } catch (err) {
       console.warn("Failed updating backend rejection:", err)
     }

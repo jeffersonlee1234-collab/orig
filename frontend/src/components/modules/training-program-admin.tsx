@@ -70,7 +70,7 @@ export default function TrainingProgramAdmin() {
 
   useEffect(() => {
     fetchTrainingApplications()
-    const interval = setInterval(fetchTrainingApplications, 2000)
+    const interval = setInterval(fetchTrainingApplications, 8000)
     const handleSync = () => fetchTrainingApplications()
     window.addEventListener("storage", handleSync)
     window.addEventListener("application_status_updated", handleSync)

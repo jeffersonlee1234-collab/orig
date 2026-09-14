@@ -15,6 +15,7 @@ import {
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 
@@ -616,21 +617,18 @@ export default function PWDSocialAssistanceWizard({
 
     const checkStatus = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/pwd-senior/applications`)
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data) && isMounted) {
-            const currentQcid = (getLoggedInUserQcid() || (userProfile as any)?.qcidNumber || userProfile?.qcidNo || "").trim()
-            const matched = data.find((a: any) => {
-              const appRef = String(a.referenceNumber || a.reference_number || a.qc_id || a.qcid || "").trim()
-              return (
-                (reference && (appRef === reference || (appRef.length >= 8 && appRef.includes(reference)))) ||
-                (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid))))
-              )
-            })
-            if (matched) {
-              setLatestSubmittedApp(matched)
-            }
+        const data = await fetchPwdSeniorApplications()
+        if (Array.isArray(data) && isMounted) {
+          const currentQcid = (getLoggedInUserQcid() || (userProfile as any)?.qcidNumber || userProfile?.qcidNo || "").trim()
+          const matched = data.find((a: any) => {
+            const appRef = String(a.referenceNumber || a.reference_number || a.qc_id || a.qcid || "").trim()
+            return (
+              (reference && (appRef === reference || (appRef.length >= 8 && appRef.includes(reference)))) ||
+              (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid))))
+            )
+          })
+          if (matched) {
+            setLatestSubmittedApp(matched)
           }
         }
       } catch (e) {
@@ -639,7 +637,7 @@ export default function PWDSocialAssistanceWizard({
     }
 
     checkStatus()
-    const pollInterval = setInterval(checkStatus, 2000)
+    const pollInterval = setInterval(checkStatus, 8000)
 
     const handleUpdated = () => checkStatus()
     window.addEventListener("pwd_senior_applications_updated", handleUpdated)

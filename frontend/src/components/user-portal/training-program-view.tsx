@@ -363,7 +363,7 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
 
   useEffect(() => {
     fetchTrainingData()
-    const interval = setInterval(fetchTrainingData, 3000)
+    const interval = setInterval(fetchTrainingData, 8000)
     return () => clearInterval(interval)
   }, [userQcid])
 

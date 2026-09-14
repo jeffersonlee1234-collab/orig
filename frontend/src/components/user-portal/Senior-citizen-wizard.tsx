@@ -765,7 +765,7 @@ export default function SeniorCitizenApplicationWizard({
     }
 
     checkActiveApp()
-    const interval = setInterval(checkActiveApp, 1500)
+    const interval = setInterval(checkActiveApp, 8000)
     window.addEventListener("pwd_senior_applications_updated", checkActiveApp)
     window.addEventListener("storage", checkActiveApp)
 

@@ -17,6 +17,7 @@ import {
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 
@@ -317,16 +318,13 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
         let allApps: any[] = []
         let backendFetched = false
         try {
-          const res = await fetch(`${API_BASE}/api/pwd-senior/applications`)
-          if (res.ok) {
-            const data = await res.json()
-            if (Array.isArray(data)) {
-              allApps = data
-              backendFetched = true
-              try {
-                localStorage.setItem("pwd_senior_applications", JSON.stringify(data))
-              } catch {}
-            }
+          const data = await fetchPwdSeniorApplications()
+          if (Array.isArray(data) && data.length > 0) {
+            allApps = data
+            backendFetched = true
+            try {
+              localStorage.setItem("pwd_senior_applications", JSON.stringify(data))
+            } catch {}
           }
         } catch {}
 
@@ -403,7 +401,7 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
     }
 
     syncRealtimeApp()
-    const interval = setInterval(syncRealtimeApp, 1500)
+    const interval = setInterval(syncRealtimeApp, 8000)
 
     const handleUpdate = () => syncRealtimeApp()
     window.addEventListener("storage", handleUpdate)

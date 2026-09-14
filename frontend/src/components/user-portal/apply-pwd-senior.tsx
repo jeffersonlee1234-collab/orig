@@ -299,7 +299,7 @@ export default function ApplyPWDSenior() {
     }
 
     checkActiveApp()
-    const pollInterval = setInterval(checkActiveApp, 1500)
+    const pollInterval = setInterval(checkActiveApp, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       checkActiveApp()

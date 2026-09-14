@@ -958,7 +958,7 @@ export default function CaseManagement() {
     loadCases(false)
 
     // Interval polling for background changes
-    const interval = setInterval(() => loadCases(true), 2500)
+    const interval = setInterval(() => loadCases(true), 8000)
 
     // Real-time broadcast sync
     const unsubscribe = subscribeToRealtimeChanges(() => {
