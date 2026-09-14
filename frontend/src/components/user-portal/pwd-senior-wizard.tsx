@@ -1620,12 +1620,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       String(targetApp?.status || "").toLowerCase() === "completed" ||
       String(targetApp?.status || "").toLowerCase() === "for_release"
 
-    const serviceTitle =
-      initialIdStatus === "renewal"
-        ? "PWD ID Renewal"
-        : initialIdStatus === "loss"
-        ? "PWD ID Replacement"
-        : "PWD ID"
+    const serviceTitle = "New PWD ID"
 
     const displayRef =
       targetApp?.referenceNumber ||
