@@ -633,6 +633,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       const p = getCurrentUserProfile() as any
       setProfile(p)
       if (p) {
+        const fullAddr = [
+          p.addressHouseNo || p.houseNo || p.house_no,
+          p.addressStreet || p.street,
+          p.addressBarangay || p.barangay || "Sauyo",
+          p.addressCity || p.city || "QUEZON CITY",
+        ]
+          .filter(Boolean)
+          .join(", ")
+
         setFormData((prev) => ({
           ...prev,
           firstName: p.firstName || prev.firstName,
@@ -652,6 +661,13 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           addressBarangay: p.addressBarangay || p.barangay || prev.addressBarangay,
           contactNo: String(p.contactNo || p.mobileNumber || prev.contactNo || "").replace(/\s+/g, ""),
           email: p.email || prev.email,
+          bloodType: p.bloodType || prev.bloodType || "O+",
+          permanentAddress: prev.permanentAddress || p.permanentAddress || fullAddr,
+          emergencyFirstName: prev.emergencyFirstName || p.emergencyFirstName || "",
+          emergencyLastName: prev.emergencyLastName || p.emergencyLastName || "",
+          emergencyContactNo: prev.emergencyContactNo || p.emergencyContactNo || (p.contactNo ? String(p.contactNo).replace(/\s+/g, "") : ""),
+          emergencyRelationship: prev.emergencyRelationship || p.emergencyRelationship || "Spouse",
+          emergencyAddress: prev.emergencyAddress || p.emergencyAddress || fullAddr,
         }))
       }
     }
@@ -724,6 +740,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
 
   const [formData, setFormData] = useState<FormData>(() => {
     const prof: any = propUserProfile || getCurrentUserProfile() || {}
+    const fullAddr = [
+      prof.addressHouseNo || prof.houseNo || prof.house_no,
+      prof.addressStreet || prof.street,
+      prof.addressBarangay || prof.barangay || "Sauyo",
+      prof.addressCity || prof.city || "QUEZON CITY",
+    ]
+      .filter(Boolean)
+      .join(", ")
+
     return {
       ...EMPTY_FORM_DATA,
       firstName: prof.firstName || prof.first_name || "",
@@ -740,22 +765,16 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       addressCity: prof.addressCity || prof.city || "QUEZON CITY",
       addressHouseNo: prof.addressHouseNo || prof.houseNo || prof.house_no || "",
       addressStreet: prof.addressStreet || prof.street || "",
+      addressBarangay: prof.addressBarangay || prof.barangay || "Sauyo",
+      contactNo: String(prof.contactNo || prof.mobileNumber || "").replace(/\s+/g, ""),
+      email: prof.email || "",
       bloodType: prof.bloodType || (prof as any).blood_type || "O+",
-      permanentAddress: "",
+      permanentAddress: prof.permanentAddress || fullAddr,
       emergencyFirstName: prof.emergencyFirstName || "",
       emergencyLastName: prof.emergencyLastName || "",
-      emergencyContactNo: prof.emergencyContactNo || "",
-      emergencyRelationship: prof.emergencyRelationship || "",
-      emergencyAddress:
-        prof.emergencyAddress ||
-        [
-          prof.addressHouseNo || prof.houseNo || prof.house_no,
-          prof.addressStreet || prof.street,
-          prof.addressBarangay || prof.barangay || "Sauyo",
-          prof.addressCity || prof.city || "QUEZON CITY",
-        ]
-          .filter(Boolean)
-          .join(", "),
+      emergencyContactNo: prof.emergencyContactNo || (prof.contactNo ? String(prof.contactNo).replace(/\s+/g, "") : ""),
+      emergencyRelationship: prof.emergencyRelationship || "Spouse",
+      emergencyAddress: prof.emergencyAddress || fullAddr,
     }
   })
 
