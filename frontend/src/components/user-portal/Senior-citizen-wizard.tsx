@@ -750,20 +750,6 @@ export default function SeniorCitizenApplicationWizard({
         setBlockedApp(null)
         setLatestApprovedApp(null)
         setIsBlocked(false)
-
-        if (approvedAny && isMounted) {
-          const officialId = approvedAny.assignedIdNumber || approvedAny.assigned_id_number || approvedAny.existingIdNumber || approvedAny.referenceNumber || ""
-          if (officialId) setExistingIdNumber(officialId)
-          setIsIdVerified(true)
-          setFormData((prev) => ({
-            ...prev,
-            emergencyFirstName: prev.emergencyFirstName || approvedAny.emergencyFirstName || "",
-            emergencyLastName: prev.emergencyLastName || approvedAny.emergencyLastName || "",
-            emergencyContactNo: prev.emergencyContactNo || approvedAny.emergencyContactNo || approvedAny.emergencyPhone || "",
-            emergencyRelationship: prev.emergencyRelationship || approvedAny.emergencyRelationship || approvedAny.relationshipToApplicant || "",
-            emergencyAddress: prev.emergencyAddress || approvedAny.emergencyAddress || approvedAny.emergencyResidentialAddress || "",
-          }))
-        }
       }
     }
 
