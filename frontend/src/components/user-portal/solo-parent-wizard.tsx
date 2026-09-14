@@ -3223,15 +3223,12 @@ export default function SoloParentApplicationWizard({
                         }`}
                       >
                         <option value="">{t("selectRelationshipOption") || "Select Relationship"}</option>
-                        <option value="Immediate Family">Immediate Family</option>
-                        <option value="Parent">Parent</option>
-                        <option value="Child">{t("relationChild") || "Child"}</option>
-                        <option value="Spouse">{t("relationSpouse") || "Spouse"}</option>
+                        <option value="Parent">{t("relationParent") || "Parent"}</option>
                         <option value="Sibling">{t("relationSibling") || "Sibling"}</option>
+                        <option value="Child">{t("relationChild") || "Child"}</option>
                         <option value="Relative">{t("relationRelative") || "Relative"}</option>
-                        <option value="Caregiver">{t("relationCaregiver") || "Caregiver / Guardian"}</option>
                         <option value="Friend">{t("relationFriend") || "Friend / Neighbor"}</option>
-                        <option value="Others">{t("relationOthers") || "Others"}</option>
+                        <option value="Caregiver">{t("relationCaregiver") || "Caregiver / Guardian"}</option>
                       </select>
                     </div>
                   </div>
