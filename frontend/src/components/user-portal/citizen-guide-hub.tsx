@@ -28,6 +28,7 @@ import {
   Bus,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
+import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
@@ -99,21 +100,19 @@ export default function CitizenGuideHub() {
         }
 
         try {
-          const delRes = await fetch(
+          const delData = await cachedApiFetch(
             `${API_BASE}/api/user-applications/deleted?email=${encodeURIComponent(userEmail)}&qcid=${encodeURIComponent(
               qcid
             )}&name=${encodeURIComponent(userFirstName + " " + userLastName)}`,
-            { headers: authHeaders }
-          )
-          if (delRes.ok) {
-            const delData = await delRes.json()
-            if (delData.applications && Array.isArray(delData.applications)) {
-              delData.applications.forEach((d: any) => {
-                if (d.referenceNo) deletedSet.add(String(d.referenceNo).toLowerCase().trim())
-                if (d.applicationId) deletedSet.add(String(d.applicationId).toLowerCase().trim())
-                if (d.id) deletedSet.add(String(d.id).toLowerCase().trim())
-              })
-            }
+            { headers: authHeaders },
+            4000
+          ).catch(() => null)
+          if (delData && delData.applications && Array.isArray(delData.applications)) {
+            delData.applications.forEach((d: any) => {
+              if (d.referenceNo) deletedSet.add(String(d.referenceNo).toLowerCase().trim())
+              if (d.applicationId) deletedSet.add(String(d.applicationId).toLowerCase().trim())
+              if (d.id) deletedSet.add(String(d.id).toLowerCase().trim())
+            })
           }
         } catch {}
 
@@ -138,9 +137,8 @@ export default function CitizenGuideHub() {
 
         // 1. AICS Apps
         try {
-          const res = await fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcid)}`, { headers: authHeaders })
-          if (res.ok) {
-            const data = await res.json()
+          const data = await cachedApiFetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcid)}`, { headers: authHeaders }, 4000).catch(() => null)
+          if (data) {
             const list = Array.isArray(data) ? data : data.applications || []
             const matched = list.filter(isUserMatch).map((a: any) => {
               const rawType = (a.assistance_type || a.assistanceType || a.type || "AICS").replace(/\s*assistance/gi, "").trim()
@@ -161,31 +159,27 @@ export default function CitizenGuideHub() {
 
         // 2. PWD / Senior Apps
         try {
-          const res2 = await fetch(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders })
-          if (res2.ok) {
-            const list2 = await res2.json()
-            if (Array.isArray(list2)) {
-              const matched2 = list2.filter(isUserMatch).map((a: any) => {
-                const refNum = a.assignedIdNumber || a.referenceNumber || a.reference_no || a.id
-                return {
-                  id: a.id || refNum,
-                  program: `${a.category || "Social Service"} - ${a.type ? String(a.type).toUpperCase() : "Application"}`,
-                  category: a.category || "PWD / Senior",
-                  status: a.status || "pending",
-                  date: a.created_at || a.dateSubmitted || new Date().toISOString(),
-                  ref: refNum
-                }
-              })
-              found.push(...matched2)
-            }
+          const list2 = await cachedApiFetch(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders }, 4000).catch(() => null)
+          if (Array.isArray(list2)) {
+            const matched2 = list2.filter(isUserMatch).map((a: any) => {
+              const refNum = a.assignedIdNumber || a.referenceNumber || a.reference_no || a.id
+              return {
+                id: a.id || refNum,
+                program: `${a.category || "Social Service"} - ${a.type ? String(a.type).toUpperCase() : "Application"}`,
+                category: a.category || "PWD / Senior",
+                status: a.status || "pending",
+                date: a.created_at || a.dateSubmitted || new Date().toISOString(),
+                ref: refNum
+              }
+            })
+            found.push(...matched2)
           }
         } catch {}
 
         // 3. Solo Parent Apps
         try {
-          const res3 = await fetch(`${API_BASE}/api/solo-parent/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
-          if (res3.ok) {
-            const data3 = await res3.json()
+          const data3 = await cachedApiFetch(`${API_BASE}/api/solo-parent/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000).catch(() => null)
+          if (data3) {
             const list3 = data3.applications || (Array.isArray(data3) ? data3 : [])
             const matched3 = list3.filter(isUserMatch).map((a: any) => {
               const refNum = a.assigned_id_number || a.solo_parent_id_number || a.reference_number || a.referenceNumber || a.id
@@ -204,9 +198,8 @@ export default function CitizenGuideHub() {
 
         // 4. Child Welfare Apps
         try {
-          const res4 = await fetch(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders })
-          if (res4.ok) {
-            const data4 = await res4.json()
+          const data4 = await cachedApiFetch(`${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(userEmail)}`, { headers: authHeaders }, 4000).catch(() => null)
+          if (data4) {
             const list4 = data4.applications || (Array.isArray(data4) ? data4 : [])
             const matched4 = list4.filter(isUserMatch).map((a: any) => {
               const refNum = a.reference_number || a.referenceNumber || a.id

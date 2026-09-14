@@ -5,6 +5,7 @@ import SoloParentApplicationWizard from "./solo-parent-wizard"
 import ChildWelfareApplicationWizard, { getLocalizedChildWelfarePrograms } from "./child-welfare-wizard"
 import { useLanguage } from "../ui/language-context"
 import { API_BASE, getAuthHeaders } from "../../config/api"
+import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
@@ -351,12 +352,12 @@ export default function ApplySoloParent() {
         const uid = userProf?.id || (userProf as any)?.userId || ""
 
         try {
-          const res = await fetch(
-            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}&firstName=${encodeURIComponent(currentFirstName)}&lastName=${encodeURIComponent(currentLastName)}&_t=${Date.now()}`,
-            { headers: getAuthHeaders(), cache: "no-store" }
-          )
-          if (res.ok) {
-            const data = await res.json()
+          const data = await cachedApiFetch(
+            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}&firstName=${encodeURIComponent(currentFirstName)}&lastName=${encodeURIComponent(currentLastName)}`,
+            { headers: getAuthHeaders() },
+            4000
+          ).catch(() => null)
+          if (data) {
             const raw = Array.isArray(data) ? data : data.applications || []
             if (Array.isArray(raw) && raw.length > 0) {
               backendApps = raw
@@ -365,24 +366,6 @@ export default function ApplySoloParent() {
           }
         } catch {
           // silent fallback
-        }
-
-        // Secondary fallback to /api/solo-parent/applications if user-specific query returned 0
-        if (backendApps.length === 0) {
-          try {
-            const allRes = await fetch(`${API_BASE}/api/solo-parent/applications?_t=${Date.now()}`, {
-              headers: getAuthHeaders(),
-              cache: "no-store",
-            })
-            if (allRes.ok) {
-              const allData = await allRes.json()
-              const rawAll = Array.isArray(allData) ? allData : allData.applications || []
-              if (Array.isArray(rawAll) && rawAll.length > 0) {
-                backendApps = rawAll
-                backendFetched = true
-              }
-            }
-          } catch {}
         }
 
         let localApps: any[] = []
@@ -458,7 +441,7 @@ export default function ApplySoloParent() {
     }
 
     checkActiveApp()
-    const pollInterval = setInterval(checkActiveApp, 5000)
+    const pollInterval = setInterval(checkActiveApp, 8000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       checkActiveApp()

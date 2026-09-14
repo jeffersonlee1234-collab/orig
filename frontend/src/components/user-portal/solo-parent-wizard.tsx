@@ -19,6 +19,7 @@ import {
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
+import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
@@ -946,55 +947,42 @@ export default function SoloParentApplicationWizard({
     const activeRef = reference || blockedReference || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : "")
 
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 6000)
-
-      const promises: Promise<Response>[] = [
-        fetch(
-          `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&_t=${Date.now()}`,
-          { headers: getAuthHeaders(), cache: "no-store", signal: controller.signal }
-        ).catch(() => new Response(JSON.stringify([]))),
-        fetch(
-          `${API_BASE}/api/solo-parent/applications?_t=${Date.now()}`,
-          { headers: getAuthHeaders(), cache: "no-store", signal: controller.signal }
-        ).catch(() => new Response(JSON.stringify([]))),
+      const promises: Promise<any>[] = [
+        cachedApiFetch(
+          `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}`,
+          { headers: getAuthHeaders() },
+          4000
+        ).catch(() => null),
       ]
 
       if (activeRef) {
         promises.push(
-          fetch(`${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}?_t=${Date.now()}`, {
-            headers: getAuthHeaders(),
-            cache: "no-store",
-            signal: controller.signal,
-          }).catch(() => new Response(JSON.stringify({})))
+          cachedApiFetch(
+            `${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}`,
+            { headers: getAuthHeaders() },
+            4000
+          ).catch(() => null)
         )
       }
 
-      const results = await Promise.allSettled(promises)
-      clearTimeout(timeoutId)
-
+      const results = await Promise.all(promises)
       const backendApps: any[] = []
       const seenIds = new Set<string>()
 
-      for (const resResult of results) {
-        if (resResult.status === "fulfilled" && resResult.value.ok) {
-          try {
-            const data = await resResult.value.json()
-            const apps = Array.isArray(data) ? data : data.applications || (data.application ? [data.application] : [])
-            if (Array.isArray(apps)) {
-              apps.forEach((a: any) => {
-                const key = a?.id || a?.reference_number || a?.referenceNumber
-                if (key && !seenIds.has(String(key))) {
-                  seenIds.add(String(key))
-                  backendApps.push(a)
-                }
-              })
+      for (const data of results) {
+        if (!data) continue
+        const apps = Array.isArray(data) ? data : data.applications || (data.application ? [data.application] : [])
+        if (Array.isArray(apps)) {
+          apps.forEach((a: any) => {
+            const key = a?.id || a?.reference_number || a?.referenceNumber
+            if (key && !seenIds.has(String(key))) {
+              seenIds.add(String(key))
+              backendApps.push(a)
             }
-          } catch {}
+          })
         }
       }
 
-      // If backend returned valid responses, synchronize localStorage
       if (backendApps.length > 0) {
         try {
           localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
@@ -1003,7 +991,7 @@ export default function SoloParentApplicationWizard({
       }
     } catch {}
 
-    // Fallback to local cache only if network failed completely
+    // Fallback to local cache
     try {
       const raw = localStorage.getItem("solo_parent_applications")
       if (raw) {
@@ -1359,20 +1347,18 @@ export default function SoloParentApplicationWizard({
 
         const isReapply = isReapplying || (typeof window !== "undefined" && window.location.search.includes("reapply=true"))
 
-        // 1. Backend Eligibility API
+        // 1. Backend Eligibility API via cached fetch
         try {
-          const res = await fetch(
-            `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&reapply=${isReapply ? "true" : "false"}&_t=${Date.now()}`,
-            { headers: getAuthHeaders(), cache: "no-store" }
-          )
-          if (res.ok) {
-            const data = await res.json()
-            if (data.blocked) {
-              isBlockedFound = true
-              reasonFound = data.reason || (data.application?.application_status === "approved" ? "approved" : "pending")
-              refFound = data.referenceNumber || data.application?.reference_number || ""
-              appFound = data.application || null
-            }
+          const data = await cachedApiFetch(
+            `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&reapply=${isReapply ? "true" : "false"}`,
+            { headers: getAuthHeaders() },
+            4000
+          ).catch(() => null)
+          if (data && data.blocked) {
+            isBlockedFound = true
+            reasonFound = data.reason || (data.application?.application_status === "approved" ? "approved" : "pending")
+            refFound = data.referenceNumber || data.application?.reference_number || ""
+            appFound = data.application || null
           }
         } catch {}
 
@@ -1530,7 +1516,7 @@ export default function SoloParentApplicationWizard({
     }
 
     checkEligibility(true)
-    const interval = setInterval(() => checkEligibility(false), 4000)
+    const interval = setInterval(() => checkEligibility(false), 8000)
     const handleUpdate = () => checkEligibility(false)
 
     const unsubscribe = subscribeToRealtimeChanges((event) => {

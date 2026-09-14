@@ -89,11 +89,39 @@ initPwdSeniorTable();
 
 let cachedApps = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 2500;
+const CACHE_TTL_MS = 4000; // 4 seconds cache
 
 function invalidateAppsCache() {
   cachedApps = null;
   lastCacheTime = 0;
+}
+
+function sanitizeDocumentList(docs) {
+  if (!Array.isArray(docs)) return [];
+  return docs.map((doc) => {
+    if (!doc || typeof doc !== 'object') return doc;
+    const cleanDoc = { ...doc };
+    if (cleanDoc.dataUrl && typeof cleanDoc.dataUrl === 'string' && cleanDoc.dataUrl.length > 500) {
+      delete cleanDoc.dataUrl;
+    }
+    if (cleanDoc.previewUrl && typeof cleanDoc.previewUrl === 'string' && cleanDoc.previewUrl.startsWith('data:') && cleanDoc.previewUrl.length > 500) {
+      cleanDoc.previewUrl = cleanDoc.fileUrl || undefined;
+    }
+    if (Array.isArray(cleanDoc.files)) {
+      cleanDoc.files = cleanDoc.files.map((f) => {
+        if (!f || typeof f !== 'object') return f;
+        const cleanF = { ...f };
+        if (cleanF.dataUrl && typeof cleanF.dataUrl === 'string' && cleanF.dataUrl.length > 500) {
+          delete cleanF.dataUrl;
+        }
+        if (cleanF.previewUrl && typeof cleanF.previewUrl === 'string' && cleanF.previewUrl.startsWith('data:') && cleanF.previewUrl.length > 500) {
+          cleanF.previewUrl = cleanF.fileUrl || undefined;
+        }
+        return cleanF;
+      });
+    }
+    return cleanDoc;
+  });
 }
 
 /**
@@ -139,13 +167,23 @@ exports.getAllApplications = async (req, res) => {
       const emFullName = [emFirst, emLast].filter(Boolean).join(' ').trim();
       const emPerson = row.emergency_contact_person || extra.emergencyContactPerson || extra.emergencyName || emFullName || '';
 
+      const cleanDocs = sanitizeDocumentList(parsedDocs.length > 0 ? parsedDocs : (extra.documents || []));
+
+      const rawPhoto = extra.applicantPhoto || extra.photoUrl || row.applicant_photo || (() => {
+        const p = cleanDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
+        return p ? (p.fileUrl || p.previewUrl || '') : '';
+      })();
+
+      const cleanPhoto = (typeof rawPhoto === 'string' && rawPhoto.startsWith('data:') && rawPhoto.length > 500)
+        ? (row.photo_url && !row.photo_url.startsWith('data:') ? row.photo_url : '')
+        : rawPhoto;
+
       return {
-        ...extra,
         id: row.id,
-        submittedAt: row.submitted_at || row.created_at,
         referenceNumber: row.reference_number,
         category: row.category,
         type: row.type,
+        submittedAt: row.submitted_at || row.created_at,
         firstName: row.first_name || extra.firstName || '',
         middleName: row.middle_name || extra.middleName || '',
         lastName: row.last_name || extra.lastName || '',
@@ -219,15 +257,9 @@ exports.getAllApplications = async (req, res) => {
         reasonForRequest: extra.reasonForRequest || '',
         livingArrangement: extra.livingArrangement || '',
         pensionSource: extra.pensionSource || '',
-        documents: parsedDocs.length > 0 ? parsedDocs : (extra.documents || []),
-        applicantPhoto: extra.applicantPhoto || extra.photoUrl || row.applicant_photo || (() => {
-          const p = parsedDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
-          return p ? (p.dataUrl || p.fileUrl || p.previewUrl || '') : '';
-        })(),
-        photoUrl: extra.photoUrl || extra.applicantPhoto || row.photo_url || row.applicant_photo || (() => {
-          const p = parsedDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
-          return p ? (p.dataUrl || p.fileUrl || p.previewUrl || '') : '';
-        })(),
+        documents: cleanDocs,
+        applicantPhoto: cleanPhoto,
+        photoUrl: cleanPhoto,
         isArchived: row.is_archived || false,
       };
     });
