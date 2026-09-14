@@ -1245,11 +1245,10 @@ interface CardProps {
   app: WelfareSubmission
   onView: (app: WelfareSubmission) => void
   onShowCard?: (app: WelfareSubmission) => void
-  onDelete?: (app: WelfareSubmission) => void
   allSubmissions?: WelfareSubmission[]
 }
 
-function ApplicationCard({ app, onView, onShowCard, onDelete, allSubmissions }: CardProps) {
+function ApplicationCard({ app, onView, onShowCard, allSubmissions }: CardProps) {
   const subLabel = isSoloParent(app)
     ? (app as any).applicationType === "new" ? "New application" : (app as any).applicationType === "renewal" ? "Renewal" : "Lost ID replacement"
     : app.supportCategory.replace(/^\d+\.\s*/, "")
@@ -2844,48 +2843,6 @@ export default function SoloParentChildWelfareAdmin() {
     }
   }
 
-  const handleDeleteApplication = async (targetApp: WelfareSubmission) => {
-    if (!window.confirm(`Are you sure you want to delete application ${targetApp.referenceNumber}?`)) return
-    const isSolo = isSoloParent(targetApp)
-    const rawId = targetApp.id.replace(/^(SP|CW)-/, "")
-    const url = isSolo
-      ? `${API_BASE}/api/solo-parent/admin/${rawId}`
-      : `${API_BASE}/api/child-welfare/admin/${rawId}`
-
-    setApplications((prev) => prev.filter((a) => a.id !== targetApp.id))
-
-    try {
-      await fetch(url, { method: "DELETE", headers: authHeaders() })
-      await loadApplications(true)
-      notifyApplicationChange("APPLICATION_DELETED", isSolo ? "solo_parent" : "child_welfare", targetApp.referenceNumber)
-    } catch (err) {
-      console.warn("Delete request failed:", err)
-    }
-  }
-
-  const handleClearSoloApplications = async () => {
-    if (!window.confirm("Are you sure you want to clear all Solo Parent records for fresh testing?")) return
-    setApplications((prev) => prev.filter((a) => a.category !== "Solo Parent"))
-    try {
-      await fetch(`${API_BASE}/api/solo-parent/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
-      await loadApplications(true)
-      notifyApplicationChange("APPLICATION_DELETED", "solo_parent")
-    } catch (err) {
-      console.warn("Clear solo parent failed:", err)
-    }
-  }
-
-  const handleClearChildApplications = async () => {
-    if (!window.confirm("Are you sure you want to clear all Child Welfare records for fresh testing?")) return
-    setApplications((prev) => prev.filter((a) => a.category !== "Child Welfare"))
-    try {
-      await fetch(`${API_BASE}/api/child-welfare/admin/clear-all`, { method: "DELETE", headers: authHeaders() })
-      await loadApplications(true)
-      notifyApplicationChange("APPLICATION_DELETED", "child_welfare")
-    } catch (err) {
-      console.warn("Clear child welfare failed:", err)
-    }
-  }
 
   const filteredApps = applications.filter((app) => {
     const matchCategory = filterCategory === "all" || app.category === filterCategory
@@ -3016,7 +2973,6 @@ export default function SoloParentChildWelfareAdmin() {
                   app={app}
                   onView={() => setSelectedApp(app)}
                   onShowCard={(app) => setCardApp(app)}
-                  onDelete={handleDeleteApplication}
                   allSubmissions={applications}
                 />
               ))}
