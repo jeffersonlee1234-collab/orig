@@ -20,10 +20,9 @@ import {
   getSavedDisbursements,
   checkAndAutoReleaseScheduledDisbursements,
   parseAppointmentDateTime,
-  deleteFinancialAidDisbursement,
   getDeletedDisbursementKeys,
 } from "../../utils/financialAidSync"
-import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
 export { FIXED_ASSISTANCE_AMOUNTS, type DisbursementStage, type SyncedDisbursementRecord }
 
