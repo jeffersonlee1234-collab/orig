@@ -8,12 +8,8 @@ const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 type ExpiryReason = "inactivity" | "concurrent" | null;
 
 export function SessionInactivityWatcher() {
-  const [expiryReason, setExpiryReason] = useState<ExpiryReason>(() => {
-    return (sessionStorage.getItem("session_terminated_reason") as ExpiryReason) || null;
-  });
-  const [newDeviceInfo, setNewDeviceInfo] = useState<string>(() => {
-    return sessionStorage.getItem("terminated_new_device") || "";
-  });
+  const [expiryReason, setExpiryReason] = useState<ExpiryReason>(null);
+  const [newDeviceInfo, setNewDeviceInfo] = useState<string>("");
   const lastActivityRef = useRef<number>(Date.now());
   const timerRef = useRef<any>(null);
   const verifyIntervalRef = useRef<any>(null);
@@ -22,9 +18,7 @@ export function SessionInactivityWatcher() {
   const checkIsAuth = useCallback(() => {
     return (
       sessionStorage.getItem("isAuthenticated") === "true" ||
-      localStorage.getItem("isAuthenticated") === "true" ||
-      Boolean(sessionStorage.getItem("currentUser")) ||
-      Boolean(localStorage.getItem("currentUser"))
+      localStorage.getItem("isAuthenticated") === "true"
     );
   }, []);
 
@@ -42,23 +36,23 @@ export function SessionInactivityWatcher() {
   }, []);
 
   const getSessionToken = useCallback(() => {
-    let token = sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken");
-    if (!token && checkIsAuth()) {
-      token = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      sessionStorage.setItem("sessionToken", token);
-      localStorage.setItem("sessionToken", token);
-    }
-    return token || "";
-  }, [checkIsAuth]);
+    return sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken") || "";
+  }, []);
 
   const clearAuthSession = useCallback(() => {
     try {
       sessionStorage.removeItem("isAuthenticated");
       sessionStorage.removeItem("userRole");
       sessionStorage.removeItem("currentUser");
+      sessionStorage.removeItem("user_email");
+      sessionStorage.removeItem("sessionToken");
+      sessionStorage.removeItem("session_terminated_reason");
+      sessionStorage.removeItem("terminated_new_device");
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("userRole");
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("user_email");
+      localStorage.removeItem("sessionToken");
       localStorage.removeItem("user_profile");
       localStorage.removeItem("token");
     } catch {}
@@ -68,13 +62,14 @@ export function SessionInactivityWatcher() {
 
   // Check if account was logged into on another device (Single Active Session rule)
   const verifyConcurrentSession = useCallback(async () => {
-    if (!checkIsAuth() && !sessionStorage.getItem("session_terminated_reason")) return;
+    if (!checkIsAuth()) return;
     if (expiryReason) return;
     if (isVerifyingRef.current) return;
 
     const email = getCurrentUserEmail();
     const token = getSessionToken();
 
+    // If no valid active session token or email, do not trigger concurrent mismatch
     if (!email || !token) return;
 
     try {
@@ -95,9 +90,7 @@ export function SessionInactivityWatcher() {
             const dev = data.newDevice;
             devStr = `${dev.device_name || dev.device_type || 'Another Device'}`;
             setNewDeviceInfo(devStr);
-            sessionStorage.setItem("terminated_new_device", devStr);
           }
-          sessionStorage.setItem("session_terminated_reason", "concurrent");
           clearAuthSession();
           setExpiryReason("concurrent");
         }
@@ -116,7 +109,12 @@ export function SessionInactivityWatcher() {
   }, [expiryReason]);
 
   useEffect(() => {
-    if (!checkIsAuth() && !sessionStorage.getItem("session_terminated_reason")) {
+    if (!checkIsAuth()) {
+      // Clear any lingering termination flags when not authenticated
+      try {
+        sessionStorage.removeItem("session_terminated_reason");
+        sessionStorage.removeItem("terminated_new_device");
+      } catch {}
       return;
     }
 
@@ -133,14 +131,13 @@ export function SessionInactivityWatcher() {
       if (checkIsAuth()) {
         const elapsed = Date.now() - lastActivityRef.current;
         if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-          sessionStorage.setItem("session_terminated_reason", "inactivity");
           clearAuthSession();
           setExpiryReason("inactivity");
         }
       }
     }, 10000);
 
-    // Initial check for concurrent session immediately
+    // Initial check for concurrent session
     verifyConcurrentSession();
 
     // Balanced periodic check every 30 seconds for concurrent device login
