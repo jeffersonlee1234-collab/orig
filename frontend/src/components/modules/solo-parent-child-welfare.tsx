@@ -890,6 +890,10 @@ function displayName(app: WelfareSubmission) {
       .filter((s) => s !== "null" && s !== "undefined")
       .join(" ")
   }
+  const child = (app as ChildWelfareSubmission).childName || (app as any).child_name
+  if (child && String(child).trim()) {
+    return String(child).trim()
+  }
   return [app.guardianFirstName, app.guardianMiddleName, app.guardianLastName]
     .filter(Boolean)
     .filter((s) => s !== "null" && s !== "undefined")
@@ -897,9 +901,15 @@ function displayName(app: WelfareSubmission) {
 }
 
 function initials(app: WelfareSubmission) {
-  const first = (isSoloParent(app) ? app.firstName : app.guardianFirstName) || ""
-  const last = (isSoloParent(app) ? app.lastName : app.guardianLastName) || ""
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "SP"
+  const name = displayName(app) || ""
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase()
+  }
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase()
+  }
+  return isSoloParent(app) ? "SP" : "CW"
 }
 function AvatarCircle({
   app,
