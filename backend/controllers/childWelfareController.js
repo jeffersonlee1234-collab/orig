@@ -392,38 +392,55 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
-    const appResult = await db.query('SELECT uploaded_documents, extra_data FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query(
+      'SELECT id, uploaded_documents, extra_data, form_data FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      [String(applicationId)]
+    );
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    const uploadedFiles = req.files.map((file) => {
+    const realAppId = appResult.rows[0].id;
+    let rawDocs = appResult.rows[0].uploaded_documents;
+    if (typeof rawDocs === 'string') {
+      try { rawDocs = JSON.parse(rawDocs); } catch { rawDocs = []; }
+    }
+    let uploadedDocuments = Array.isArray(rawDocs) ? rawDocs : [];
+
+    const existingDocIndex = uploadedDocuments.findIndex((doc) => doc && (doc.documentId === documentId || doc.id === documentId));
+    const existingFiles = existingDocIndex > -1 ? (uploadedDocuments[existingDocIndex].files || []) : [];
+
+    const uploadedFiles = req.files.map((file, idx) => {
       const fileUrl = `/uploads/child-welfare/${file.filename}`;
+      const matchExisting = existingFiles.find((ef) => ef && (ef.filename === file.originalname || ef.filename === file.filename)) || existingFiles[idx] || existingFiles[0];
       return {
         filename: file.filename,
+        originalName: file.originalname,
         fileUrl,
-        previewUrl: fileUrl,
+        previewUrl: matchExisting?.dataUrl || matchExisting?.previewUrl || fileUrl,
+        dataUrl: matchExisting?.dataUrl || (matchExisting?.previewUrl && matchExisting.previewUrl.startsWith('data:') ? matchExisting.previewUrl : undefined),
         fileSize: file.size,
         uploadedAt: new Date(),
       };
     });
 
-    let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
-    const existingDocIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
-
     if (existingDocIndex > -1) {
       uploadedDocuments[existingDocIndex] = {
         documentId,
-        documentLabel: documentLabel || uploadedDocuments[existingDocIndex].documentLabel,
+        documentLabel: documentLabel || uploadedDocuments[existingDocIndex].documentLabel || documentId,
         files: uploadedFiles,
       };
     } else {
-      uploadedDocuments.push({ documentId, documentLabel, files: uploadedFiles });
+      uploadedDocuments.push({
+        documentId,
+        documentLabel: documentLabel || documentId,
+        files: uploadedFiles,
+      });
     }
 
     await db.query(
       'UPDATE child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
-      [JSON.stringify(uploadedDocuments), applicationId]
+      [JSON.stringify(uploadedDocuments), realAppId]
     );
 
     const isPhotoDoc = /photo|picture|2x2|id_pic|avatar/i.test(documentId || documentLabel || '');
@@ -434,7 +451,7 @@ exports.uploadDocuments = async (req, res) => {
           `UPDATE child_welfare_applications 
            SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
            WHERE id = $2`,
-          [photoFile.fileUrl, applicationId]
+          [photoFile.fileUrl, realAppId]
         );
       } catch (e) {}
     }
@@ -452,33 +469,36 @@ exports.removeDocument = async (req, res) => {
   try {
     const { applicationId, documentId, filename } = req.params;
 
-    const appResult = await db.query('SELECT uploaded_documents FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query(
+      'SELECT id, uploaded_documents FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      [String(applicationId)]
+    );
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    let uploadedDocuments = appResult.rows[0].uploaded_documents || [];
-    const documentIndex = uploadedDocuments.findIndex((doc) => doc.documentId === documentId);
+    const realAppId = appResult.rows[0].id;
+    let rawDocs = appResult.rows[0].uploaded_documents;
+    if (typeof rawDocs === 'string') {
+      try { rawDocs = JSON.parse(rawDocs); } catch { rawDocs = []; }
+    }
+    let uploadedDocuments = Array.isArray(rawDocs) ? rawDocs : [];
 
-    if (documentIndex > -1) {
-      const fileIndex = uploadedDocuments[documentIndex].files.findIndex((file) => file.filename === filename);
+    const docIndex = uploadedDocuments.findIndex((doc) => doc && (doc.documentId === documentId || doc.id === documentId));
+    if (docIndex > -1) {
+      const doc = uploadedDocuments[docIndex];
+      const fileIndex = (doc.files || []).findIndex((f) => f.filename === filename);
 
       if (fileIndex > -1) {
-        try {
-          const filePath = path.join(__dirname, '../uploads/child-welfare', filename);
-          await fs.unlink(filePath);
-        } catch (err) {
-          console.warn('Could not delete physical file:', err);
-        }
+        doc.files.splice(fileIndex, 1);
 
-        uploadedDocuments[documentIndex].files.splice(fileIndex, 1);
-        if (uploadedDocuments[documentIndex].files.length === 0) {
-          uploadedDocuments.splice(documentIndex, 1);
+        if (doc.files.length === 0) {
+          uploadedDocuments.splice(docIndex, 1);
         }
 
         await db.query(
           'UPDATE child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
-          [JSON.stringify(uploadedDocuments), applicationId]
+          [JSON.stringify(uploadedDocuments), realAppId]
         );
 
         invalidateChildCache();
@@ -498,16 +518,20 @@ exports.submitApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
 
-    const appResult = await db.query('SELECT * FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query(
+      'SELECT id, reference_number FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      [String(applicationId)]
+    );
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
+    const realAppId = appResult.rows[0].id;
     const application = appResult.rows[0];
 
     await db.query(
       `UPDATE child_welfare_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
-      [applicationId]
+      [realAppId]
     );
 
     invalidateChildCache();

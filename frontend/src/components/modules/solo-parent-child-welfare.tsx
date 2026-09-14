@@ -263,10 +263,14 @@ function resolveFileUrl(fileUrl?: string, filename?: string, isChildWelfare: boo
 }
 
 function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): ApplicationDocument[] {
-  let uploaded = raw?.uploaded_documents
+  let uploaded = raw?.uploaded_documents || raw?.documents || raw?.uploadedDocuments
   if (!uploaded && raw?.form_data) {
-    const parsedFd = parseJsonSafe(raw.form_data, {})
-    uploaded = parsedFd.uploaded_documents || parsedFd.documents || parsedFd.uploadedFiles
+    const parsedFd = typeof raw.form_data === "string" ? parseJsonSafe(raw.form_data, {}) : (raw.form_data || {})
+    uploaded = parsedFd.uploaded_documents || parsedFd.documents || parsedFd.uploadedDocuments || parsedFd.uploadedFiles || parsedFd.uploadedDocs
+  }
+  if (!uploaded && raw?.extra_data) {
+    const parsedEd = typeof raw.extra_data === "string" ? parseJsonSafe(raw.extra_data, {}) : (raw.extra_data || {})
+    uploaded = parsedEd.uploaded_documents || parsedEd.documents || parsedEd.uploadedDocuments || parsedEd.uploadedFiles
   }
   uploaded = parseJsonSafe(uploaded, [])
 

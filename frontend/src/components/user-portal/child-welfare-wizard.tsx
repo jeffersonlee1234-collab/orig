@@ -946,6 +946,7 @@ export default function ChildWelfareApplicationWizard({
 
   // Step 3: Documents
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File[]>>({})
+  const [uploadedFilesBase64, setUploadedFilesBase64] = useState<Record<string, string>>({})
 
   const handleFileUpload = (docId: string, files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -954,6 +955,18 @@ export default function ChildWelfareApplicationWizard({
       ...prev,
       [docId]: [fileArray[0]],
     }))
+
+    const file = fileArray[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string
+        if (base64) {
+          setUploadedFilesBase64((prev) => ({ ...prev, [docId]: base64 }))
+        }
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const removeFile = (docId: string, index: number) => {
@@ -961,6 +974,11 @@ export default function ChildWelfareApplicationWizard({
       const current = prev[docId] || []
       const updated = current.filter((_, i) => i !== index)
       return { ...prev, [docId]: updated }
+    })
+    setUploadedFilesBase64((prev) => {
+      const updated = { ...prev }
+      delete updated[docId]
+      return updated
     })
   }
 
@@ -1005,6 +1023,7 @@ export default function ChildWelfareApplicationWizard({
     setStep(1)
     setReference("")
     setUploadedFiles({})
+    setUploadedFilesBase64({})
     setCheck1(false)
     setCheck2(false)
     setCheck3(false)
@@ -1177,8 +1196,74 @@ export default function ChildWelfareApplicationWizard({
     setReference(ref)
     setShowConfirmModal(false)
     setSubmissionStage("pending")
+    try {
+      ;(window as any).__isFormDirty = false
+    } catch {}
+
+    const newDocItems = selectedProgram.documents.map((d) => ({
+      documentId: d.id,
+      documentLabel: d.label,
+      files: (uploadedFiles[d.id] || []).map((f) => ({
+        filename: f.name,
+        originalName: f.name,
+        fileUrl: uploadedFilesBase64[d.id] || `${API_BASE}/uploads/child-welfare/${f.name}`,
+        previewUrl: uploadedFilesBase64[d.id] || `${API_BASE}/uploads/child-welfare/${f.name}`,
+        dataUrl: uploadedFilesBase64[d.id] || undefined,
+        fileSize: f.size,
+        uploadedAt: new Date().toISOString(),
+      })),
+    }))
 
     const userId = (userProfile as any)?.id || (userProfile as any)?.userId || "0"
+    const childFullName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(" ")
+
+    const finalFormData = {
+      ...formData,
+      childName: childFullName,
+      parentFullName: formData.parentFullName,
+      parentRelationship: formData.parentRelationship,
+      parentContactNo: formData.parentContactNo,
+      isReportingPersonCurrentParent: formData.isReportingPersonCurrentParent,
+      specifiedRelationship: formData.specifiedRelationship,
+      supportTypes: [selectedAssistanceType],
+      documents: newDocItems,
+      uploaded_documents: newDocItems,
+    }
+
+    // Instant local cache sync so Admin & User portal immediately see submission and uploaded documents
+    try {
+      const stored = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
+      const localRecord = {
+        id: String(Date.now()),
+        reference_number: ref,
+        referenceNumber: ref,
+        category: "Child Welfare",
+        classification_title: selectedProgram.title,
+        application_type: selectedAssistanceType || "Child Welfare Assistance",
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        childName: childFullName,
+        child_name: childFullName,
+        parentFullName: formData.parentFullName,
+        parentRelationship: formData.parentRelationship,
+        parentContactNo: formData.parentContactNo,
+        guardian_first_name: formData.parentFullName,
+        guardian_contact_no: formData.parentContactNo,
+        isReportingPersonCurrentParent: formData.isReportingPersonCurrentParent,
+        specifiedRelationship: formData.specifiedRelationship,
+        documents: newDocItems,
+        form_data: finalFormData,
+        uploaded_documents: newDocItems,
+        application_status: "pending",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      }
+      localStorage.setItem("child_welfare_applications", JSON.stringify([localRecord, ...stored.slice(0, 30)]))
+      window.dispatchEvent(new Event("storage"))
+      notifyApplicationChange("APPLICATION_SUBMITTED", "child_welfare", ref)
+    } catch {}
+
     const payload = {
       userId: String(userId),
       referenceNumber: ref,
@@ -1188,17 +1273,11 @@ export default function ChildWelfareApplicationWizard({
         selectedCategoryId: String(selectedProgram.id),
         selectedCategory: { id: selectedProgram.id, title: selectedProgram.title, key: selectedProgram.key },
         selectedAssistanceType,
-        formData: {
-          ...formData,
-          childName: [formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(" "),
-          parentFullName: formData.parentFullName,
-          parentRelationship: formData.parentRelationship,
-          parentContactNo: formData.parentContactNo,
-          isReportingPersonCurrentParent: formData.isReportingPersonCurrentParent,
-          specifiedRelationship: formData.specifiedRelationship,
-          supportTypes: [selectedAssistanceType],
-        },
+        documents: newDocItems,
+        uploadedDocuments: newDocItems,
+        formData: finalFormData,
       },
+      documents: newDocItems,
       requiredDocumentIds: selectedProgram.documents.filter((d) => d.required).map((d) => d.id),
     }
 
