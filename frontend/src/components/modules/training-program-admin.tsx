@@ -4,6 +4,7 @@ import {
   Search,
   CheckCircle2,
   Check,
+  RefreshCw,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { useLanguage } from "../ui/language-context"
@@ -20,6 +21,7 @@ export default function TrainingProgramAdmin() {
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [selectedApp, setSelectedApp] = useState<TrainingApplicationRecord | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Review modal form state
   const [rejectReason, setRejectReason] = useState("")
@@ -85,17 +87,17 @@ export default function TrainingProgramAdmin() {
 
   // Sync and persist application changes
   const persistAppUpdate = async (updated: TrainingApplicationRecord) => {
-    const updatedList = applications.map((a) => (String(a.id) === String(updated.id) ? updated : a))
+    setIsProcessing(true)
+    const updatedList = applications.map((a) => (String(a.id) === String(updated.id) || a.referenceNumber === updated.referenceNumber ? updated : a))
     setApplications(updatedList)
     setSelectedApp(updated)
 
     try {
       localStorage.setItem("training_applications", JSON.stringify(updatedList))
-      window.dispatchEvent(new Event("storage"))
     } catch (_) {}
 
     try {
-      await fetch(`${API_BASE}/api/training/applications/${updated.id}/status`, {
+      const res = await fetch(`${API_BASE}/api/training/applications/${updated.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -106,9 +108,27 @@ export default function TrainingProgramAdmin() {
           approvedBy: updated.approvedBy || "Gov Services Skills Development Division",
         }),
       })
-    } catch (_) {}
 
-    // Trigger real-time cross-tab sync so user portal notifications and application history immediately update
+      if (res.ok) {
+        const data = await res.json()
+        if (data && data.application) {
+          const finalApp = data.application
+          const refreshed = updatedList.map((a) => (String(a.id) === String(finalApp.id) || a.referenceNumber === finalApp.referenceNumber ? finalApp : a))
+          setApplications(refreshed)
+          setSelectedApp(finalApp)
+          try {
+            localStorage.setItem("training_applications", JSON.stringify(refreshed))
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      console.warn("persistAppUpdate fetch error:", err)
+    } finally {
+      setIsProcessing(false)
+    }
+
+    // Trigger real-time cross-tab sync AFTER PATCH succeeds so fetchTrainingApplications won't race
+    window.dispatchEvent(new Event("storage"))
     const syncType = updated.status === "approved" ? "APPLICATION_APPROVED" : updated.status === "rejected" ? "APPLICATION_REJECTED" : "STATUS_CHANGED"
     notifyApplicationChange(syncType, "livelihood", updated.referenceNumber)
   }
@@ -569,11 +589,21 @@ export default function TrainingProgramAdmin() {
                   {selectedApp.status !== "approved" && selectedApp.status !== "rejected" && (
                     <button
                       type="button"
+                      disabled={isProcessing}
                       onClick={() => handleApprove(selectedApp)}
-                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
                     >
-                      <Check className="h-4 w-4" />
-                      <span>Approve Application</span>
+                      {isProcessing ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span>{isEn ? "Approving..." : "Inaaprubahan..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span>Approve Application</span>
+                        </>
+                      )}
                     </button>
                   )}
 
