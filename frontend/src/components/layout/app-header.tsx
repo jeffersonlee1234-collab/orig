@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react"
 import { useLocation } from "react-router-dom"
-import { User, Settings, Sun, Moon, LogOut } from "lucide-react"
+import { User, Sun, Moon, LogOut } from "lucide-react"
 import { moduleRoutes } from "./routes"
 import { Tooltip } from "../ui/tooltip"
-import { SettingsModal } from "../ui/settings-modal"
 import { ProfileModal } from "../ui/profile-modal"
 import { useLanguage } from "../ui/language-context"
 
@@ -18,7 +17,6 @@ export function AppHeader({
   const location = useLocation()
   const current = moduleRoutes.find((r) => r.path === location.pathname)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [profileOpen, setProfileOpenState] = useState(() => {
     return (
       localStorage.getItem("is_profile_modal_open") === "true" ||
@@ -110,11 +108,11 @@ export function AppHeader({
             className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-muted transition-colors"
           >
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-medium text-foreground leading-tight">{t("socialWorker")}</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">{t("staffRole")}</p>
+              <p className="text-xs font-medium text-foreground leading-tight">System Admin</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Administrator</p>
             </div>
             <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary to-info flex items-center justify-center text-xs font-semibold text-white shrink-0">
-              SW
+              AD
             </div>
           </button>
 
@@ -125,25 +123,15 @@ export function AppHeader({
                   setProfileOpen(true)
                   setMenuOpen(false)
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 <User className="h-4 w-4 text-muted-foreground" />
                 {t("profile")}
               </button>
-              <button
-                onClick={() => {
-                  setSettingsOpen(true)
-                  setMenuOpen(false)
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-              >
-                <Settings className="h-4 w-4 text-muted-foreground" />
-                {t("settings")}
-              </button>
               <div className="my-1 border-t border-border" />
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
                 {t("logOut")}
@@ -154,7 +142,6 @@ export function AppHeader({
       </div>
     </header>
 
-    <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <ProfileModal
       open={profileOpen}
       onClose={() => setProfileOpen(false)}
