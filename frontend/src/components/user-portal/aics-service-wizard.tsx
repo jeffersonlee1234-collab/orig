@@ -384,7 +384,17 @@ export default function AICSServiceWizard({
         const matchingApps = allApps.filter((a) => matchService(a) && isUserMatch(a))
         const activeApp = matchingApps.find((a) => {
           const s = String(a.status || "pending").toLowerCase()
-          return s === "pending" || s === "under_review" || s === "for_assessment" || s === "assessment" || s === "approved" || s === "completed" || s === "for_release"
+          return (
+            s === "pending" ||
+            s === "under_review" ||
+            s === "for_assessment" ||
+            s === "assessment" ||
+            s === "approved" ||
+            s === "completed" ||
+            s === "for_release" ||
+            s === "rejected" ||
+            s === "disapproved"
+          )
         })
 
         if (isMounted && activeApp && !isReapplyingRef.current) {
@@ -835,6 +845,17 @@ export default function AICSServiceWizard({
                 <span className="font-semibold text-gray-900">{applicantFullName}</span>
               </div>
             </div>
+
+            {(blockedApp?.rejection_reason || blockedApp?.rejectionReason || blockedApp?.admin_notes || blockedApp?.remarks) && (
+              <div className="w-full bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl p-3.5 text-xs text-red-800 dark:text-red-300 text-left space-y-1">
+                <span className="font-bold uppercase tracking-wider block text-[10px] text-red-600 dark:text-red-400">
+                  {language === "en" ? "Social Worker Evaluation Notes / Reason:" : language === "bis" ? "Rason sa Pagbalibad (Social Worker):" : "Dahilan ng Hindi Pag-apruba (Social Worker):"}
+                </span>
+                <p className="font-medium leading-relaxed">
+                  {blockedApp.rejection_reason || blockedApp.rejectionReason || blockedApp.admin_notes || blockedApp.remarks}
+                </p>
+              </div>
+            )}
 
             <div className="w-full flex flex-col gap-2 mt-2">
               <button

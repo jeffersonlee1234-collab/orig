@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Eye,
   PackageCheck,
+  RotateCcw,
 } from "lucide-react"
 
 export interface LivelihoodApplicationRecord {
@@ -282,9 +283,20 @@ export default function LivelihoodStatusCard({
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-muted/20 border border-border text-xs text-muted-foreground flex items-center justify-between">
-                <span>Status: <strong className="text-rose-600 uppercase font-bold">Application Closed</strong></span>
-                <span>Maaaring mag-aplay muli sa susunod na evaluation cycle.</span>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border">
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground text-sm">Gusto mo bang mag-apply muli?</p>
+                  <p className="mt-0.5">Maaari kang magsumite ng bagong livelihood application kalakip ang mga kinakailangang impormasyon at dokumento.</p>
+                </div>
+
+                <button
+                  onClick={() => onUpdateApplication(application)}
+                  id="btn-reapply-livelihood"
+                  className="w-full sm:w-auto px-6 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2 shrink-0 uppercase"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Mag-apply Muli (Re-Apply)
+                </button>
               </div>
             </div>
           )}

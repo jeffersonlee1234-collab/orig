@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
-import { AlertCircle, RefreshCw, HeartHandshake, X, FileText, Info, CheckCircle2 } from "lucide-react"
+import { AlertCircle, RefreshCw, HeartHandshake, X, FileText, Info, CheckCircle2, RotateCcw } from "lucide-react"
 import PWDApplicationWizard from "./pwd-senior-wizard"
 import SeniorCitizenApplicationWizard from "./Senior-citizen-wizard"
 import PWDSocialAssistanceWizard from "./pwd-assistance-wizard"
@@ -156,6 +156,7 @@ export default function ApplyPWDSenior() {
           })
           const approvedMed = medApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
           const pendingMed = medApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          const rejectedMed = medApps.find((a) => ["rejected", "disapproved"].includes(String(a.status || "").toLowerCase()))
           if (isMounted) {
             if (approvedMed) {
               setIsBlocked(true)
@@ -163,6 +164,9 @@ export default function ApplyPWDSenior() {
             } else if (pendingMed) {
               setIsBlocked(true)
               setBlockedApp(pendingMed)
+            } else if (rejectedMed) {
+              setIsBlocked(true)
+              setBlockedApp(rejectedMed)
             } else {
               setIsBlocked(false)
               setBlockedApp(null)
@@ -175,6 +179,7 @@ export default function ApplyPWDSenior() {
           })
           const approvedMovie = movieApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
           const pendingMovie = movieApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          const rejectedMovie = movieApps.find((a) => ["rejected", "disapproved"].includes(String(a.status || "").toLowerCase()))
           if (isMounted) {
             if (approvedMovie) {
               setIsBlocked(true)
@@ -182,6 +187,9 @@ export default function ApplyPWDSenior() {
             } else if (pendingMovie) {
               setIsBlocked(true)
               setBlockedApp(pendingMovie)
+            } else if (rejectedMovie) {
+              setIsBlocked(true)
+              setBlockedApp(rejectedMovie)
             } else {
               setIsBlocked(false)
               setBlockedApp(null)
@@ -194,6 +202,7 @@ export default function ApplyPWDSenior() {
           })
           const approvedSocial = socialApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
           const pendingSocial = socialApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          const rejectedSocial = socialApps.find((a) => ["rejected", "disapproved"].includes(String(a.status || "").toLowerCase()))
           if (isMounted) {
             if (approvedSocial) {
               setIsBlocked(true)
@@ -201,6 +210,9 @@ export default function ApplyPWDSenior() {
             } else if (pendingSocial) {
               setIsBlocked(true)
               setBlockedApp(pendingSocial)
+            } else if (rejectedSocial) {
+              setIsBlocked(true)
+              setBlockedApp(rejectedSocial)
             } else {
               setIsBlocked(false)
               setBlockedApp(null)
@@ -213,6 +225,7 @@ export default function ApplyPWDSenior() {
           })
           const approvedAssistance = pwdAssistanceApps.find((a) => ["approved", "completed", "for_release"].includes(String(a.status || "").toLowerCase()))
           const pendingAssistance = pwdAssistanceApps.find((a) => ["pending", "under_review"].includes(String(a.status || "pending").toLowerCase()))
+          const rejectedAssistance = pwdAssistanceApps.find((a) => ["rejected", "disapproved"].includes(String(a.status || "").toLowerCase()))
           if (isMounted) {
             if (approvedAssistance) {
               setIsBlocked(true)
@@ -220,6 +233,9 @@ export default function ApplyPWDSenior() {
             } else if (pendingAssistance) {
               setIsBlocked(true)
               setBlockedApp(pendingAssistance)
+            } else if (rejectedAssistance) {
+              setIsBlocked(true)
+              setBlockedApp(rejectedAssistance)
             } else {
               setIsBlocked(false)
               setBlockedApp(null)
@@ -272,6 +288,23 @@ export default function ApplyPWDSenior() {
             return (s === "pending" || s === "under_review") && (t === "loss" || t === "replacement")
           })
 
+          // Check for rejected applications matching current sub-flow
+          const rejectedNew = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "new").toLowerCase()
+            return (s === "rejected" || s === "disapproved") && t !== "renewal" && t !== "loss" && t !== "replacement"
+          })
+          const rejectedRenewal = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "rejected" || s === "disapproved") && t === "renewal"
+          })
+          const rejectedLoss = idApps.find((a) => {
+            const s = String(a.status || "").toLowerCase()
+            const t = String(a.type || "").toLowerCase()
+            return (s === "rejected" || s === "disapproved") && (t === "loss" || t === "replacement")
+          })
+
           if (isMounted) {
             if (urlType === "new" || !urlType) {
               // On New Application: if user ALREADY has an approved ID, STRICTLY block and show Approved ID
@@ -282,6 +315,10 @@ export default function ApplyPWDSenior() {
               } else if (pendingNew) {
                 setIsBlocked(true)
                 setBlockedApp(pendingNew)
+                setHasApprovedApp(false)
+              } else if (rejectedNew) {
+                setIsBlocked(true)
+                setBlockedApp(rejectedNew)
                 setHasApprovedApp(false)
               } else {
                 setIsBlocked(false)
@@ -297,6 +334,10 @@ export default function ApplyPWDSenior() {
                 setIsBlocked(true)
                 setBlockedApp(pendingRenewal)
                 setHasApprovedApp(false)
+              } else if (rejectedRenewal) {
+                setIsBlocked(true)
+                setBlockedApp(rejectedRenewal)
+                setHasApprovedApp(false)
               } else {
                 setIsBlocked(false)
                 setBlockedApp(null)
@@ -310,6 +351,10 @@ export default function ApplyPWDSenior() {
               } else if (pendingLoss) {
                 setIsBlocked(true)
                 setBlockedApp(pendingLoss)
+                setHasApprovedApp(false)
+              } else if (rejectedLoss) {
+                setIsBlocked(true)
+                setBlockedApp(rejectedLoss)
                 setHasApprovedApp(false)
               } else {
                 setIsBlocked(false)
@@ -483,6 +528,9 @@ export default function ApplyPWDSenior() {
 
   // Render blocked active application UI directly (for PWD, Senior, Booklets, and Assistance wizards)
   const isAppApproved = String(blockedApp?.status || "").toLowerCase() === "approved" || String(blockedApp?.status || "").toLowerCase() === "completed" || String(blockedApp?.status || "").toLowerCase() === "for_release"
+  const isAppRejected = String(blockedApp?.status || "").toLowerCase() === "rejected" || String(blockedApp?.status || "").toLowerCase() === "disapproved"
+  const rejectionReason = blockedApp?.rejection_reason || blockedApp?.rejectionReason || blockedApp?.admin_notes || blockedApp?.remarks || ""
+
   if (isBlocked && (!bypassedBlock || isAppApproved)) {
     const displayRef = blockedApp?.referenceNumber || blockedApp?.reference_no || blockedApp?.reference_number || blockedApp?.id || blockedApp?.qc_id || blockedApp?.qcid || getLoggedInUserQcid() || "110000572516915"
     const assignedBookletNo = blockedApp?.assignedIdNumber || blockedApp?.assigned_id_number || blockedApp?.bookletNumber || blockedApp?.existingBookletNumber
@@ -493,9 +541,11 @@ export default function ApplyPWDSenior() {
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">
         <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center gap-4">
-          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${isAppApproved ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-500"}`}>
+          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${isAppApproved ? "bg-emerald-500/10 text-emerald-600" : isAppRejected ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-500"}`}>
             {isAppApproved ? (
               <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            ) : isAppRejected ? (
+              <X className="h-8 w-8 text-red-600" />
             ) : (
               <Info className="h-8 w-8 text-amber-500" />
             )}
@@ -508,6 +558,12 @@ export default function ApplyPWDSenior() {
                   : language === "bis"
                   ? "Na-aprobahan ang Aplikasyon!"
                   : "Na-approve ang Application!"
+                : isAppRejected
+                ? language === "en"
+                  ? "Application Not Approved / Disapproved"
+                  : language === "bis"
+                  ? "Wala Na-aprobahan ang Aplikasyon"
+                  : "Hindi Na-aprubahan ang Aplikasyon"
                 : language === "en"
                 ? "You Have an Existing Active Application"
                 : language === "bis"
@@ -539,6 +595,12 @@ export default function ApplyPWDSenior() {
                         : language === "bis"
                         ? `Ang imong aplikasyon para sa ${serviceCleanTitle} opisyal nang na-aprobahan. Aduna ka nay aktibo nga ID.`
                         : `Ang inyong aplikasyon para sa ${serviceCleanTitle} ay opisyal nang na-apruba ng Gov Service.`))
+                : isAppRejected
+                ? (language === "en"
+                    ? `Your application for ${serviceCleanTitle} was reviewed and not approved. You can review the reason below and submit a new application with updated documents.`
+                    : language === "bis"
+                    ? `Ang imong aplikasyon para sa ${serviceCleanTitle} gisusi ug wala na-aprobahan. Mahimo nimong susihon ang hinungdan sa ubos ug mag-apply pag-usab.`
+                    : `Ang inyong aplikasyon para sa ${serviceCleanTitle} ay sinuri ng Social Worker at hindi na-aprubahan. Maaari ninyong suriin ang dahilan sa ibaba at mag-apply muli kalakip ang kumpletong mga dokumento.`)
                 : (language === "en"
                     ? `Your application for ${serviceCleanTitle} has been successfully submitted and is currently pending review. Please wait for an assessment before submitting a new application.`
                     : language === "bis"
@@ -573,6 +635,11 @@ export default function ApplyPWDSenior() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   {language === "en" ? "Approved" : language === "bis" ? "Aprobado" : "Approved"}
                 </span>
+              ) : isAppRejected ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  {language === "en" ? "Not Approved (Rejected)" : language === "bis" ? "Wala Na-aprobahan (Rejected)" : "Hindi Na-aprubahan (Rejected)"}
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -588,6 +655,17 @@ export default function ApplyPWDSenior() {
                 {displayDate}
               </span>
             </div>
+
+            {isAppRejected && rejectionReason && (
+              <div className="p-3 bg-red-50/90 border border-red-200 rounded-lg text-left mt-2">
+                <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider block">
+                  {language === "en" ? "Reason for Disapproval:" : language === "bis" ? "Hinungdan sa Wala Pag-apruba:" : "Dahilan ng Hindi Pag-apruba:"}
+                </span>
+                <p className="text-xs text-red-700 mt-1 font-medium leading-relaxed">
+                  {rejectionReason}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="w-full pt-2 flex flex-col gap-2">
@@ -624,6 +702,41 @@ export default function ApplyPWDSenior() {
                     } catch {}
                     ;(window as any).__isFormDirty = false
                     window.location.href = "/portal/my-applications"
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+                >
+                  {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+                </button>
+              </>
+            ) : isAppRejected ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(`pwd_senior_reapplying_${urlCategory || "pwd"}_${urlType || "new"}`, "true")
+                      localStorage.setItem("pwd_senior_reapplying", "true")
+                    } catch {}
+                    bypassedBlockRef.current = true
+                    setBypassedBlock(true)
+                    setIsBlocked(false)
+                    setBlockedApp(null)
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>
+                    {language === "en"
+                      ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                      : language === "bis"
+                      ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                      : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = isAssistance || isSeniorSocial ? "/portal/financial-aid" : "/portal/my-applications"
                   }}
                   className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
                 >

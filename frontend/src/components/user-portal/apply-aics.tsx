@@ -133,6 +133,7 @@ export default function ApplyAICS({ initialType, initialTypeKey, onBack }: Apply
   const [type] = useState(initialType || assistanceTypes[0])
   const [reference, setReference] = useState("")
   const [appStatus, setAppStatus] = useState<"pending" | "approved" | "rejected" | "completed">("pending")
+  const [rejectionReason, setRejectionReason] = useState("")
 
   const isFuneralAssistance =
     initialTypeKey === "aicsFuneral" ||
@@ -643,13 +644,25 @@ const canProceedPersonal = Boolean(
         const matchingApps = allApps.filter((a) => matchService(a) && isUserMatch(a))
         const activeApp = matchingApps.find((a) => {
           const s = String(a.status || "pending").toLowerCase()
-          return s === "pending" || s === "under_review" || s === "for_assessment" || s === "assessment" || s === "approved" || s === "completed" || s === "for_release"
+          return (
+            s === "pending" ||
+            s === "under_review" ||
+            s === "for_assessment" ||
+            s === "assessment" ||
+            s === "approved" ||
+            s === "completed" ||
+            s === "for_release" ||
+            s === "rejected" ||
+            s === "disapproved"
+          )
         })
 
         if (isMounted && activeApp && !isReapplyingRef.current) {
           const ref = activeApp.reference_no || activeApp.reference_number || activeApp.qc_id || (activeApp.id ? `AICS-2026-${String(activeApp.id).padStart(4, "0")}` : "")
           setReference(ref)
-          setAppStatus((activeApp.status?.toLowerCase() as any) || "pending")
+          const rawSt = String(activeApp.status || "pending").toLowerCase()
+          setAppStatus((rawSt === "disapproved" ? "rejected" : rawSt) as any)
+          setRejectionReason(activeApp.rejection_reason || activeApp.rejectionReason || activeApp.remarks || activeApp.admin_notes || activeApp.reason || "")
           setStep("pending")
           if (activeApp.first_name) setPFirstName(activeApp.first_name)
           if (activeApp.last_name) setPLastName(activeApp.last_name)
@@ -661,17 +674,21 @@ const canProceedPersonal = Boolean(
     }
 
     checkActiveAicsApplication()
-    const interval = setInterval(checkActiveAicsApplication, 8000)
+    const interval = setInterval(checkActiveAicsApplication, 4000)
 
     const handleUpdate = () => checkActiveAicsApplication()
     window.addEventListener("aics_applications_updated", handleUpdate)
     window.addEventListener("govserve_realtime_event", handleUpdate)
+    window.addEventListener("applications_updated", handleUpdate)
+    window.addEventListener("storage", handleUpdate)
 
     return () => {
       isMounted = false
       clearInterval(interval)
       window.removeEventListener("aics_applications_updated", handleUpdate)
       window.removeEventListener("govserve_realtime_event", handleUpdate)
+      window.removeEventListener("applications_updated", handleUpdate)
+      window.removeEventListener("storage", handleUpdate)
     }
   }, [type, resolvedTypeKey])
 
@@ -684,9 +701,18 @@ const canProceedPersonal = Boolean(
         const res = await fetch(`${API_BASE}/api/aics/applications/${encodeURIComponent(reference)}`)
         if (!res.ok) return
         const data = await res.json()
-        const status = data.application?.status
-        if (status && status.toLowerCase() !== appStatus) {
-          setAppStatus(status.toLowerCase() as any)
+        const app = data.application || data
+        const status = app?.status
+        const reason = app?.rejection_reason || app?.rejectionReason || app?.remarks || app?.admin_notes || ""
+        if (status) {
+          const rawSt = status.toLowerCase()
+          const cleanSt = rawSt === "disapproved" ? "rejected" : rawSt
+          if (cleanSt !== appStatus) {
+            setAppStatus(cleanSt as any)
+          }
+        }
+        if (reason) {
+          setRejectionReason(reason)
         }
       } catch (err) {
         console.warn("Status check skipped/offline:", err)
@@ -694,7 +720,7 @@ const canProceedPersonal = Boolean(
     }
 
     checkStatus()
-    const interval = setInterval(checkStatus, 8000)
+    const interval = setInterval(checkStatus, 4000)
     return () => clearInterval(interval)
   }, [step, reference, appStatus])
 
@@ -2572,6 +2598,15 @@ const handleFinalSubmit = async () => {
                 <span className="font-semibold text-slate-900 dark:text-slate-100">{[pFirstName, pLastName].filter(Boolean).join(" ") || name || "Applicant"}</span>
               </div>
             </div>
+
+            {rejectionReason && (
+              <div className="w-full bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl p-3.5 text-xs text-red-800 dark:text-red-300 text-left space-y-1">
+                <span className="font-bold uppercase tracking-wider block text-[10px] text-red-600 dark:text-red-400">
+                  {language === "en" ? "Social Worker Evaluation Notes / Reason:" : language === "bis" ? "Rason sa Pagbalibad (Social Worker):" : "Dahilan ng Hindi Pag-apruba (Social Worker):"}
+                </span>
+                <p className="font-medium leading-relaxed">{rejectionReason}</p>
+              </div>
+            )}
 
             <div className="w-full flex flex-col gap-2 mt-2">
               <button

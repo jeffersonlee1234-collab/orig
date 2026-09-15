@@ -13,6 +13,7 @@ import {
   IdCard,
   Search,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
@@ -961,7 +962,13 @@ export default function SeniorCitizenApplicationWizard({
     String(targetApp?.status || "").toLowerCase() === "completed" ||
     String(targetApp?.status || "").toLowerCase() === "for_release"
 
-  // ---- PENDING STATE (Identical to Solo Parent) ----
+  const isAppRejected =
+    String(targetApp?.status || "").toLowerCase() === "rejected" ||
+    String(targetApp?.status || "").toLowerCase() === "disapproved"
+
+  const rejectionReason = targetApp?.rejection_reason || targetApp?.rejectionReason || targetApp?.admin_notes || targetApp?.remarks || ""
+
+  // ---- PENDING OR REJECTED STATE ----
   if (isBlocked && !isAppApproved) {
     const serviceTitle =
       appFlow === "renewal"
@@ -969,6 +976,28 @@ export default function SeniorCitizenApplicationWizard({
         : appFlow === "loss"
         ? "Senior Citizen ID Replacement"
         : "Senior Citizen ID"
+
+    const displayRef =
+      targetApp?.referenceNumber ||
+      targetApp?.reference_no ||
+      targetApp?.reference_number ||
+      targetApp?.id ||
+      userProfile?.qcidNo ||
+      formData.qcidNumber ||
+      existingIdNumber ||
+      "110000572516915"
+
+    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
+      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4">
@@ -980,16 +1009,113 @@ export default function SeniorCitizenApplicationWizard({
             ← Back
           </button>
         )}
-        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col items-center text-center gap-3">
-          <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-            <Info className="h-7 w-7 text-amber-500" />
+        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col items-center text-center gap-4">
+          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${isAppRejected ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-500"}`}>
+            {isAppRejected ? (
+              <X className="h-8 w-8 text-red-600" />
+            ) : (
+              <Info className="h-8 w-8 text-amber-500" />
+            )}
           </div>
-          <h2 className="text-lg font-bold text-gray-900">
-            You Have an Existing Pending Application
-          </h2>
-          <p className="text-sm text-gray-500 max-w-sm">
-            You already have a pending application for {serviceTitle}. Please wait for the evaluation before submitting a new application.
-          </p>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              {isAppRejected
+                ? (language === "en" ? "Application Not Approved" : language === "bis" ? "Wala Na-aprobahan ang Aplikasyon" : "Hindi Na-aprubahan ang Aplikasyon")
+                : "You Have an Existing Pending Application"}
+            </h2>
+            <p className="text-sm text-gray-500 max-w-sm mt-1 leading-relaxed">
+              {isAppRejected
+                ? (language === "en"
+                    ? `Your application for ${serviceTitle} was not approved. Please review the reason below and submit a new application with the correct documents.`
+                    : language === "bis"
+                    ? `Ang imong aplikasyon para sa ${serviceTitle} wala na-aprobahan. Mahimo nimong susihon ang hinungdan sa ubos ug mag-apply pag-usab.`
+                    : `Ang inyong aplikasyon para sa ${serviceTitle} ay hindi na-aprubahan. Maaari ninyong suriin ang dahilan sa ibaba at mag-apply muli kalakip ang kumpletong mga dokumento.`)
+                : `You already have a pending application for ${serviceTitle}. Please wait for the evaluation before submitting a new application.`}
+            </p>
+          </div>
+
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2.5 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">Reference Number:</span>
+              <span className="font-mono font-bold text-blue-600">{displayRef}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <span className="text-gray-500 font-medium">Status:</span>
+              {isAppRejected ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  {language === "en" ? "Not Approved (Rejected)" : language === "bis" ? "Wala Na-aprobahan (Rejected)" : "Hindi Na-aprubahan (Rejected)"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Under Review (Pending)
+                </span>
+              )}
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Date Filed:</span>
+              <span className="font-semibold text-gray-700">{displayDate}</span>
+            </div>
+
+            {isAppRejected && rejectionReason && (
+              <div className="p-3 bg-red-50/90 border border-red-200 rounded-lg text-left mt-2">
+                <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider block">
+                  {language === "en" ? "Reason for Disapproval:" : language === "bis" ? "Hinungdan sa Wala Pag-apruba:" : "Dahilan ng Hindi Pag-apruba:"}
+                </span>
+                <p className="text-xs text-red-700 mt-1 font-medium leading-relaxed">
+                  {rejectionReason}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full pt-2 flex flex-col gap-2">
+            {isAppRejected ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(`pwd_senior_reapplying_senior_${appFlow || "new"}`, "true")
+                      localStorage.setItem("pwd_senior_reapplying", "true")
+                    } catch {}
+                    setIsBlocked(false)
+                    setStep(1)
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>
+                    {language === "en"
+                      ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                      : language === "bis"
+                      ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                      : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = "/portal/my-applications"
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+                >
+                  {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/portal/my-applications"
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
+              >
+                {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
