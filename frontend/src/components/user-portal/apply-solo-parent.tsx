@@ -275,42 +275,7 @@ export default function ApplySoloParent() {
     }
   })
 
-  const [isBlocked, setIsBlocked] = useState<boolean>(() => {
-    try {
-      if (typeof window === "undefined") return false
-      const isReapp =
-        window.location.search.includes("reapply=true") ||
-        localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
-        localStorage.getItem("solo_parent_reapplying") === "true"
-      if (isReapp) return false
-
-      const prof = getCurrentUserProfile()
-      const userQcidClean = (prof?.qcidNo || prof?.qcidNumber || "").replace(/\D/g, "")
-      const userEmailClean = (prof?.email || "").toLowerCase().trim()
-      const raw = localStorage.getItem("solo_parent_applications")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const match = parsed.find((a: any) => {
-            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
-            const matchType =
-              typeParam === "renewal" ? aType === "renewal" :
-              typeParam === "loss" ? (aType === "loss" || aType === "replacement") :
-              (aType === "new" || !aType)
-            if (!matchType) return false
-
-            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
-            const aEmail = String(a.email || "").toLowerCase().trim()
-            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
-          })
-          if (match) return true
-        }
-      }
-      return false
-    } catch {
-      return false
-    }
-  })
+  const [isBlocked, setIsBlocked] = useState<boolean>(false)
   const [selectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
@@ -344,45 +309,26 @@ export default function ApplySoloParent() {
         let backendApps: any[] = []
         let backendFetched = false
 
-        const currentQcid = getLoggedInUserQcid() || "110000572516915"
+        const currentQcid = getLoggedInUserQcid() || ""
         const userProf = getCurrentUserProfile()
         const currentEmail = (userProf?.email || "").toLowerCase().trim()
-        const currentLastName = (userProf?.lastName || "").toLowerCase().trim()
-        const currentFirstName = (userProf?.firstName || "").toLowerCase().trim()
         const uid = userProf?.id || (userProf as any)?.userId || ""
 
         try {
           const data = await cachedApiFetch(
-            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}&firstName=${encodeURIComponent(currentFirstName)}&lastName=${encodeURIComponent(currentLastName)}`,
+            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}`,
             { headers: getAuthHeaders() },
-            4000
+            2000
           ).catch(() => null)
           if (data) {
             const raw = Array.isArray(data) ? data : data.applications || []
-            if (Array.isArray(raw) && raw.length > 0) {
+            if (Array.isArray(raw)) {
               backendApps = raw
               backendFetched = true
             }
           }
         } catch {
           // silent fallback
-        }
-
-        let localApps: any[] = []
-        try {
-          const raw = localStorage.getItem("solo_parent_applications")
-          if (raw) localApps = JSON.parse(raw)
-          if (!Array.isArray(localApps)) localApps = []
-        } catch {}
-
-        let allApps: any[] = []
-        if (backendFetched && backendApps.length > 0) {
-          allApps = [...backendApps]
-          try {
-            localStorage.setItem("solo_parent_applications", JSON.stringify(backendApps))
-          } catch {}
-        } else {
-          allApps = [...localApps]
         }
 
         const isMatchForSoloParent = (a: any) => {
@@ -396,23 +342,20 @@ export default function ApplySoloParent() {
             if (aType === "loss" || aType === "replacement" || aType === "renewal") return false
           }
 
-          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || a.form_data?.qcidNumber || "").trim()
+          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || a.form_data?.qcidNumber || "").trim().replace(/\D/g, "")
           const appEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
-          const appLastName = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
-          const appFirstName = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
-          const appFullName = String(a.applicant_name || a.applicantName || `${appFirstName} ${appLastName}`).toLowerCase().trim()
           const appUid = String(a.user_id || a.userId || "").trim()
+          const cleanUserQcid = String(currentQcid).replace(/\D/g, "")
 
           const matchUser =
             (uid && appUid && String(uid) === appUid && String(uid) !== "0") ||
-            (currentQcid && (appRef === currentQcid || (appRef.length >= 8 && appRef.includes(currentQcid)) || (currentQcid.length >= 8 && currentQcid.includes(appRef)))) ||
-            (currentEmail && appEmail && currentEmail === appEmail) ||
-            (currentLastName && appLastName && (currentLastName === appLastName || appLastName.includes(currentLastName) || currentLastName.includes(appLastName))) ||
-            (currentFirstName && appFirstName && (currentFirstName === appFirstName || appFullName.includes(currentFirstName) || currentFirstName.includes(appFirstName)))
+            (cleanUserQcid && appRef && (cleanUserQcid === appRef || (cleanUserQcid.length >= 10 && appRef.startsWith(cleanUserQcid)))) ||
+            (currentEmail && appEmail && currentEmail === appEmail)
 
           return Boolean(matchUser)
         }
 
+        const allApps = backendFetched ? backendApps : []
         const userMatchingApps = allApps.filter(isMatchForSoloParent)
         const matchedApproved = userMatchingApps.find((a) => {
           const s = String(a.application_status || a.status || "").toLowerCase()

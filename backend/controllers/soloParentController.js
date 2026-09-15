@@ -743,13 +743,11 @@ exports.getUserApplications = async (req, res) => {
   try {
     await initSoloParentColumns();
     const { userId } = req.params;
-    const { qcid, email, firstName, lastName } = req.query;
+    const { qcid, email } = req.query;
 
     const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' ? String(userId).trim() : null;
     const cleanQcid = qcid && String(qcid).trim() && qcid !== 'undefined' ? String(qcid).trim() : null;
     const cleanEmail = email && String(email).trim() && email !== 'undefined' ? String(email).trim().toLowerCase() : null;
-    const cleanFirstName = firstName && String(firstName).trim() && firstName !== 'undefined' ? String(firstName).trim().toLowerCase() : null;
-    const cleanLastName = lastName && String(lastName).trim() && lastName !== 'undefined' ? String(lastName).trim().toLowerCase() : null;
 
     const params = [];
     const orClauses = [];
@@ -760,28 +758,11 @@ exports.getUserApplications = async (req, res) => {
     }
     if (cleanQcid) {
       params.push(cleanQcid);
-      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%' OR form_data->>'qcidNumber' = $${params.length})`);
+      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number = $${params.length} OR form_data->>'qcidNumber' = $${params.length})`);
     }
     if (cleanEmail) {
       params.push(cleanEmail);
       orClauses.push(`(LOWER(email) = LOWER($${params.length}) OR LOWER(form_data->>'email') = LOWER($${params.length}))`);
-    }
-    if (cleanFirstName && cleanLastName) {
-      params.push(cleanFirstName);
-      const fnIdx = params.length;
-      params.push(cleanLastName);
-      const lnIdx = params.length;
-      orClauses.push(`(
-        (LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx})
-        AND
-        (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx})
-      )`);
-    } else if (cleanLastName) {
-      params.push(cleanLastName);
-      orClauses.push(`(LOWER(last_name) = $${params.length} OR last_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'lastName') = $${params.length})`);
-    } else if (cleanFirstName) {
-      params.push(cleanFirstName);
-      orClauses.push(`(LOWER(first_name) = $${params.length} OR first_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'firstName') = $${params.length})`);
     }
 
     if (orClauses.length === 0) {
@@ -800,13 +781,7 @@ exports.getUserApplications = async (req, res) => {
     res.status(200).json({ success: true, applications: cleanRows });
   } catch (error) {
     console.warn('Error fetching user applications:', error.message);
-    try {
-      const fallback = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 50');
-      const cleanRows = (fallback.rows || []).map(sanitizeAppRow);
-      return res.status(200).json({ success: true, applications: cleanRows });
-    } catch {
-      res.status(200).json({ success: true, applications: [] });
-    }
+    res.status(200).json({ success: true, applications: [] });
   }
 };
 
@@ -1079,10 +1054,8 @@ exports.checkEligibility = async (req, res) => {
     const cleanUserId = userId && userId !== 'undefined' && userId !== 'null' && userId !== '0' ? String(userId).trim() : null;
     const cleanQcid = qcid && String(qcid).trim() && qcid !== 'undefined' ? String(qcid).trim() : null;
     const cleanEmail = email && String(email).trim() && email !== 'undefined' ? String(email).trim().toLowerCase() : null;
-    const cleanFirstName = firstName && String(firstName).trim() && firstName !== 'undefined' ? String(firstName).trim().toLowerCase() : null;
-    const cleanLastName = lastName && String(lastName).trim() && lastName !== 'undefined' ? String(lastName).trim().toLowerCase() : null;
 
-    if (!cleanUserId && !cleanQcid && !cleanEmail && !cleanFirstName && !cleanLastName) {
+    if (!cleanUserId && !cleanQcid && !cleanEmail) {
       return res.status(200).json({ success: true, blocked: false, reason: null });
     }
 
@@ -1095,28 +1068,11 @@ exports.checkEligibility = async (req, res) => {
     }
     if (cleanQcid) {
       params.push(cleanQcid);
-      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number ILIKE '%' || $${params.length} || '%' OR assigned_id_number ILIKE '%' || $${params.length} || '%' OR form_data->>'qcidNumber' = $${params.length})`);
+      orClauses.push(`(qcid_number = $${params.length} OR reference_number = $${params.length} OR solo_parent_id_number = $${params.length} OR form_data->>'qcidNumber' = $${params.length})`);
     }
     if (cleanEmail) {
       params.push(cleanEmail);
       orClauses.push(`(LOWER(email) = LOWER($${params.length}) OR LOWER(form_data->>'email') = LOWER($${params.length}))`);
-    }
-    if (cleanFirstName && cleanLastName) {
-      params.push(cleanFirstName);
-      const fnIdx = params.length;
-      params.push(cleanLastName);
-      const lnIdx = params.length;
-      orClauses.push(`(
-        (LOWER(first_name) = $${fnIdx} OR first_name ILIKE '%' || $${fnIdx} || '%' OR LOWER(form_data->>'firstName') = $${fnIdx})
-        AND
-        (LOWER(last_name) = $${lnIdx} OR last_name ILIKE '%' || $${lnIdx} || '%' OR LOWER(form_data->>'lastName') = $${lnIdx})
-      )`);
-    } else if (cleanLastName) {
-      params.push(cleanLastName);
-      orClauses.push(`(LOWER(last_name) = $${params.length} OR last_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'lastName') = $${params.length})`);
-    } else if (cleanFirstName) {
-      params.push(cleanFirstName);
-      orClauses.push(`(LOWER(first_name) = $${params.length} OR first_name ILIKE '%' || $${params.length} || '%' OR LOWER(form_data->>'firstName') = $${params.length})`);
     }
 
     // 1. Check if user has a pending application for this specific type

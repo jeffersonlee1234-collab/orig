@@ -1350,9 +1350,9 @@ export default function SoloParentApplicationWizard({
         // 1. Backend Eligibility API via cached fetch
         try {
           const data = await cachedApiFetch(
-            `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}&reapply=${isReapply ? "true" : "false"}`,
+            `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&reapply=${isReapply ? "true" : "false"}`,
             { headers: getAuthHeaders() },
-            4000
+            2000
           ).catch(() => null)
           if (data && data.blocked) {
             isBlockedFound = true
@@ -1362,38 +1362,23 @@ export default function SoloParentApplicationWizard({
           }
         } catch {}
 
-        // 2. Local & Real-time fetch verification & auto-population
+        // 2. Real-time fetch verification
         const allApps = await fetchAllSoloParentApps()
         const userQcidClean = qcid.replace(/\D/g, "")
         const userEmailClean = email.toLowerCase()
-        const userFnClean = fn.toLowerCase()
-        const userLnClean = ln.toLowerCase()
 
         const matchedUserApps = allApps.filter((a) => {
           if (!a) return false
           const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || a.form_data?.qcidNumber || "").replace(/\D/g, "")
-          const aRef = String(a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
           const aEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
-          const aFn = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
-          const aLn = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
-          const aFullName = String(a.applicant_name || a.applicantName || `${aFn} ${aLn}`).toLowerCase().trim()
-          const aAssigned = String(a.assigned_id_number || a.assignedIdNumber || a.solo_parent_id_number || a.soloParentIdNumber || "").replace(/\D/g, "")
           const aUid = String(a.user_id || a.userId || "").trim()
-
-          const isSoloCategory =
-            String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase().includes("solo") ||
-            String(a.classification_title || a.category || a.service || a.application_type || "").toLowerCase().includes("parent") ||
-            Boolean(a.solo_parent_id_number || a.soloParentIdNumber || a.children || a.family_members || a.familyMembers) ||
-            Boolean(String(a.assigned_id_number || a.assignedIdNumber || "").includes("SP-"))
 
           const isUserMatch =
             (uid && aUid && aUid === String(uid) && String(uid) !== "0") ||
-            (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid) || aRef.includes(userQcidClean) || userQcidClean.includes(aRef) || (aAssigned && aAssigned.includes(userQcidClean)))) ||
-            (userEmailClean && aEmail && userEmailClean === aEmail) ||
-            (userLnClean && aLn && (userLnClean === aLn || aLn.includes(userLnClean) || userLnClean.includes(aLn))) ||
-            (userFnClean && aFn && (userFnClean === aFn || aFn.includes(userFnClean) || aFullName.includes(userFnClean)))
+            (userQcidClean && aQcid && (userQcidClean === aQcid || (userQcidClean.length >= 10 && aQcid.startsWith(userQcidClean)))) ||
+            (userEmailClean && aEmail && userEmailClean === aEmail)
 
-          return isSoloCategory && isUserMatch
+          return isUserMatch
         })
 
         const approvedAnyApp = matchedUserApps.find((a) => {
