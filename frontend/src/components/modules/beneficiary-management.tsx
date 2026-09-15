@@ -258,149 +258,6 @@ function getBeneficiaryCardPhoto(b: Beneficiary): string {
 
 type ProfileTab = "overview" | "programs" | "verification" | "history"
 
-function renderProgramIdCard(b: Beneficiary, currentProg: EnrolledProgram | null, cardPhoto: string) {
-  const prog = currentProg ? currentProg.program : "General";
-  const refNo = currentProg?.referenceNo || b.qcidNumber || b.idNumber || b.beneficiaryNo;
-
-  let headerGradient = "from-red-700 via-red-600 to-red-800";
-  let subheaderBg = "bg-amber-400 text-slate-950";
-  let idLabel = "QCitizen ID";
-  let bottomBadge = "QC CITIZEN";
-  let subheaderText = "Quezon City Resident Identification Card";
-
-  if (prog === "PWD") {
-    headerGradient = "from-purple-800 via-purple-700 to-indigo-900";
-    subheaderBg = "bg-purple-300 text-purple-950";
-    idLabel = "PWD ID";
-    bottomBadge = "PWD CITIZEN";
-    subheaderText = "Quezon City Person with Disability ID";
-  } else if (prog === "Senior Citizen") {
-    headerGradient = "from-amber-800 via-amber-700 to-yellow-900";
-    subheaderBg = "bg-amber-300 text-amber-950";
-    idLabel = "Senior Citizen ID";
-    bottomBadge = "SENIOR CITIZEN";
-    subheaderText = "Quezon City Senior Citizen Identification Card";
-  } else if (prog === "Solo Parent") {
-    headerGradient = "from-violet-800 via-violet-700 to-purple-900";
-    subheaderBg = "bg-violet-300 text-violet-950";
-    idLabel = "Solo Parent ID";
-    bottomBadge = "SOLO PARENT";
-    subheaderText = "Quezon City Solo Parent Identification Card";
-  } else if (prog === "AICS") {
-    headerGradient = "from-blue-800 via-blue-700 to-indigo-900";
-    subheaderBg = "bg-blue-300 text-blue-950";
-    idLabel = "AICS Grantee ID";
-    bottomBadge = "AICS GRANTEE";
-    subheaderText = currentProg?.assistanceType ? `AICS – ${currentProg.assistanceType}` : "Assistance to Individuals in Crisis Situations";
-  } else if (prog === "Livelihood") {
-    headerGradient = "from-emerald-800 via-emerald-700 to-teal-900";
-    subheaderBg = "bg-emerald-300 text-emerald-950";
-    idLabel = "Livelihood ID";
-    bottomBadge = "GRANTEE";
-    subheaderText = "Quezon City Livelihood Program Beneficiary";
-  } else if (prog === "Training") {
-    headerGradient = "from-teal-800 via-teal-700 to-cyan-900";
-    subheaderBg = "bg-teal-300 text-teal-950";
-    idLabel = "Training ID";
-    bottomBadge = "TRAINEE / GRADUATE";
-    subheaderText = currentProg?.assistanceType ? `Skills Training – ${currentProg.assistanceType}` : "Quezon City Skills & Livelihood Training Program";
-  } else if (prog === "Child Welfare") {
-    headerGradient = "from-rose-800 via-rose-700 to-pink-900";
-    subheaderBg = "bg-rose-300 text-rose-950";
-    idLabel = "Child Welfare";
-    bottomBadge = "BENEFICIARY";
-    subheaderText = "Quezon City Child & Youth Welfare Beneficiary";
-  }
-
-  return (
-    <div className="border border-slate-300 rounded-2xl overflow-hidden shadow-md bg-white select-none max-w-md mx-auto">
-      {/* Header */}
-      <div className={`px-3.5 py-2.5 flex items-center justify-between text-white bg-gradient-to-r ${headerGradient} shadow-xs`}>
-        <div className="flex items-center gap-2">
-          <img src="/gov-serves-seal.png" alt="QC Seal" className="w-7 h-7 object-contain drop-shadow-xs rounded-full bg-white/20 p-0.5" />
-          <div>
-            <p className="text-[7.5px] font-bold tracking-widest uppercase opacity-90 leading-tight">Republic of the Philippines</p>
-            <p className="text-xs font-black tracking-wide leading-tight uppercase">GOV SERVICES</p>
-          </div>
-        </div>
-        <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
-          {idLabel}
-        </span>
-      </div>
-
-      {/* Sub-header */}
-      <div className={`py-1 text-center text-[9.5px] font-black uppercase tracking-widest ${subheaderBg}`}>
-        {subheaderText}
-      </div>
-
-      {/* Details with QC Logo on right side */}
-      <div className="p-3 flex gap-2.5 items-start relative bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
-        <div className="w-20 h-24 shrink-0 rounded-lg border-2 border-slate-300 bg-white overflow-hidden shadow-xs flex flex-col items-center justify-center relative z-10">
-          {cardPhoto ? (
-            <img src={cardPhoto} alt="Cardholder" className="w-full h-full object-cover" />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
-              <User className="w-8 h-8 text-slate-300 mb-1" />
-              <span className="text-[7px] font-bold uppercase tracking-wider">2x2 Photo</span>
-            </div>
-          )}
-          <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 text-white text-[6.5px] text-center py-0.5 font-bold uppercase">
-            {bottomBadge}
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-0 space-y-1 relative z-10">
-          <div>
-            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">{idLabel} Number</span>
-            <p className="text-sm font-black text-slate-900 font-mono tracking-wide leading-none">{refNo}</p>
-          </div>
-
-          <div className="pt-0.5">
-            <span className="text-[7.5px] font-bold uppercase text-slate-400 tracking-wider">Cardholder Full Name</span>
-            <p className="text-xs font-black text-slate-900 leading-tight uppercase truncate">{b.fullName}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1 pt-0.5 text-[8.5px] text-slate-700">
-            <div>
-              <span className="text-[7px] font-semibold text-slate-400 uppercase">Birthdate:</span> {b.birthDate || "—"}
-            </div>
-            <div>
-              <span className="text-[7px] font-semibold text-slate-400 uppercase">Sex / Blood:</span> {b.sex || b.gender || "—"} / O+
-            </div>
-          </div>
-
-          <div className="text-[8.5px] text-slate-700 truncate pt-0.5">
-            <span className="text-[7px] font-semibold text-slate-400 uppercase">Address:</span> {b.address || b.barangay ? `${b.address || ""} Brgy. ${b.barangay || ""}`.trim() : "Quezon City"}
-          </div>
-        </div>
-
-        {/* QC Official Seal on right side */}
-        <div className="shrink-0 flex flex-col items-center justify-center pl-1 z-10 self-center">
-          <img
-            src="/gov-serves-seal.png"
-            alt="QC Official Seal"
-            className="w-13 h-13 object-contain drop-shadow-md hover:scale-105 transition-transform"
-          />
-          <span className="text-[6px] font-black uppercase text-slate-600 tracking-tighter mt-0.5">QC SEAL</span>
-        </div>
-      </div>
-
-      {/* Bottom Signature & Barcode */}
-      <div className="px-3 py-1.5 border-t border-slate-200/80 bg-slate-50/90 flex items-center justify-between text-[7.5px]">
-        <div>
-          <p className="font-mono font-bold text-slate-700 tracking-widest text-[8px]">|||| | || |||| | | ||| ||||</p>
-          <span className="text-slate-400 text-[6.5px] uppercase font-semibold">Status: Verified Resident</span>
-        </div>
-        <div className="text-center">
-          <div className="w-16 border-b border-slate-400 mx-auto mb-0.5" />
-          <p className="font-bold text-slate-800 text-[7px] leading-tight uppercase">MA. JOSEFINA G. BELMONTE</p>
-          <p className="text-[6px] text-slate-500 uppercase leading-none">City Mayor</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function BeneficiaryProfileModal({
   b,
   onClose,
@@ -408,7 +265,6 @@ function BeneficiaryProfileModal({
   b: Beneficiary
   onClose: () => void
 }) {
-  const cardPhoto = getBeneficiaryCardPhoto(b)
   const [tab, setTab] = useState<ProfileTab>("overview")
   const [selectedProgramIndex, setSelectedProgramIndex] = useState<number>(b.enrolledPrograms.length > 0 ? 0 : -1)
 
@@ -656,20 +512,19 @@ function BeneficiaryProfileModal({
                             </span>
                           </div>
                           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 rounded-full">
-                            ACTIVE ID
+                            ACTIVE
                           </span>
                         </div>
                         <p className="text-xs text-emerald-700">
                           Verified on <strong>{b.verifiedDate ? formatDate(b.verifiedDate) : formatDate(currentProg?.dateEnrolled || b.dateRegistered)}</strong> by <strong>{b.verifiedBy || "Social Worker Approval"}</strong>
                         </p>
                         <div className="grid grid-cols-2 gap-4 mt-3 text-sm pt-2 border-t border-emerald-200/60">
-                          <Field label="Program / ID Type" value={currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Beneficiary'})` : (b.idType || "QCitizen ID")} />
+                          <Field label="Program / Service" value={currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Beneficiary'})` : (b.idType || "QCitizen Beneficiary")} />
                           <Field label="Reference / ID Number" value={currentProg?.referenceNo || b.idNumber || b.qcidNumber || "—"} />
+                          <Field label="Date Enrolled" value={formatDate(currentProg?.dateEnrolled || b.dateRegistered)} />
+                          <Field label="Status" value={<span className="text-xs font-semibold text-emerald-600">Approved / Verified</span>} />
                         </div>
                       </div>
-
-                      {/* Official Program ID Card */}
-                      {renderProgramIdCard(b, currentProg, cardPhoto)}
                     </div>
                   );
                 }
@@ -685,7 +540,7 @@ function BeneficiaryProfileModal({
                           </span>
                         </div>
                         <p className="text-xs text-amber-700">
-                          Ang aplikasyon para sa <strong>{currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Social Assistance'})` : "Social Services"}</strong> ay kasalukuyang sinusuri pa ng Social Worker. Awtomatikong magiging Verified at lilitaw ang opisyal na ID Card kapag ito ay na-aprubahan na sa service module.
+                          Ang aplikasyon para sa <strong>{currentProg ? `${currentProg.program} (${currentProg.assistanceType || 'Social Assistance'})` : "Social Services"}</strong> ay kasalukuyang sinusuri pa ng Social Worker.
                         </p>
                       </div>
 
@@ -702,7 +557,6 @@ function BeneficiaryProfileModal({
                           />
                           <Field label="Date Filed / Enrolled" value={formatDate(currentProg?.dateEnrolled || b.dateRegistered)} />
                           <Field label="Evaluation Status" value={<span className="text-xs font-semibold text-amber-600">Pending Review</span>} />
-                          <Field label="ID Card Generation" value={<span className="text-xs text-slate-500">Unlocks upon module approval</span>} />
                         </div>
                       </div>
                     </div>
