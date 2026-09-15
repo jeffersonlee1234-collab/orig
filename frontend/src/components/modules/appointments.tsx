@@ -52,38 +52,38 @@ const MODULE_OPTIONS: ModuleKey[] = [
 ]
 
 const moduleColors: Record<ModuleKey, string> = {
-  AICS: "bg-blue-50 text-blue-700 border-blue-200",
-  PWD: "bg-purple-50 text-purple-700 border-purple-200",
-  "Senior Citizen": "bg-amber-50 text-amber-700 border-amber-200",
-  "Solo Parent": "bg-violet-50 text-violet-700 border-violet-200",
-  "Child Welfare": "bg-rose-50 text-rose-700 border-rose-200",
-  Livelihood: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  AICS: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60",
+  PWD: "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60",
+  "Senior Citizen": "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60",
+  "Solo Parent": "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800/60",
+  "Child Welfare": "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60",
+  Livelihood: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60",
 }
 
 const statusTheme: Record<AppointmentStatus, { card: string; chip: string; icon: ReactElement; label: string }> = {
   pending: {
-    card: "bg-amber-50/60 border-amber-200",
-    chip: "bg-amber-100 text-amber-700",
+    card: "bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40",
+    chip: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60",
     icon: <Clock className="h-3.5 w-3.5" />,
     label: "Pending",
   },
   scheduled: {
-    card: "bg-blue-50/60 border-blue-200",
-    chip: "bg-blue-100 text-blue-700",
+    card: "bg-blue-50/70 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40",
+    chip: "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60",
     icon: <Calendar className="h-3.5 w-3.5" />,
     label: "Scheduled",
   },
   completed: {
-    card: "bg-emerald-50/60 border-emerald-200",
-    chip: "bg-emerald-100 text-emerald-700",
+    card: "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40",
+    chip: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
     label: "Completed",
   },
 }
 
 const DEFAULT_APPT_STATUS_THEME = {
-  card: "bg-amber-50/60 border-amber-200",
-  chip: "bg-amber-100 text-amber-700",
+  card: "bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40",
+  chip: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60",
   icon: <Clock className="h-3.5 w-3.5" />,
   label: "Pending",
 }
@@ -227,7 +227,7 @@ function AppointmentCard({
           <p className="text-xs text-muted-foreground">Requested: {formatDateTime(appt.submittedAt)}</p>
 
           {appt.status !== "pending" && appt.scheduledDate && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground bg-white/60 rounded-lg px-3 py-2 border border-border/60">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground bg-white/70 dark:bg-slate-900/60 rounded-lg px-3 py-2 border border-border/70 dark:border-slate-800">
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                 {new Date(appt.scheduledDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
