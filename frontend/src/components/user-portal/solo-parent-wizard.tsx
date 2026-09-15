@@ -14,6 +14,7 @@ import {
   Sparkles,
   User,
   Clock,
+  RotateCcw,
 } from "lucide-react"
 
 import { useLanguage } from "../ui/language-context"
@@ -1341,7 +1342,7 @@ export default function SoloParentApplicationWizard({
         const ln = (prof.lastName || "").trim()
 
         let isBlockedFound = false
-        let reasonFound: "draft" | "pending" | "approved" | null = null
+        let reasonFound: "draft" | "pending" | "approved" | "rejected" | null = null
         let refFound = ""
         let appFound: any = null
 
@@ -1356,7 +1357,7 @@ export default function SoloParentApplicationWizard({
           ).catch(() => null)
           if (data && data.blocked) {
             isBlockedFound = true
-            reasonFound = data.reason || (data.application?.application_status === "approved" ? "approved" : "pending")
+            reasonFound = data.reason || (data.application?.application_status === "approved" ? "approved" : data.application?.application_status === "rejected" ? "rejected" : "pending")
             refFound = data.referenceNumber || data.application?.reference_number || ""
             appFound = data.application || null
           }
@@ -1406,6 +1407,16 @@ export default function SoloParentApplicationWizard({
           return (st === "pending" || st === "draft" || st === "under_review") && isMatchPendingType
         })
 
+        const rejectedApp = matchedUserApps.find((a) => {
+          const st = String(a.application_status || a.status || "").toLowerCase()
+          const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+          const isMatchRejectedType =
+            typeToCheck === "renewal" ? aType === "renewal" :
+            typeToCheck === "loss" ? (aType === "loss" || aType === "replacement") :
+            (aType === "new" || !aType)
+          return (st === "rejected" || st === "disapproved") && isMatchRejectedType
+        })
+
         if (!isReapply) {
           if (typeToCheck === "renewal" || typeToCheck === "loss") {
             if (approvedAppForType) {
@@ -1418,6 +1429,11 @@ export default function SoloParentApplicationWizard({
               reasonFound = "pending"
               refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
               appFound = pendingApp
+            } else if (rejectedApp) {
+              isBlockedFound = true
+              reasonFound = "rejected"
+              refFound = rejectedApp.reference_number || rejectedApp.referenceNumber || refFound
+              appFound = rejectedApp
             } else {
               isBlockedFound = false
               reasonFound = null
@@ -1435,6 +1451,11 @@ export default function SoloParentApplicationWizard({
               reasonFound = "pending"
               refFound = pendingApp.reference_number || pendingApp.referenceNumber || ""
               appFound = pendingApp
+            } else if (reasonFound === "rejected" || rejectedApp) {
+              isBlockedFound = true
+              reasonFound = "rejected"
+              refFound = rejectedApp?.reference_number || rejectedApp?.referenceNumber || refFound
+              appFound = rejectedApp || appFound
             }
           }
         }
@@ -1928,8 +1949,10 @@ export default function SoloParentApplicationWizard({
 
 
 
-  if (isBlocked && !isReapplying && (blockReason === "pending" || blockReason === "draft" || (blockReason === "approved" && idStatus === "new"))) {
+  if (isBlocked && !isReapplying && (blockReason === "pending" || blockReason === "draft" || blockReason === "rejected" || (blockReason === "approved" && idStatus === "new"))) {
     const isAppApproved = blockReason === "approved" || blockedApp?.application_status === "approved" || blockedApp?.status === "approved"
+    const isAppRejected = blockReason === "rejected" || blockedApp?.application_status === "rejected" || blockedApp?.status === "rejected"
+    const rejectionReason = blockedApp?.rejection_reason || blockedApp?.rejectionReason || blockedApp?.admin_notes || ""
     const displayRef = blockedReference || blockedApp?.reference_number || blockedApp?.referenceNumber || "REF-SP-2026-001"
     const assignedIdNo = blockedApp?.assigned_id_number || blockedApp?.assignedIdNumber || blockedApp?.solo_parent_id_number || blockedApp?.soloParentIdNumber
     const displayDate = blockedApp?.created_at || blockedApp?.submittedAt
@@ -1959,11 +1982,15 @@ export default function SoloParentApplicationWizard({
             className={`h-16 w-16 rounded-2xl flex items-center justify-center ${
               isAppApproved
                 ? "bg-emerald-500/10 text-emerald-600"
+                : isAppRejected
+                ? "bg-red-500/10 text-red-600"
                 : "bg-amber-500/10 text-amber-500"
             }`}
           >
             {isAppApproved ? (
               <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            ) : isAppRejected ? (
+              <X className="h-8 w-8 text-red-600" />
             ) : (
               <Info className="h-8 w-8 text-amber-500" />
             )}
@@ -1976,6 +2003,12 @@ export default function SoloParentApplicationWizard({
                   : language === "bis"
                   ? "Na-aprobahan ang Aplikasyon!"
                   : "Na-approve ang Application!"
+                : isAppRejected
+                ? language === "en"
+                  ? "Application Not Approved / Disapproved"
+                  : language === "bis"
+                  ? "Wala Na-aprobahan ang Aplikasyon"
+                  : "Hindi Na-aprubahan ang Aplikasyon"
                 : language === "en"
                 ? "You Have an Existing Active Application"
                 : language === "bis"
@@ -1989,6 +2022,12 @@ export default function SoloParentApplicationWizard({
                   : language === "bis"
                   ? "Ang imong aplikasyon para sa Solo Parent ID opisyal nga na-aprobahan sa Gov Service. Aduna ka nay aktibo nga ID."
                   : "Ang inyong aplikasyon para sa Solo Parent ID ay opisyal nang na-apruba ng Gov Service Social Services Development Department."
+                : isAppRejected
+                ? language === "en"
+                  ? "Your application for Solo Parent ID was reviewed and not approved. You can review the reason below and submit a new application with the required documents."
+                  : language === "bis"
+                  ? "Ang imong aplikasyon para sa Solo Parent ID gisusi ug wala na-aprobahan. Mahimo nimong susihon ang hinungdan sa ubos ug mag-apply pag-usab."
+                  : "Ang inyong aplikasyon para sa Solo Parent ID ay sinuri ng Social Worker at hindi na-aprubahan. Maaari ninyong suriin ang dahilan sa ibaba at mag-apply muli kalakip ang kumpletong mga dokumento."
                 : language === "en"
                 ? "Your application for Solo Parent ID has been successfully submitted and is currently pending review. Please wait for a Social Worker's assessment before submitting a new application."
                 : language === "bis"
@@ -2023,6 +2062,11 @@ export default function SoloParentApplicationWizard({
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   {language === "en" ? "Approved" : language === "bis" ? "Aprobado" : "Approved"}
                 </span>
+              ) : isAppRejected ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  {language === "en" ? "Not Approved (Rejected)" : language === "bis" ? "Wala Na-aprobahan (Rejected)" : "Hindi Na-aprubahan (Rejected)"}
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -2036,6 +2080,17 @@ export default function SoloParentApplicationWizard({
               </span>
               <span className="font-semibold text-gray-700">{displayDate}</span>
             </div>
+
+            {isAppRejected && rejectionReason && (
+              <div className="p-3 bg-red-50/90 border border-red-200 rounded-lg text-left mt-2">
+                <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider block">
+                  {language === "en" ? "Reason for Disapproval:" : language === "bis" ? "Hinungdan sa Wala Pag-apruba:" : "Dahilan ng Hindi Pag-apruba:"}
+                </span>
+                <p className="text-xs text-red-700 mt-1 font-medium leading-relaxed">
+                  {rejectionReason}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="w-full pt-2 flex flex-col gap-2">
@@ -2054,6 +2109,37 @@ export default function SoloParentApplicationWizard({
                   className="w-full py-2.5 px-4 rounded-xl border border-blue-600 text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors cursor-pointer"
                 >
                   {language === "en" ? "Apply for Replacement / Lost ID" : language === "bis" ? "Pag-apply para sa Replacement / Nawala nga ID" : "Mag-apply para sa Replacement / Nawalang ID"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem("solo_parent_reapplying")
+                      localStorage.removeItem(`solo_parent_reapplying_${idStatus || "new"}`)
+                    } catch {}
+                    ;(window as any).__isFormDirty = false
+                    window.location.href = "/portal/my-applications"
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
+                >
+                  {language === "bis" ? "TAN-AWA SA KASAYSAYAN SA APLIKASYON" : "VIEW IN APPLICATION HISTORY"}
+                </button>
+              </>
+            ) : isAppRejected ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleStartReapply(idStatus || "new")}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>
+                    {language === "en"
+                      ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                      : language === "bis"
+                      ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                      : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+                  </span>
                 </button>
                 <button
                   type="button"

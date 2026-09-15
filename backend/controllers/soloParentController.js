@@ -1102,7 +1102,7 @@ exports.checkEligibility = async (req, res) => {
         applicationId: app.id,
         referenceNumber: app.reference_number,
         assignedIdNumber: app.assigned_id_number || app.solo_parent_id_number,
-        application: app,
+        application: sanitizeAppRow(app),
       });
     }
 
@@ -1130,7 +1130,34 @@ exports.checkEligibility = async (req, res) => {
           applicationId: app.id,
           referenceNumber: app.reference_number,
           assignedIdNumber: app.assigned_id_number || app.solo_parent_id_number,
-          application: app,
+          application: sanitizeAppRow(app),
+        });
+      }
+
+      // 3. Check if user has a rejected application for this type (if not reapplying)
+      const rejectedQuery = `
+        SELECT * FROM solo_parent_applications
+        WHERE (${orClauses.join(' OR ')})
+        AND application_status = 'rejected'
+        AND (
+          $${typeParamIdx} = 'new'
+          OR ($${typeParamIdx} = 'renewal' AND application_type = 'renewal')
+          OR ($${typeParamIdx} = 'loss' AND (application_type = 'loss' OR application_type = 'replacement'))
+        )
+        ORDER BY updated_at DESC, created_at DESC LIMIT 1
+      `;
+      const rejectedResult = await db.query(rejectedQuery, params);
+
+      if (rejectedResult.rows.length > 0) {
+        const app = rejectedResult.rows[0];
+        return res.status(200).json({
+          success: true,
+          blocked: true,
+          reason: 'rejected',
+          rejectionReason: app.rejection_reason || null,
+          applicationId: app.id,
+          referenceNumber: app.reference_number,
+          application: sanitizeAppRow(app),
         });
       }
     }
