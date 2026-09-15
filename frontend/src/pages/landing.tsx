@@ -9,7 +9,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { getInitialTheme, applyTheme } from '../utils/theme';
+import { getInitialTheme, applyTheme, getThemePreference, getEffectiveTheme, setThemeMode } from '../utils/theme';
 
 // 5 capability cards — matches docx §8 "Landing Page Feature Cards".
 // Layout: row 1 = 3 cards, row 2 = 2 cards (centered), each card offset
@@ -81,8 +81,30 @@ export function LandingPage() {
   const [dark, setDark] = useState(() => getInitialTheme());
 
   useEffect(() => {
-    applyTheme(dark, true);
-  }, [dark]);
+    const syncTheme = () => {
+      const mode = getThemePreference();
+      const effectiveDark = getEffectiveTheme(mode);
+      setDark(effectiveDark);
+      applyTheme(effectiveDark, false);
+    };
+
+    syncTheme();
+
+    const interval = setInterval(syncTheme, 15000);
+    window.addEventListener('theme_changed', syncTheme);
+    window.addEventListener('storage', syncTheme);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('theme_changed', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
+
+  const handleToggleDark = () => {
+    const nextDark = !dark;
+    setThemeMode(nextDark ? 'dark' : 'light');
+  };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background">
@@ -128,9 +150,9 @@ export function LandingPage() {
           </div>
           <button
             type="button"
-            onClick={() => setDark((v) => !v)}
+            onClick={handleToggleDark}
             aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground border border-border hover:bg-muted hover:text-foreground transition-colors"
+            className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground border border-border hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
