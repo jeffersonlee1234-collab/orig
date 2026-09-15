@@ -213,7 +213,7 @@ async function getUniqueReferenceNumber(baseRef) {
   let candidate = clean;
   let attempt = 0;
   while (true) {
-    const existing = await db.query('SELECT id FROM solo_parent_applications WHERE reference_number = $1', [candidate]);
+    const existing = await db.query('SELECT id FROM solo_parent_child_welfare_applications WHERE reference_number = $1', [candidate]);
     if (existing.rows.length === 0) {
       return candidate;
     }
@@ -238,7 +238,7 @@ exports.createApplication = async (req, res) => {
     // Clean up any unsubmitted draft records so they never block new attempts
     if (userId && String(userId) !== '0') {
       await db.query(
-        `DELETE FROM solo_parent_applications WHERE user_id = $1 AND application_status = 'draft' AND module_type = 'CHILD_WELFARE'`,
+        `DELETE FROM solo_parent_child_welfare_applications WHERE user_id = $1 AND application_status = 'draft' AND module_type = 'CHILD_WELFARE'`,
         [String(userId)]
       ).catch(() => {});
     }
@@ -310,7 +310,7 @@ exports.createApplication = async (req, res) => {
     const initialDocs = applicationData?.documents || req.body.documents || applicationData?.uploadedDocuments || [];
 
     const result = await db.query(
-      `INSERT INTO solo_parent_applications (
+      `INSERT INTO solo_parent_child_welfare_applications (
         reference_number, user_id, module_type, application_status, category_id, category_title, required_document_ids,
         guardian_first_name, guardian_middle_name, guardian_last_name, guardian_sex, guardian_date_of_birth,
         guardian_age, guardian_civil_status, guardian_relationship_to_child, guardian_contact_no,
@@ -411,7 +411,7 @@ exports.uploadDocuments = async (req, res) => {
 
     const appResult = await db.query(
       `SELECT id, uploaded_documents, extra_data, form_data 
-       FROM solo_parent_applications 
+       FROM solo_parent_child_welfare_applications 
        WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
@@ -458,7 +458,7 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE solo_parent_child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(uploadedDocuments), realAppId]
     );
 
@@ -467,7 +467,7 @@ exports.uploadDocuments = async (req, res) => {
     if (isPhotoDoc && photoFile && photoFile.fileUrl) {
       try {
         await db.query(
-          `UPDATE solo_parent_applications 
+          `UPDATE solo_parent_child_welfare_applications 
            SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
            WHERE id = $2`,
           [photoFile.fileUrl, realAppId]
@@ -490,7 +490,7 @@ exports.removeDocument = async (req, res) => {
 
     const appResult = await db.query(
       `SELECT id, uploaded_documents 
-       FROM solo_parent_applications 
+       FROM solo_parent_child_welfare_applications 
        WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
@@ -518,7 +518,7 @@ exports.removeDocument = async (req, res) => {
         }
 
         await db.query(
-          'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+          'UPDATE solo_parent_child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
           [JSON.stringify(uploadedDocuments), realAppId]
         );
 
@@ -541,7 +541,7 @@ exports.submitApplication = async (req, res) => {
 
     const appResult = await db.query(
       `SELECT id, reference_number 
-       FROM solo_parent_applications 
+       FROM solo_parent_child_welfare_applications 
        WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
@@ -553,7 +553,7 @@ exports.submitApplication = async (req, res) => {
     const application = appResult.rows[0];
 
     await db.query(
-      `UPDATE solo_parent_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
+      `UPDATE solo_parent_child_welfare_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
       [realAppId]
     );
 
@@ -570,7 +570,7 @@ exports.getApplicationByReference = async (req, res) => {
   try {
     const { referenceNumber } = req.params;
     const result = await db.query(
-      `SELECT * FROM solo_parent_applications WHERE reference_number = $1 AND module_type = 'CHILD_WELFARE'`,
+      `SELECT * FROM solo_parent_child_welfare_applications WHERE reference_number = $1 AND module_type = 'CHILD_WELFARE'`,
       [referenceNumber]
     );
     if (result.rows.length === 0) {
@@ -636,7 +636,7 @@ exports.getUserApplications = async (req, res) => {
     }
 
     const result = await db.query(
-      `SELECT * FROM solo_parent_applications 
+      `SELECT * FROM solo_parent_child_welfare_applications 
        WHERE module_type = 'CHILD_WELFARE' AND (${orClauses.join(' OR ')}) 
        ORDER BY created_at DESC`,
       params
@@ -666,7 +666,7 @@ exports.getAllApplications = async (req, res) => {
       });
     }
 
-    let query = `SELECT * FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`;
+    let query = `SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`;
     const params = [];
 
     if (status && status !== 'all') {
@@ -683,7 +683,7 @@ exports.getAllApplications = async (req, res) => {
     const result = await db.query(query, params);
 
     const countParams = [];
-    let countQuery = `SELECT COUNT(*) FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`;
+    let countQuery = `SELECT COUNT(*) FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`;
     if (status && status !== 'all') {
       countParams.push(status);
       countQuery += ` AND application_status = $${countParams.length}`;
@@ -714,7 +714,7 @@ exports.getApplicationById = async (req, res) => {
   try {
     const { applicationId } = req.params;
     const result = await db.query(
-      `SELECT * FROM solo_parent_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
+      `SELECT * FROM solo_parent_child_welfare_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
       [applicationId]
     );
     if (result.rows.length === 0) {
@@ -745,7 +745,7 @@ exports.updateApplicationStatus = async (req, res) => {
 
     try {
       const q = await db.query(
-        `UPDATE solo_parent_applications
+        `UPDATE solo_parent_child_welfare_applications
          SET application_status = $1,
              admin_notes = COALESCE($2, admin_notes),
              rejection_reason = $3,
@@ -781,7 +781,7 @@ exports.updateApplicationStatus = async (req, res) => {
       console.warn('[DB Error] Child Welfare update failed, trying fallback:', dbErr.message);
       try {
         const fallbackQ = await db.query(
-          `UPDATE solo_parent_applications
+          `UPDATE solo_parent_child_welfare_applications
            SET application_status = $1, updated_at = NOW()
            WHERE module_type = 'CHILD_WELFARE' AND (
                  reference_number = $2
@@ -806,7 +806,7 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!app) {
       try {
         const broadQ = await db.query(
-          `UPDATE solo_parent_applications
+          `UPDATE solo_parent_child_welfare_applications
            SET application_status = $1,
                approved_amount = COALESCE($2, approved_amount),
                updated_at = NOW()
@@ -912,7 +912,7 @@ exports.cancelApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     const appResult = await db.query(
-      `SELECT * FROM solo_parent_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
+      `SELECT * FROM solo_parent_child_welfare_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
       [applicationId]
     );
     if (appResult.rows.length === 0) {
@@ -921,7 +921,7 @@ exports.cancelApplication = async (req, res) => {
     if (appResult.rows[0].application_status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Only pending applications can be cancelled' });
     }
-    await db.query(`UPDATE solo_parent_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
+    await db.query(`UPDATE solo_parent_child_welfare_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
     invalidateChildCache();
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });
   } catch (error) {
@@ -934,13 +934,13 @@ exports.deleteApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
-      await db.query(`DELETE FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`);
+      await db.query(`DELETE FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`);
       invalidateChildCache();
       return res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^CW-/, '').trim();
     await db.query(
-      `DELETE FROM solo_parent_applications 
+      `DELETE FROM solo_parent_child_welfare_applications 
        WHERE module_type = 'CHILD_WELFARE' 
          AND (id::text = $1 OR reference_number = $1 OR reference_number = $2) 
        RETURNING id`,
@@ -957,7 +957,7 @@ exports.deleteApplication = async (req, res) => {
 // Clear all child welfare applications (admin test cleanup)
 exports.clearApplications = async (req, res) => {
   try {
-    await db.query(`DELETE FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`);
+    await db.query(`DELETE FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`);
     invalidateChildCache();
     res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
   } catch (error) {

@@ -70,7 +70,7 @@ exports.archiveApplication = async (req, res) => {
     if (catUpper.includes('SOLO') || !updatedInDb) {
       try {
         const q = await db.query(
-          `UPDATE solo_parent_applications
+          `UPDATE solo_parent_child_welfare_applications
            SET is_archived = true, archived_at = NOW()
            WHERE id::text = $1 OR reference_number = $1 OR qcid_number = $1 OR id::text = $2
            RETURNING id, reference_number`,
@@ -275,7 +275,7 @@ exports.restoreApplication = async (req, res) => {
     // 3. Solo Parent
     try {
       await db.query(
-        `UPDATE solo_parent_applications
+        `UPDATE solo_parent_child_welfare_applications
          SET is_archived = false, archived_at = NULL
          WHERE id::text = $1 OR reference_number = $1 OR qcid_number = $1 OR id::text = $2`,
         [targetId, targetRef]
@@ -375,7 +375,7 @@ exports.permanentDeleteApplication = async (req, res) => {
 
     try {
       await db.query(
-        `DELETE FROM solo_parent_applications
+        `DELETE FROM solo_parent_child_welfare_applications
          WHERE id::text = $1 OR reference_number = $1 OR qcid_number = $1 OR id::text = $2`,
         [targetId, targetRef]
       );

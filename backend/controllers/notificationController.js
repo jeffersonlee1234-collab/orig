@@ -94,11 +94,11 @@ exports.getNotifications = async (req, res) => {
 
     // 0. Auto-discover all application references belonging to this user
     if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
-      // Collect from solo_parent_applications
+      // Collect from solo_parent_child_welfare_applications
       try {
         const spRes = await db.query(
           `SELECT reference_number, user_id, assigned_id_number, solo_parent_id_number, qcid_number 
-           FROM solo_parent_applications 
+           FROM solo_parent_child_welfare_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
               OR COALESCE(qcid_number::text, '') = ANY($1::text[]) 
               OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
@@ -174,11 +174,11 @@ exports.getNotifications = async (req, res) => {
         });
       } catch (_) {}
 
-      // Collect from child welfare records in solo_parent_applications
+      // Collect from child welfare records in solo_parent_child_welfare_applications
       try {
         const cwRes = await db.query(
           `SELECT reference_number, user_id 
-           FROM solo_parent_applications 
+           FROM solo_parent_child_welfare_applications 
            WHERE module_type = 'CHILD_WELFARE'
              AND ((COALESCE(user_id::text, '') = ANY($1::text[]) 
                OR COALESCE(reference_number::text, '') = ANY($1::text[]))
@@ -383,7 +383,7 @@ exports.getNotifications = async (req, res) => {
       try {
         const spRes = await db.query(
           `SELECT id, reference_number, user_id, qcid_number, application_status, rejection_reason, created_at, updated_at, email, assigned_id_number, solo_parent_id_number, application_type
-           FROM solo_parent_applications 
+           FROM solo_parent_child_welfare_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
               OR COALESCE(qcid_number::text, '') = ANY($1::text[]) 
               OR COALESCE(reference_number::text, '') = ANY($1::text[]) 
@@ -435,7 +435,7 @@ exports.getNotifications = async (req, res) => {
       try {
         const cwRes = await db.query(
           `SELECT id, reference_number, user_id, application_status, rejection_reason, created_at, updated_at, guardian_email, category_title, approved_amount, form_data
-           FROM solo_parent_applications 
+           FROM solo_parent_child_welfare_applications 
            WHERE module_type = 'CHILD_WELFARE'
              AND ((COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(reference_number::text, '') = ANY($1::text[]))
                OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')

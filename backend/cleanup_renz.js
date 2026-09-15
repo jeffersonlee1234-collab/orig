@@ -76,7 +76,7 @@ async function cleanup() {
     // 5. Delete Solo Parent applications
     try {
       const spRes = await db.query(
-        `DELETE FROM solo_parent_applications 
+        `DELETE FROM solo_parent_child_welfare_applications 
          WHERE first_name ILIKE $1 
             OR last_name ILIKE $3 
             OR reference_number ILIKE $2 
@@ -85,13 +85,13 @@ async function cleanup() {
       );
       console.log(`Deleted ${spRes.rowCount} Solo Parent applications.`);
     } catch (e) {
-      console.log('solo_parent_applications cleanup error:', e.message);
+      console.log('solo_parent_child_welfare_applications cleanup error:', e.message);
     }
 
     // 6. Delete Solo Parent & Child Welfare applications
     try {
       const cwRes = await db.query(
-        `DELETE FROM solo_parent_applications 
+        `DELETE FROM solo_parent_child_welfare_applications 
          WHERE (module_type = 'CHILD_WELFARE')
            AND (guardian_first_name ILIKE $1 
              OR guardian_last_name ILIKE $3 

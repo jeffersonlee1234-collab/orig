@@ -223,7 +223,7 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
     }
 
     // 5. Sync applicants from Solo Parent applications
-    const soloRes = await db.query(`SELECT * FROM solo_parent_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    const soloRes = await db.query(`SELECT * FROM solo_parent_child_welfare_applications ORDER BY id ASC`).catch(() => ({ rows: [] }));
     for (const s of soloRes.rows || []) {
       await insertBeneficiaryIfMissing({
         firstName: s.first_name,
@@ -242,7 +242,7 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
     }
 
     // 6. Sync applicants from Child Welfare applications
-    const childRes = await db.query(`SELECT * FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE' ORDER BY id ASC`).catch(() => ({ rows: [] }));
+    const childRes = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE' ORDER BY id ASC`).catch(() => ({ rows: [] }));
     for (const c of childRes.rows || []) {
       await insertBeneficiaryIfMissing({
         firstName: c.guardian_first_name || c.first_name,
@@ -709,11 +709,11 @@ async function getAllBeneficiaries(req, res) {
       pwdList = p.rows;
     } catch {}
     try {
-      const s = await db.query(`SELECT * FROM solo_parent_applications WHERE module_type = 'SOLO_PARENT' OR module_type IS NULL`).catch(() => ({ rows: [] }));
+      const s = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'SOLO_PARENT' OR module_type IS NULL`).catch(() => ({ rows: [] }));
       soloList = s.rows;
     } catch {}
     try {
-      const c = await db.query(`SELECT * FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`).catch(() => ({ rows: [] }));
+      const c = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`).catch(() => ({ rows: [] }));
       childList = c.rows;
     } catch {}
     try {

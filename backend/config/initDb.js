@@ -14,135 +14,176 @@ async function initDb() {
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     await db.query(schemaSql);
 
-    // Migration patches for solo_parent_applications (Solo Parent + Child Welfare Consolidated)
+    // Migration patches for solo_parent_child_welfare_applications (Unified Solo Parent & Child Welfare Table)
     await db.query(`
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS module_type VARCHAR(50) DEFAULT 'SOLO_PARENT';
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS civil_status VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
-      
-      -- Child Welfare Consolidated Fields
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS category_id VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS category_title VARCHAR(255);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_first_name VARCHAR(150);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_middle_name VARCHAR(150);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_last_name VARCHAR(150);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_sex VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_date_of_birth VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_age INTEGER;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_civil_status VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_relationship_to_child VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_contact_no VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS guardian_valid_id VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(255);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_sex VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_birthday VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_age INTEGER;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_school_daycare VARCHAR(255);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_birth_certificate VARCHAR(255);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_grade_level VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_school_address TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_enrollment_status VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_special_needs VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_special_needs_specify TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS household_members VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS children_studying VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS monthly_household_income VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS main_source_income VARCHAR(255);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS other_financial_support TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS support_types JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS support_other TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS primary_reason_for_assistance TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS specific_needs TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS estimated_amount_needed VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS urgency VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS child_living_arrangement VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS other_children_needing_assistance VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS other_children_count VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS other_govt_assistance_received VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS other_govt_program TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS additional_info TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
+      CREATE TABLE IF NOT EXISTS solo_parent_child_welfare_applications (
+        id SERIAL PRIMARY KEY,
+        reference_number VARCHAR(100) UNIQUE NOT NULL,
+        user_id VARCHAR(100) NOT NULL,
+        module_type VARCHAR(50) DEFAULT 'SOLO_PARENT',
+        application_status VARCHAR(50) DEFAULT 'draft',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
 
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_type ON solo_parent_applications(application_type);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_id_num ON solo_parent_applications(solo_parent_id_number);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_assigned_id ON solo_parent_applications(assigned_id_number);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_module ON solo_parent_applications(module_type);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS module_type VARCHAR(50) DEFAULT 'SOLO_PARENT';
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS application_type VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_resident BOOLEAN DEFAULT true;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS classification_id VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS classification_title VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS first_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS middle_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS last_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS suffix VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS age INTEGER;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS sex VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS civil_status VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_month VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_day VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_year VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS contact_no VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS photo_url TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
+      
+      -- Child Welfare Fields
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS category_id VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS category_title VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_first_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_middle_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_last_name VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_sex VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_date_of_birth VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_age INTEGER;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_civil_status VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_relationship_to_child VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_contact_no VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_valid_id VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_sex VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_birthday VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_age INTEGER;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_daycare VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_birth_certificate VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_grade_level VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_address TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_enrollment_status VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs_specify TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS household_members VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS children_studying VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS monthly_household_income VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS main_source_income VARCHAR(255);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS other_financial_support TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS support_types JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS support_other TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS primary_reason_for_assistance TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS specific_needs TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS estimated_amount_needed VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS urgency VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS child_living_arrangement VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_needing_assistance VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_count VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_assistance_received VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_program TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS additional_info TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
+
+      CREATE INDEX IF NOT EXISTS idx_spcw_type ON solo_parent_child_welfare_applications(application_type);
+      CREATE INDEX IF NOT EXISTS idx_spcw_id_num ON solo_parent_child_welfare_applications(solo_parent_id_number);
+      CREATE INDEX IF NOT EXISTS idx_spcw_assigned_id ON solo_parent_child_welfare_applications(assigned_id_number);
+      CREATE INDEX IF NOT EXISTS idx_spcw_module ON solo_parent_child_welfare_applications(module_type);
     `);
 
-    // Check and migrate legacy child_welfare_applications into solo_parent_applications, then DROP child_welfare_applications
-    try {
-      const checkLegacyTable = await db.query(`
-        SELECT to_regclass('public.child_welfare_applications') as tbl;
-      `);
-      if (checkLegacyTable.rows[0] && checkLegacyTable.rows[0].tbl) {
-        console.log('🔄 Migrating legacy child_welfare_applications into solo_parent_applications...');
-        await db.query(`
-          INSERT INTO solo_parent_applications (
-            reference_number, user_id, module_type, application_status,
-            category_id, category_title, required_document_ids, uploaded_documents,
-            guardian_first_name, guardian_middle_name, guardian_last_name, guardian_sex,
-            guardian_date_of_birth, guardian_age, guardian_civil_status,
-            guardian_relationship_to_child, guardian_contact_no, guardian_email, guardian_valid_id,
-            address_house_no, address_street, address_barangay, address_city_municipality,
-            child_name, child_sex, child_birthday, child_age, child_school_daycare,
-            child_birth_certificate, child_grade_level, child_school_address,
-            child_enrollment_status, child_special_needs, child_special_needs_specify,
-            household_members, children_studying, monthly_household_income, main_source_income,
-            employment_status, other_financial_support, support_types, support_other,
-            primary_reason_for_assistance, specific_needs, estimated_amount_needed, urgency,
-            child_living_arrangement, other_children_needing_assistance, other_children_count,
-            other_govt_assistance_received, other_govt_program, additional_info,
-            rejection_reason, admin_notes, approved_by, approved_amount, is_archived, archived_at,
-            created_at, updated_at
-          )
-          SELECT 
-            reference_number, user_id, 'CHILD_WELFARE', COALESCE(application_status, 'draft'),
-            category_id, category_title, COALESCE(required_document_ids, '[]'::jsonb), COALESCE(uploaded_documents, '[]'::jsonb),
-            guardian_first_name, guardian_middle_name, guardian_last_name, guardian_sex,
-            guardian_date_of_birth, guardian_age, guardian_civil_status,
-            guardian_relationship_to_child, guardian_contact_no, guardian_email, guardian_valid_id,
-            address_house_no, address_street, address_barangay, address_city_municipality,
-            child_name, child_sex, child_birthday, child_age, child_school_daycare,
-            child_birth_certificate, child_grade_level, child_school_address,
-            child_enrollment_status, child_special_needs, child_special_needs_specify,
-            household_members, children_studying, monthly_household_income, main_source_income,
-            employment_status, other_financial_support, COALESCE(support_types, '[]'::jsonb), support_other,
-            primary_reason_for_assistance, specific_needs, estimated_amount_needed, urgency,
-            child_living_arrangement, other_children_needing_assistance, other_children_count,
-            other_govt_assistance_received, other_govt_program, additional_info,
-            rejection_reason, admin_notes, approved_by, approved_amount, COALESCE(is_archived, false), archived_at,
-            created_at, updated_at
-          FROM child_welfare_applications
-          ON CONFLICT (reference_number) DO UPDATE SET
-            module_type = 'CHILD_WELFARE';
+    // Dynamic safe migration helper for consolidating legacy tables into solo_parent_child_welfare_applications
+    async function consolidateLegacyTable(sourceTable, defaultModule) {
+      try {
+        const check = await db.query(`SELECT to_regclass($1) as tbl;`, [`public.${sourceTable}`]);
+        if (!check.rows[0] || !check.rows[0].tbl) return;
 
-          DROP TABLE IF EXISTS child_welfare_applications CASCADE;
+        console.log(`🔄 Consolidating legacy table '${sourceTable}' into solo_parent_child_welfare_applications...`);
+
+        // Check available columns in source table
+        const srcColsRes = await db.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = $1 AND table_schema = 'public'
+        `, [sourceTable]);
+        const srcCols = new Set(srcColsRes.rows.map(r => r.column_name));
+
+        // Check columns in target table
+        const tgtColsRes = await db.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'solo_parent_child_welfare_applications' AND table_schema = 'public'
         `);
-        console.log('✅ Successfully consolidated child_welfare_applications and dropped legacy table.');
+        const tgtCols = tgtColsRes.rows.map(r => r.column_name).filter(c => c !== 'id');
+
+        const selectExprs = [];
+        const insertCols = [];
+
+        for (const col of tgtCols) {
+          if (col === 'module_type') {
+            if (srcCols.has('module_type')) {
+              selectExprs.push(`COALESCE(module_type, '${defaultModule}') AS module_type`);
+            } else {
+              selectExprs.push(`'${defaultModule}' AS module_type`);
+            }
+            insertCols.push('module_type');
+          } else if (srcCols.has(col)) {
+            selectExprs.push(`"${col}"`);
+            insertCols.push(`"${col}"`);
+          }
+        }
+
+        if (insertCols.length > 0 && srcCols.has('reference_number')) {
+          const sql = `
+            INSERT INTO solo_parent_child_welfare_applications (${insertCols.join(', ')})
+            SELECT ${selectExprs.join(', ')}
+            FROM ${sourceTable}
+            ON CONFLICT (reference_number) DO UPDATE SET
+              module_type = EXCLUDED.module_type,
+              updated_at = NOW();
+          `;
+          await db.query(sql);
+        }
+
+        await db.query(`DROP TABLE IF EXISTS ${sourceTable} CASCADE;`);
+        console.log(`✅ Successfully consolidated and dropped legacy table '${sourceTable}'.`);
+      } catch (err) {
+        console.warn(`⚠️ Consolidation notice for ${sourceTable}:`, err.message);
+        try {
+          await db.query(`DROP TABLE IF EXISTS ${sourceTable} CASCADE;`);
+        } catch (dropErr) {
+          console.warn(`⚠️ Could not drop ${sourceTable}:`, dropErr.message);
+        }
       }
-    } catch (migErr) {
-      console.warn('⚠️ Table consolidation notice:', migErr.message);
     }
+
+    await consolidateLegacyTable('solo_parent_applications', 'SOLO_PARENT');
+    await consolidateLegacyTable('child_welfare_applications', 'CHILD_WELFARE');
 
     // Migration patches for livelihood_applications (Workflow, Revision, & Approval Columns)
     await db.query(`
@@ -369,14 +410,14 @@ async function initDb() {
       INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
       SELECT DISTINCT ON (LOWER(email))
         LOWER(email), '${defaultHashed}', first_name, last_name, middle_name, suffix, contact_no, COALESCE(solo_parent_id_number, qcid_number), 'user', 'active', true, created_at
-      FROM solo_parent_applications
-      WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
+      FROM solo_parent_child_welfare_applications
+      WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
       ON CONFLICT (email) DO NOTHING;
 
       INSERT INTO users (email, password, first_name, last_name, middle_name, mobile_number, role, status, is_email_verified, created_at)
       SELECT DISTINCT ON (LOWER(guardian_email))
         LOWER(guardian_email), '${defaultHashed}', guardian_first_name, guardian_last_name, guardian_middle_name, guardian_contact_no, 'user', 'active', true, created_at
-      FROM solo_parent_applications
+      FROM solo_parent_child_welfare_applications
       WHERE module_type = 'CHILD_WELFARE' AND guardian_email IS NOT NULL AND guardian_email != '' AND LOWER(guardian_email) NOT IN (SELECT LOWER(email) FROM users)
       ON CONFLICT (email) DO NOTHING;
 
@@ -413,18 +454,18 @@ async function initDb() {
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS reason_for_replacement TEXT;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
 
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20);
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
 
       ALTER TABLE livelihood_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE livelihood_applications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
@@ -632,9 +673,9 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_aics_qcid ON aics_applications(qcid_number);
       CREATE INDEX IF NOT EXISTS idx_aics_status ON aics_applications(status);
       CREATE INDEX IF NOT EXISTS idx_aics_user_id ON aics_applications(user_id);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_qcid ON solo_parent_applications(qcid_number);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_status ON solo_parent_applications(application_status);
-      CREATE INDEX IF NOT EXISTS idx_solo_parent_module ON solo_parent_applications(module_type);
+      CREATE INDEX IF NOT EXISTS idx_spcw_qcid ON solo_parent_child_welfare_applications(qcid_number);
+      CREATE INDEX IF NOT EXISTS idx_spcw_status ON solo_parent_child_welfare_applications(application_status);
+      CREATE INDEX IF NOT EXISTS idx_spcw_module ON solo_parent_child_welfare_applications(module_type);
       CREATE INDEX IF NOT EXISTS idx_livelihood_status ON livelihood_applications(application_status);
       CREATE INDEX IF NOT EXISTS idx_training_status ON training_applications(status);
       CREATE INDEX IF NOT EXISTS idx_appointments_user ON appointments(user_id);

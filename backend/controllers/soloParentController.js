@@ -240,7 +240,7 @@ async function getUniqueReferenceNumber(baseRef, appType) {
   let attempt = 0;
   try {
     while (attempt < 20) {
-      const existing = await db.query('SELECT id FROM solo_parent_applications WHERE reference_number = $1', [candidate]);
+      const existing = await db.query('SELECT id FROM solo_parent_child_welfare_applications WHERE reference_number = $1', [candidate]);
       if (!existing || existing.rows.length === 0) {
         return candidate;
       }
@@ -258,59 +258,59 @@ let soloColsInitialized = false;
 async function initSoloParentColumns() {
   if (soloColsInitialized) return;
   const columnDefs = [
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS application_status VARCHAR(50) DEFAULT 'pending'",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS application_type VARCHAR(50) DEFAULT 'new'",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_resident BOOLEAN DEFAULT true",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_id VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS classification_title VARCHAR(255)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS first_name VARCHAR(150)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS middle_name VARCHAR(150)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS last_name VARCHAR(150)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS suffix VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS age INTEGER",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS sex VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS civil_status VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_month VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_day VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS dob_year VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS contact_no VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS photo_url TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP WITH TIME ZONE",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
-    "ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS application_status VARCHAR(50) DEFAULT 'pending'",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS application_type VARCHAR(50) DEFAULT 'new'",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_resident BOOLEAN DEFAULT true",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS classification_id VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS classification_title VARCHAR(255)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS solo_parent_id_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS assigned_id_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_id_verified BOOLEAN DEFAULT false",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS first_name VARCHAR(150)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS middle_name VARCHAR(150)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS last_name VARCHAR(150)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS suffix VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS age INTEGER",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS sex VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS civil_status VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_month VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_day VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS dob_year VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS contact_no VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS email VARCHAR(150)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_first_name VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_last_name VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_name VARCHAR(200)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_contact_no VARCHAR(50)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_relationship VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS emergency_address TEXT",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS blood_type VARCHAR(20)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS family_members JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS applicant_photo TEXT",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS photo_url TEXT",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP WITH TIME ZONE",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+    "ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
   ];
 
   try {
     await db.query(`
-      CREATE TABLE IF NOT EXISTS solo_parent_applications (
+      CREATE TABLE IF NOT EXISTS solo_parent_child_welfare_applications (
         id SERIAL PRIMARY KEY,
         reference_number VARCHAR(100) UNIQUE NOT NULL,
         user_id VARCHAR(100) NOT NULL,
@@ -393,7 +393,7 @@ exports.createApplication = async (req, res) => {
     // Clean up any unsubmitted draft records so they never block new attempts
     if (userId) {
       await db.query(
-        `DELETE FROM solo_parent_applications
+        `DELETE FROM solo_parent_child_welfare_applications
          WHERE user_id::text = $1 AND application_status = 'draft'`,
         [String(userId)]
       ).catch(() => {});
@@ -446,7 +446,7 @@ exports.createApplication = async (req, res) => {
 
     try {
       const result = await db.query(
-        `INSERT INTO solo_parent_applications (
+        `INSERT INTO solo_parent_child_welfare_applications (
           reference_number, user_id, application_status, application_type,
           is_resident, classification_id, classification_title, required_document_ids,
           solo_parent_id_number, is_id_verified,
@@ -494,7 +494,7 @@ exports.createApplication = async (req, res) => {
       console.warn('[Solo Parent Create] Primary insert failed, retrying with flexible schema:', insertErr.message);
       try {
         const fallbackResult = await db.query(
-          `INSERT INTO solo_parent_applications (
+          `INSERT INTO solo_parent_child_welfare_applications (
             reference_number, user_id, application_status, application_type,
             form_data, extra_data, uploaded_documents
           ) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb)
@@ -581,7 +581,7 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
-    const appResult = await db.query('SELECT uploaded_documents, form_data, extra_data FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT uploaded_documents, form_data, extra_data FROM solo_parent_child_welfare_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -619,7 +619,7 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE solo_parent_child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(uploadedDocuments), applicationId]
     );
 
@@ -629,7 +629,7 @@ exports.uploadDocuments = async (req, res) => {
     if (isPhotoDoc && photoFile && photoFile.fileUrl) {
       try {
         await db.query(
-          `UPDATE solo_parent_applications 
+          `UPDATE solo_parent_child_welfare_applications 
            SET form_data = jsonb_set(COALESCE(form_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true),
                extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true),
                applicant_photo = $1,
@@ -659,7 +659,7 @@ exports.removeDocument = async (req, res) => {
   try {
     const { applicationId, documentId, filename } = req.params;
 
-    const appResult = await db.query('SELECT uploaded_documents FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT uploaded_documents FROM solo_parent_child_welfare_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -685,7 +685,7 @@ exports.removeDocument = async (req, res) => {
         }
 
         await db.query(
-          'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+          'UPDATE solo_parent_child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
           [JSON.stringify(uploadedDocuments), applicationId]
         );
 
@@ -706,7 +706,7 @@ exports.submitApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
 
-    const appResult = await db.query('SELECT * FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT * FROM solo_parent_child_welfare_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -714,7 +714,7 @@ exports.submitApplication = async (req, res) => {
     const application = appResult.rows[0];
 
     await db.query(
-      `UPDATE solo_parent_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
+      `UPDATE solo_parent_child_welfare_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
       [applicationId]
     );
 
@@ -735,7 +735,7 @@ exports.getApplicationByReference = async (req, res) => {
   try {
     const { referenceNumber } = req.params;
 
-    const result = await db.query('SELECT * FROM solo_parent_applications WHERE reference_number = $1', [referenceNumber]);
+    const result = await db.query('SELECT * FROM solo_parent_child_welfare_applications WHERE reference_number = $1', [referenceNumber]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -780,7 +780,7 @@ exports.getUserApplications = async (req, res) => {
 
     const result = await db.query(
       `SELECT *
-       FROM solo_parent_applications
+       FROM solo_parent_child_welfare_applications
        WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
          AND (${orClauses.join(' OR ')})
        ORDER BY id DESC`,
@@ -818,7 +818,7 @@ exports.getAllApplications = async (req, res) => {
       });
     }
 
-    let query = `SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`;
+    let query = `SELECT * FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`;
     const params = [];
 
     if (status && status !== 'all') {
@@ -840,7 +840,7 @@ exports.getAllApplications = async (req, res) => {
       rows = result.rows || [];
     } catch (dbErr) {
       console.warn('[getAllApplications] Query warning, fallback to simple select:', dbErr.message);
-      const simple = await db.query(`SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
+      const simple = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
       rows = simple.rows || [];
     }
 
@@ -863,7 +863,7 @@ exports.getAllApplications = async (req, res) => {
   } catch (error) {
     console.error('Error fetching applications:', error);
     try {
-      const emergency = await db.query(`SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
+      const emergency = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
       const cleanRows = (emergency.rows || []).map(sanitizeAppRow);
       return res.status(200).json({
         success: true,
@@ -879,7 +879,7 @@ exports.getAllApplications = async (req, res) => {
 exports.getApplicationById = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    const result = await db.query('SELECT * FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const result = await db.query('SELECT * FROM solo_parent_child_welfare_applications WHERE id = $1', [applicationId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -910,7 +910,7 @@ exports.updateApplicationStatus = async (req, res) => {
 
     try {
       const q = await db.query(
-        `UPDATE solo_parent_applications
+        `UPDATE solo_parent_child_welfare_applications
          SET application_status = $1,
              admin_notes = COALESCE($2, admin_notes),
              rejection_reason = $3,
@@ -946,7 +946,7 @@ exports.updateApplicationStatus = async (req, res) => {
       console.warn('[DB Error] Detailed UPDATE failed, running simplified fallback:', dbErr.message);
       try {
         const fallbackQ = await db.query(
-          `UPDATE solo_parent_applications
+          `UPDATE solo_parent_child_welfare_applications
            SET application_status = $1,
                updated_at = NOW()
            WHERE reference_number = $2
@@ -970,7 +970,7 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!updatedRow) {
       try {
         const broadQ = await db.query(
-          `UPDATE solo_parent_applications
+          `UPDATE solo_parent_child_welfare_applications
            SET application_status = $1,
                solo_parent_id_number = COALESCE($2, solo_parent_id_number),
                assigned_id_number = COALESCE($2, assigned_id_number),
@@ -1031,7 +1031,7 @@ exports.cancelApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
 
-    const appResult = await db.query('SELECT * FROM solo_parent_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query('SELECT * FROM solo_parent_child_welfare_applications WHERE id = $1', [applicationId]);
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -1040,7 +1040,7 @@ exports.cancelApplication = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only pending applications can be cancelled' });
     }
 
-    await db.query(`UPDATE solo_parent_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
+    await db.query(`UPDATE solo_parent_child_welfare_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
 
     invalidateSoloCache();
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });
@@ -1090,7 +1090,7 @@ exports.checkEligibility = async (req, res) => {
     const typeParamIdx = params.length;
 
     const pendingQuery = `
-      SELECT * FROM solo_parent_applications
+      SELECT * FROM solo_parent_child_welfare_applications
       WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
       AND (${orClauses.join(' OR ')})
       AND application_status = 'pending'
@@ -1120,7 +1120,7 @@ exports.checkEligibility = async (req, res) => {
     // 2. Check if user has an approved Solo Parent application for this type
     if (req.query.reapply !== 'true') {
       const approvedQuery = `
-        SELECT * FROM solo_parent_applications
+        SELECT * FROM solo_parent_child_welfare_applications
         WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
         AND (${orClauses.join(' OR ')})
         AND application_status IN ('approved', 'completed', 'for_release', 'active')
@@ -1148,7 +1148,7 @@ exports.checkEligibility = async (req, res) => {
 
       // 3. Check if user has a rejected application for this type (if not reapplying)
       const rejectedQuery = `
-        SELECT * FROM solo_parent_applications
+        SELECT * FROM solo_parent_child_welfare_applications
         WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
         AND (${orClauses.join(' OR ')})
         AND application_status = 'rejected'
@@ -1217,7 +1217,7 @@ exports.updateApplicationData = async (req, res) => {
     const cleanId = String(applicationId).replace(/^SP-/, '').trim();
 
     const result = await db.query(
-      `UPDATE solo_parent_applications SET
+      `UPDATE solo_parent_child_welfare_applications SET
         first_name = $1, middle_name = $2, last_name = $3, suffix = $4, age = $5, sex = $6,
         dob_month = $7, dob_day = $8, dob_year = $9, civil_status = $10, contact_no = $11,
         address_house_no = $12, address_street = $13, address_barangay = $14, address_city_municipality = $15,
@@ -1256,13 +1256,13 @@ exports.deleteApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
-      await db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
+      await db.query(`DELETE FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
       invalidateSoloCache();
       return res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^SP-/, '').trim();
     await db.query(
-      `DELETE FROM solo_parent_applications 
+      `DELETE FROM solo_parent_child_welfare_applications 
        WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
          AND (id::text = $1 OR reference_number = $1 OR reference_number = $2) 
        RETURNING id`,
@@ -1279,7 +1279,7 @@ exports.deleteApplication = async (req, res) => {
 // Clear all solo parent applications (admin test cleanup)
 exports.clearApplications = async (req, res) => {
   try {
-    await db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
+    await db.query(`DELETE FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
     invalidateSoloCache();
     res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
   } catch (error) {
@@ -1301,7 +1301,7 @@ exports.verifySoloParentId = async (req, res) => {
 
     // 1. Search in DB for existing application
     const query = `
-      SELECT * FROM solo_parent_applications
+      SELECT * FROM solo_parent_child_welfare_applications
       WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
       AND (
         solo_parent_id_number = $1

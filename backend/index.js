@@ -218,7 +218,7 @@ app.delete('/api/cleanup-user/:nameOrRef', async (req, res) => {
     // 5. Solo Parent
     try {
       const del = await db.query(
-        `DELETE FROM solo_parent_applications 
+        `DELETE FROM solo_parent_child_welfare_applications 
          WHERE LOWER(first_name || ' ' || last_name) LIKE LOWER($1)
             OR LOWER(guardian_first_name || ' ' || guardian_last_name) LIKE LOWER($1)
             OR user_id::text LIKE $1 OR reference_number LIKE $1 OR qcid_number LIKE $1 OR child_name ILIKE $1`,

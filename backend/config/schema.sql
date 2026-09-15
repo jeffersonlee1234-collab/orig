@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS aics_documents (
 CREATE INDEX IF NOT EXISTS idx_aics_documents_app_id ON aics_documents(application_id);
 
 -- 4. Solo Parent & Child Welfare Applications Table (Unified)
-CREATE TABLE IF NOT EXISTS solo_parent_applications (
+CREATE TABLE IF NOT EXISTS solo_parent_child_welfare_applications (
   id SERIAL PRIMARY KEY,
   reference_number VARCHAR(100) UNIQUE NOT NULL,
   user_id VARCHAR(100) NOT NULL,
@@ -170,10 +170,10 @@ CREATE TABLE IF NOT EXISTS solo_parent_applications (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_solo_parent_user_id ON solo_parent_applications(user_id);
-CREATE INDEX IF NOT EXISTS idx_solo_parent_reference ON solo_parent_applications(reference_number);
-CREATE INDEX IF NOT EXISTS idx_solo_parent_status ON solo_parent_applications(application_status);
-CREATE INDEX IF NOT EXISTS idx_solo_parent_module ON solo_parent_applications(module_type);
+CREATE INDEX IF NOT EXISTS idx_spcw_user_id ON solo_parent_child_welfare_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_spcw_reference ON solo_parent_child_welfare_applications(reference_number);
+CREATE INDEX IF NOT EXISTS idx_spcw_status ON solo_parent_child_welfare_applications(application_status);
+CREATE INDEX IF NOT EXISTS idx_spcw_module ON solo_parent_child_welfare_applications(module_type);
 
 -- 5. Appointments Table
 CREATE TABLE IF NOT EXISTS appointments (
