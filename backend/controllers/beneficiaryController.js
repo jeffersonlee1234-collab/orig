@@ -313,12 +313,34 @@ async function syncRealUsersAndApplicantsToBeneficiaries() {
   }
 }
 
+function formatProgramStatus(rawStatus) {
+  if (!rawStatus) return 'Pending';
+  const s = String(rawStatus).toLowerCase().trim();
+  if (s.includes('approv') || s === 'approved' || s === 'verified' || s.includes('enrol') || s.includes('complet')) return 'Approved';
+  if (s.includes('reject') || s === 'rejected' || s.includes('decline')) return 'Rejected';
+  if (s.includes('release') || s === 'for_release') return 'For Release';
+  if (s.includes('review') || s === 'under_review') return 'Under Review';
+  if (s.includes('evaluat')) return 'Under Evaluation';
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ');
+}
+
 /**
  * Match helper to link an application record with a beneficiary profile
  */
 function matchesApplicant(b, app) {
   if (!b || !app) return false;
-  const info = app.applicantInfo || (typeof app.applicant_info === 'string' ? JSON.parse(app.applicant_info) : (app.applicant_info || {}));
+  let info = {};
+  try {
+    info = app.applicantInfo || (typeof app.applicant_info === 'string' ? JSON.parse(app.applicant_info) : (app.applicant_info || {}));
+  } catch {}
+  let formData = {};
+  try {
+    formData = app.form_data || (typeof app.form_data === 'string' ? JSON.parse(app.form_data) : (app.form_data || {}));
+  } catch {}
+  let extraData = {};
+  try {
+    extraData = app.extra_data || (typeof app.extra_data === 'string' ? JSON.parse(app.extra_data) : (app.extra_data || {}));
+  } catch {}
 
   const bQcid = String(b.qcid_number || b.id_number || '').trim().toLowerCase();
   const bEmail = String(b.email || '').trim().toLowerCase();
@@ -326,29 +348,65 @@ function matchesApplicant(b, app) {
   const bFirst = String(b.first_name || '').trim().toLowerCase();
   const bLast = String(b.last_name || '').trim().toLowerCase();
   const bUserId = b.user_id ? String(b.user_id) : null;
+  const bContact = String(b.contact_no || '').replace(/[^0-9]/g, '');
 
-  const appQc = String(app.qc_id || app.qcid || app.qcid_number || app.reference_number || app.referenceNumber || app.reference_no || info.qcid || '').trim().toLowerCase();
-  const appEmail = String(app.email || app.guardian_email || info.email || '').trim().toLowerCase();
-  const appUserId = app.user_id || app.userId || info.userId ? String(app.user_id || app.userId || info.userId) : null;
-  const appFirst = String(app.first_name || app.guardian_first_name || info.firstName || '').trim().toLowerCase();
-  const appMiddle = String(app.middle_name || app.guardian_middle_name || info.middleName || '').trim().toLowerCase();
-  const appLast = String(app.last_name || app.guardian_last_name || info.lastName || '').trim().toLowerCase();
-  const appFullName = String(app.full_name || app.applicantName || info.fullName || [appFirst, appMiddle, appLast].filter(Boolean).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
+  const appQc = String(
+    app.qc_id || app.qcid || app.qcid_number || app.existing_id_number || app.assigned_id_number ||
+    app.solo_parent_id_number || info.qcid || formData.qcid || formData.qcidNumber || formData.qcidNo || ''
+  ).trim().toLowerCase();
+
+  const appEmail = String(
+    app.email || app.guardian_email || info.email || formData.email || extraData.email || ''
+  ).trim().toLowerCase();
+
+  const appUserId = app.user_id || app.userId || info.userId || formData.userId || extraData.userId
+    ? String(app.user_id || app.userId || info.userId || formData.userId || extraData.userId)
+    : null;
+
+  const appFirst = String(
+    app.first_name || app.guardian_first_name || info.firstName || formData.firstName || ''
+  ).trim().toLowerCase();
+
+  const appMiddle = String(
+    app.middle_name || app.guardian_middle_name || info.middleName || formData.middleName || ''
+  ).trim().toLowerCase();
+
+  const appLast = String(
+    app.last_name || app.guardian_last_name || info.lastName || formData.lastName || ''
+  ).trim().toLowerCase();
+
+  const appFullName = String(
+    app.full_name || app.applicantName || info.fullName || formData.fullName ||
+    [appFirst, appMiddle, appLast].filter(Boolean).join(' ')
+  ).trim().toLowerCase().replace(/\s+/g, ' ');
+
   const appFirstLast = [appFirst, appLast].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+
+  const appContact = String(
+    app.contact_no || app.contact_number || app.mobile_number || app.phone ||
+    app.guardian_contact_no || info.contactNo || formData.contactNo || ''
+  ).replace(/[^0-9]/g, '');
 
   // 1. User ID match
   if (bUserId && appUserId && bUserId === appUserId) return true;
 
-  // 2. QCID / Reference match
-  if (bQcid && bQcid.length >= 4 && appQc && (appQc === bQcid || appQc.includes(bQcid) || bQcid.includes(appQc))) return true;
-
-  // 3. Email match
+  // 2. Email match
   if (bEmail && appEmail && bEmail === appEmail) return true;
 
-  // 4. Exact first and last name match
+  // 3. QCID match
+  if (bQcid && appQc && bQcid.length >= 5 && appQc.length >= 5) {
+    if (bQcid === appQc || bQcid.includes(appQc) || appQc.includes(bQcid)) return true;
+  }
+
+  // 4. Contact match (at least 10 digits)
+  if (bContact.length >= 10 && appContact.length >= 10 && (bContact.includes(appContact) || appContact.includes(bContact))) {
+    return true;
+  }
+
+  // 5. Exact first and last name match
   if (bFirst && bLast && appFirst && appLast && bFirst === appFirst && bLast === appLast) return true;
 
-  // 5. Full name match
+  // 6. Full name match
   if (bName && appFullName && (bName === appFullName || bName.includes(appFullName) || appFullName.includes(bName))) return true;
   if (bName && appFirstLast && (bName === appFirstLast || bName.includes(appFirstLast) || appFirstLast.includes(bName))) return true;
   if (bName && appFirst && appLast && bName.includes(appFirst) && bName.includes(appLast)) return true;
@@ -684,69 +742,92 @@ async function getAllBeneficiaries(req, res) {
 
       const enrolledPrograms = [];
 
-      // Check AICS
+      // 1. Check AICS
       aicsList.forEach((app) => {
         if (matchesApplicant(b, app)) {
+          const dateStr = app.submitted_at || app.created_at || new Date().toISOString();
           enrolledPrograms.push({
             program: "AICS",
             assistanceType: app.assistance_type || "Medical Assistance",
-            referenceNo: app.reference_no,
-            status: (app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'Pending').slice(1),
-            dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
+            referenceNo: app.reference_no || `AICS-${app.id}`,
+            status: formatProgramStatus(app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
 
-      // Check PWD / Senior
+      // 2. Check PWD / Senior Citizen
       pwdList.forEach((app) => {
         if (matchesApplicant(b, app)) {
           const progName = (app.category || '').toLowerCase().includes('senior') ? 'Senior Citizen' : 'PWD';
+          const typeLabel = app.type || (progName === 'Senior Citizen' ? 'Senior Citizen Assistance' : 'PWD Assistance');
+          const dateStr = app.submitted_at || app.created_at || new Date().toISOString();
           enrolledPrograms.push({
             program: progName,
-            referenceNo: app.reference_number || app.id,
-            status: (app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'Pending').slice(1),
-            dateEnrolled: new Date(app.submitted_at || app.created_at || Date.now()).toISOString().split('T')[0],
+            assistanceType: typeLabel,
+            referenceNo: app.assigned_id_number || app.reference_number || app.existing_id_number || `PWD-${app.id}`,
+            status: formatProgramStatus(app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
 
-      // Check Solo Parent
+      // 3. Check Solo Parent
       soloList.forEach((app) => {
         if (matchesApplicant(b, app)) {
+          let typeLabel = "Solo Parent ID";
+          const appType = String(app.application_type || '').toLowerCase();
+          if (appType === 'new') typeLabel = "Solo Parent ID (New)";
+          else if (appType === 'renewal') typeLabel = "Solo Parent ID (Renewal)";
+          else if (appType === 'lost_id' || appType === 'loss' || appType === 'replacement') typeLabel = "Solo Parent ID (Replacement / Lost)";
+          else if (app.classification_title) typeLabel = `Solo Parent ID - ${app.classification_title}`;
+          else if (app.application_type) typeLabel = `Solo Parent ID (${app.application_type})`;
+
+          const dateStr = app.submitted_at || app.created_at || new Date().toISOString();
           enrolledPrograms.push({
             program: "Solo Parent",
-            referenceNo: app.reference_number || app.solo_parent_id_number || `SP-${app.id}`,
-            status: (app.application_status || 'Pending').charAt(0).toUpperCase() + (app.application_status || 'Pending').slice(1),
-            dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
+            assistanceType: typeLabel,
+            referenceNo: app.assigned_id_number || app.solo_parent_id_number || app.reference_number || `SP-${app.id}`,
+            status: formatProgramStatus(app.application_status || app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
 
-      // Check Child Welfare
+      // 4. Check Child Welfare
       childList.forEach((app) => {
         if (matchesApplicant(b, app)) {
+          const dateStr = app.submitted_at || app.created_at || new Date().toISOString();
           enrolledPrograms.push({
             program: "Child Welfare",
+            assistanceType: app.program_type || "Child Educational Assistance",
             referenceNo: app.reference_number || `CW-${app.id}`,
-            status: (app.application_status || 'Pending').charAt(0).toUpperCase() + (app.application_status || 'Pending').slice(1),
-            dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
+            status: formatProgramStatus(app.application_status || app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
 
-      // Check Livelihood
+      // 5. Check Livelihood
       livList.forEach((app) => {
         if (matchesApplicant(b, app)) {
+          const dateStr = app.submitted_at || app.created_at || new Date().toISOString();
           enrolledPrograms.push({
             program: "Livelihood",
+            assistanceType: app.program_type || app.assistance_type || "Livelihood Grant Assistance",
             referenceNo: app.reference_number || `LP-${app.id}`,
-            status: (app.application_status || 'Pending').charAt(0).toUpperCase() + (app.application_status || 'Pending').slice(1),
-            dateEnrolled: new Date(app.created_at || Date.now()).toISOString().split('T')[0],
+            status: formatProgramStatus(app.application_status || app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
 
-      // Check Training Program
+      // 6. Check Training Program
       const trainingSeen = new Set();
       trainingList.forEach((app) => {
         if (matchesApplicant(b, app)) {
@@ -755,25 +836,21 @@ async function getAllBeneficiaries(req, res) {
           trainingSeen.add(tKey);
 
           const tName = app.training_name || app.trainingName || "Skills Training Program";
-          const rawStatus = String(app.status || "Pending").toLowerCase();
-          let cleanStatus = "Pending";
-          if (rawStatus.includes("approv") || rawStatus.includes("enrol") || rawStatus.includes("complet") || rawStatus.includes("certif")) {
-            cleanStatus = "Approved";
-          } else if (rawStatus.includes("reject") || rawStatus.includes("decline")) {
-            cleanStatus = "Rejected";
-          } else {
-            cleanStatus = "Pending";
-          }
+          const dateStr = app.submitted_at || app.submittedAt || app.created_at || new Date().toISOString();
 
           enrolledPrograms.push({
             program: "Training",
             assistanceType: tName,
             referenceNo: String(app.reference_number || app.referenceNumber || app.qcid || `TR-${app.id}`),
-            status: cleanStatus,
-            dateEnrolled: new Date(app.submitted_at || app.submittedAt || app.created_at || Date.now()).toISOString().split('T')[0],
+            status: formatProgramStatus(app.status),
+            dateEnrolled: new Date(dateStr).toISOString().split('T')[0],
+            rawTimestamp: new Date(dateStr).getTime(),
           });
         }
       });
+
+      // Sort enrolled programs with newest first
+      enrolledPrograms.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
 
       // Beneficiary timeline history: combine explicit DB history + automatic application submissions + verification events + profile registration
       const historyList = [];
@@ -805,10 +882,10 @@ async function getAllBeneficiaries(req, res) {
         historyList.push({
           id: `H-APP-${bId}-${p.program}-${p.referenceNo || idx}`,
           date: p.dateEnrolled || new Date(b.created_at || Date.now()).toISOString().split('T')[0],
-          rawTimestamp: new Date(p.dateEnrolled || b.created_at || Date.now()).getTime() + idx * 1000,
+          rawTimestamp: (p.rawTimestamp || new Date(p.dateEnrolled || b.created_at || Date.now()).getTime()) + idx * 100,
           program: p.program,
           action: actionLabel,
-          detail: `${p.program} assistance application (Ref: ${p.referenceNo || 'N/A'}) status: ${p.status}.`,
+          detail: `${p.assistanceType || p.program} application (Ref: ${p.referenceNo || 'N/A'}) status: ${p.status}.`,
           performedBy: b.full_name || "Applicant",
           status: p.status,
         });
@@ -840,7 +917,7 @@ async function getAllBeneficiaries(req, res) {
         status: "Registered",
       });
 
-      // Sort history chronologically descending and remove duplicate event keys
+      // Sort history chronologically descending (newest first) and remove duplicate event keys
       const historySeen = new Set();
       const history = historyList
         .sort((a, b) => b.rawTimestamp - a.rawTimestamp)

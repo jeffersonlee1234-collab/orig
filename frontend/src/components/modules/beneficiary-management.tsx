@@ -752,37 +752,34 @@ function BeneficiaryProfileModal({
                 </div>
               ) : (
                 <div className="space-y-0">
-                  {b.history
-                    .slice()
-                    .reverse()
-                    .map((ev, idx) => (
-                      <div key={ev.id || idx} className="flex gap-3 pb-4 last:pb-0">
-                        <div className="flex flex-col items-center shrink-0">
-                          <div className="h-8 w-8 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 shadow-xs">
-                            <Home className="h-3.5 w-3.5 text-slate-600" />
-                          </div>
-                          {idx !== b.history.length - 1 && <div className="flex-1 w-px bg-border mt-1" />}
+                  {b.history.map((ev, idx) => (
+                    <div key={ev.id || idx} className="flex gap-3 pb-4 last:pb-0">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 shadow-xs">
+                          <Home className="h-3.5 w-3.5 text-slate-600" />
                         </div>
-                        <div className="flex-1 min-w-0 pb-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getProgramColor(ev.program)}`}>
-                              {ev.program}
+                        {idx !== b.history.length - 1 && <div className="flex-1 w-px bg-border mt-1" />}
+                      </div>
+                      <div className="flex-1 min-w-0 pb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getProgramColor(ev.program)}`}>
+                            {ev.program}
+                          </span>
+                          <span className="text-sm font-semibold text-foreground">{ev.action}</span>
+                          {ev.status && (
+                            <span className="text-[11px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded font-medium">
+                              {ev.status}
                             </span>
-                            <span className="text-sm font-semibold text-foreground">{ev.action}</span>
-                            {ev.status && (
-                              <span className="text-[11px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
-                                {ev.status}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-foreground">{ev.detail}</p>
-                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5">
-                            <span>{formatDate(ev.date)}</span>
-                            {ev.performedBy && <span>• By {ev.performedBy}</span>}
-                          </div>
+                          )}
+                        </div>
+                        <p className="text-sm text-foreground">{ev.detail}</p>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5">
+                          <span>{formatDate(ev.date)}</span>
+                          {ev.performedBy && <span>• By {ev.performedBy}</span>}
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -829,6 +826,14 @@ export default function BeneficiaryManagement() {
       const data = await res.json()
       if (data.success && Array.isArray(data.beneficiaries)) {
         setBeneficiaries(data.beneficiaries)
+        // Live update currently open beneficiary modal
+        setSelectedBeneficiary((prev) => {
+          if (!prev) return null
+          const updated = data.beneficiaries.find(
+            (b: Beneficiary) => b.id === prev.id || b.beneficiaryNo === prev.beneficiaryNo
+          )
+          return updated || prev
+        })
       } else {
         throw new Error(data.error || "Failed to load beneficiary records")
       }
@@ -848,10 +853,10 @@ export default function BeneficiaryManagement() {
       fetchBeneficiaries(true)
     })
 
-    // Silent background poll every 8 seconds for multi-device sync
+    // Silent background poll every 4 seconds for multi-device live sync
     const interval = setInterval(() => {
       fetchBeneficiaries(true)
-    }, 8000)
+    }, 4000)
 
     return () => {
       unsubscribe()
