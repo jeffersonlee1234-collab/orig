@@ -224,7 +224,12 @@ export const Login = () => {
             interactionTimeMs: Date.now() - formStartTime,
           }),
         });
-        const data = await res.json();
+        let data: any = {};
+        try {
+          data = await res.json();
+        } catch (parseErr) {
+          data = {};
+        }
 
         if (res.status === 429 || data.isRateLimited) {
           setIsLoginLoading(false);
@@ -260,13 +265,18 @@ export const Login = () => {
             localStorage.setItem('user_profile', JSON.stringify(data.user));
           }
 
-          setTimeout(() => {
-            if (detectedRole === 'super_admin' || detectedRole === 'admin' || detectedRole === 'staff') {
-              window.location.href = '/aics';
-            } else {
-              window.location.href = '/portal/overview';
-            }
-          }, 1200);
+          // Trigger auth listeners across app
+          window.dispatchEvent(new Event('auth_state_changed'));
+          window.dispatchEvent(new Event('user_profile_updated'));
+
+          const target = (detectedRole === 'super_admin' || detectedRole === 'admin' || detectedRole === 'staff')
+            ? '/aics'
+            : '/portal/overview';
+
+          // Immediate seamless navigation
+          navigate(target, { replace: true });
+          window.location.replace(target);
+          return;
         } else if (data.isInactive) {
           setIsLoginLoading(false);
           setInactiveUserPrompt({
@@ -276,10 +286,17 @@ export const Login = () => {
           return;
         } else {
           setIsLoginLoading(false);
-          setError(data.message || 'Invalid credentials or account is not registered. Please register first.');
+          setError(data.message || (res.status === 401 ? 'Incorrect password. Please verify your password and try again.' : 'Invalid credentials or account is not registered. Please register first.'));
         }
-      } catch (err) {
+      } catch (err: any) {
         setIsLoginLoading(false);
+        // If already authenticated in storage, avoid showing error
+        if (sessionStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('isAuthenticated') === 'true') {
+          const role = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || 'user').toLowerCase();
+          const target = (role === 'super_admin' || role === 'admin' || role === 'staff') ? '/aics' : '/portal/overview';
+          window.location.replace(target);
+          return;
+        }
         setError('Network error connecting to backend. Please check your connection and try again.');
       }
     } else {

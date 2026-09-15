@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 
 import UserLayout from "./components/layout/user-layout"
@@ -70,7 +70,21 @@ function getAuthContext() {
 }
 
 export default function App() {
-  const auth = getAuthContext();
+  const [auth, setAuth] = useState(() => getAuthContext());
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setAuth(getAuthContext());
+    };
+
+    window.addEventListener("auth_state_changed", handleAuthChange);
+    window.addEventListener("storage", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("auth_state_changed", handleAuthChange);
+      window.removeEventListener("storage", handleAuthChange);
+    };
+  }, []);
 
   return (
     <LanguageProvider>
