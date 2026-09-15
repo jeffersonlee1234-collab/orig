@@ -103,6 +103,7 @@ export function ProfileModal({
   onClose,
   name = "Resident",
   email,
+  role,
   qcidNo,
   user,
 }: ProfileModalProps) {
