@@ -5,7 +5,6 @@ import {
   Wallet,
   FileCheck2,
   Download,
-  RefreshCw,
 } from "lucide-react"
 import {
   ResponsiveContainer,
@@ -422,11 +421,7 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live Connected Data
-          </span>
+          <h1 className="text-3xl font-bold text-foreground">Reports &amp; Analytics</h1>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -439,18 +434,6 @@ export default function Reports() {
             <option>Last 6 Months</option>
             <option>Year to Date</option>
           </select>
-          <button
-            type="button"
-            onClick={() => {
-              setBarsAnimated(false)
-              setTimeout(() => setBarsAnimated(true), 60)
-              fetchLiveAnalytics(false)
-            }}
-            title="Refresh analytics data"
-            className="p-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-gray-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin text-blue-600" : ""}`} />
-          </button>
           <button
             type="button"
             onClick={handleExport}
