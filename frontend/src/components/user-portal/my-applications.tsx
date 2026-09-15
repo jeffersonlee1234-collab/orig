@@ -73,14 +73,20 @@ export interface ApplicationRecord {
   [key: string]: any
 }
 
-export function parseAppDate(rawDate?: any): Date {
-  if (!rawDate) return new Date()
+export function parseAppDate(rawDate?: any): Date | null {
+  if (!rawDate) return null
   if (rawDate instanceof Date) {
-    return isNaN(rawDate.getTime()) ? new Date() : rawDate
+    return isNaN(rawDate.getTime()) ? null : rawDate
   }
   const str = String(rawDate).trim()
-  if (!str || str.toLowerCase() === "invalid date" || str.toLowerCase() === "undefined" || str.toLowerCase() === "null") {
-    return new Date()
+  if (
+    !str ||
+    str.toLowerCase() === "invalid date" ||
+    str.toLowerCase() === "undefined" ||
+    str.toLowerCase() === "null" ||
+    str === "0"
+  ) {
+    return null
   }
 
   // Standard date parse
@@ -110,11 +116,12 @@ export function parseAppDate(rawDate?: any): Date {
     }
   }
 
-  return new Date()
+  return null
 }
 
-export function formatAppDate(rawDate?: any): string {
-  const d = parseAppDate(rawDate)
+export function formatAppDate(rawDate?: any, fallbackDate?: any): string {
+  const d = parseAppDate(rawDate) || parseAppDate(fallbackDate)
+  if (!d) return "Pending Date"
   return d.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
@@ -1936,13 +1943,21 @@ export default function MyApplications() {
               .map((app: any) => {
                 const rawType = (app.assistance_type || "Transportation").replace(/\s*assistance/gi, "").trim()
                 const cleanAssistance = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
-                const rawDate = app.created_at || app.date_applied || app.submittedAt || Date.now()
+                const rawDate =
+                  app.created_at ||
+                  app.date_applied ||
+                  app.submitted_at ||
+                  app.submittedAt ||
+                  app.date_submitted ||
+                  app.date ||
+                  app.updated_at
+                const parsedDate = parseAppDate(rawDate)
 
                 return {
                   applicationNo: app.qc_id || app.reference_no || app.reference_number || qcId,
                   assistance: cleanAssistance,
                   assistanceCategory: "AICS",
-                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                   dateApplied: formatAppDate(rawDate),
                   status:
                     app.status === "approved"
@@ -2041,13 +2056,22 @@ export default function MyApplications() {
                 String(p.type || "").toLowerCase().includes("booklet") ||
                 String(p.category || "").toLowerCase().includes("booklet")
 
-              const rawDate = p.submittedAt || p.submitted_at || p.created_at || p.dateApplied || p.date_applied || Date.now()
+              const rawDate =
+                p.submittedAt ||
+                p.submitted_at ||
+                p.created_at ||
+                p.dateApplied ||
+                p.date_applied ||
+                p.date_submitted ||
+                p.dateSubmitted ||
+                p.updated_at
+              const parsedDate = parseAppDate(rawDate)
 
               return {
                 applicationNo: p.assignedIdNumber || p.referenceNumber || p.qcidNo || qcId,
                 assistance: serviceTitle,
                 assistanceCategory: isPwd ? "PWD" : "Senior Citizen",
-                rawTimestamp: parseAppDate(rawDate).getTime(),
+                rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                 dateApplied: formatAppDate(rawDate),
                 status: appStatus,
                 applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
@@ -2104,12 +2128,24 @@ export default function MyApplications() {
             const mappedSp: ApplicationRecord[] = spApps
               .filter(isUserMatch)
               .map((app: any) => {
-                const rawDate = app.created_at || app.submittedAt || app.submitted_at || Date.now()
+                const rawDate =
+                  app.created_at ||
+                  app.submitted_at ||
+                  app.submittedAt ||
+                  app.date_applied ||
+                  app.dateApplied ||
+                  app.date_submitted ||
+                  app.dateSubmitted ||
+                  app.extra_data?.submittedAt ||
+                  app.extra_data?.dateSubmitted ||
+                  app.updated_at
+                const parsedDate = parseAppDate(rawDate)
+
                 return {
                   applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
                   assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
                   assistanceCategory: "Solo Parent",
-                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                   dateApplied: formatAppDate(rawDate),
                   status:
                     app.application_status === "approved" || app.status === "approved"
@@ -2175,12 +2211,25 @@ export default function MyApplications() {
             const mappedCw: ApplicationRecord[] = cwApps
               .filter(isUserMatch)
               .map((app: any) => {
-                const rawDate = app.created_at || app.submittedAt || app.submitted_at || Date.now()
+                const rawDate =
+                  app.created_at ||
+                  app.submitted_at ||
+                  app.submittedAt ||
+                  app.date_applied ||
+                  app.dateApplied ||
+                  app.date_submitted ||
+                  app.dateSubmitted ||
+                  app.form_data?.submittedAt ||
+                  app.form_data?.dateSubmitted ||
+                  app.form_data?.created_at ||
+                  app.updated_at
+                const parsedDate = parseAppDate(rawDate)
+
                 return {
                   applicationNo: app.reference_number || app.referenceNumber || qcId,
                   assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
                   assistanceCategory: "Child Welfare",
-                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                   dateApplied: formatAppDate(rawDate),
                   status:
                     app.application_status === "approved" || app.status === "approved"
@@ -2284,7 +2333,16 @@ export default function MyApplications() {
                   ? "Approved"
                   : "Under Review"
 
-                const rawDate = l.created_at || l.submittedAt || l.submitted_at || Date.now()
+                const rawDate =
+                  l.created_at ||
+                  l.submitted_at ||
+                  l.submittedAt ||
+                  l.date_applied ||
+                  l.dateApplied ||
+                  l.date_submitted ||
+                  l.application_date ||
+                  l.updated_at
+                const parsedDate = parseAppDate(rawDate)
 
                 return {
                   applicationNo: l.reference_number || l.referenceNumber || l.qcid || qcId,
@@ -2294,7 +2352,7 @@ export default function MyApplications() {
                     ? `Livelihood: ${l.livelihood_type}`
                     : "Livelihood Assistance",
                   assistanceCategory: "Livelihood",
-                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                   dateApplied: formatAppDate(rawDate),
                   status: statusVal,
                   applicantName:
@@ -2380,13 +2438,21 @@ export default function MyApplications() {
                   : "Under Review"
 
                 const courseName = t.trainingName || t.training_name || t.program_title || t.course_title || t.training_course || "Skills Training"
-                const rawDate = t.submittedAt || t.submitted_at || t.created_at || Date.now()
+                const rawDate =
+                  t.submittedAt ||
+                  t.submitted_at ||
+                  t.created_at ||
+                  t.date_applied ||
+                  t.dateApplied ||
+                  t.date_submitted ||
+                  t.updated_at
+                const parsedDate = parseAppDate(rawDate)
 
                 return {
                   applicationNo: t.referenceNumber || t.reference_number || t.qcid || qcId,
                   assistance: `Gov Services Training: ${courseName}`,
                   assistanceCategory: "Training Program",
-                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
                   dateApplied: formatAppDate(rawDate),
                   status: statusVal,
                   applicantName:
@@ -2420,8 +2486,8 @@ export default function MyApplications() {
 
         // Sort newest applications first so latest submissions appear right at the top
         allFoundApps.sort((a, b) => {
-          const timeA = a.rawTimestamp || parseAppDate(a.dateApplied).getTime() || 0
-          const timeB = b.rawTimestamp || parseAppDate(b.dateApplied).getTime() || 0
+          const timeA = a.rawTimestamp || parseAppDate(a.dateApplied)?.getTime() || 0
+          const timeB = b.rawTimestamp || parseAppDate(b.dateApplied)?.getTime() || 0
           return timeB - timeA
         })
 

@@ -178,18 +178,27 @@ function sanitizeAppRow(row) {
   }
 
   // Ensure valid submission and creation timestamps
-  const rawDate = cleanRow.created_at || cleanRow.submitted_at || cleanRow.submittedAt || cleanRow.dateSubmitted || cleanRow.updated_at;
-  let validDate = new Date().toISOString();
+  const rawDate =
+    cleanRow.created_at ||
+    cleanRow.submitted_at ||
+    cleanRow.submittedAt ||
+    cleanRow.date_submitted ||
+    cleanRow.dateSubmitted ||
+    (cleanRow.form_data && (cleanRow.form_data.submittedAt || cleanRow.form_data.dateSubmitted || cleanRow.form_data.created_at)) ||
+    cleanRow.updated_at;
+  let validDate = null;
   if (rawDate) {
     const parsed = new Date(rawDate);
     if (!isNaN(parsed.getTime())) {
       validDate = parsed.toISOString();
     }
   }
-  cleanRow.created_at = cleanRow.created_at || validDate;
-  cleanRow.submittedAt = validDate;
-  cleanRow.submitted_at = validDate;
-  cleanRow.dateSubmitted = validDate;
+  if (validDate) {
+    cleanRow.created_at = cleanRow.created_at || validDate;
+    cleanRow.submittedAt = cleanRow.submittedAt || cleanRow.submitted_at || validDate;
+    cleanRow.submitted_at = cleanRow.submitted_at || cleanRow.submittedAt || validDate;
+    cleanRow.dateSubmitted = cleanRow.dateSubmitted || cleanRow.submittedAt || validDate;
+  }
 
   return stripLargeDataUrls(cleanRow);
 }
