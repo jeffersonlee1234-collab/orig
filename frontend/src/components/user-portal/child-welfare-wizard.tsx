@@ -893,7 +893,7 @@ export default function ChildWelfareApplicationWizard({
     parentFullName: "",
     parentRelationship: "",
     parentContactNo: "",
-    isReportingPersonCurrentParent: "Yes",
+    isReportingPersonCurrentParent: "",
     specifiedRelationship: "",
 
     // Specific concern / details
@@ -1172,7 +1172,8 @@ export default function ChildWelfareApplicationWizard({
     formData.parentFullName.trim() !== "" &&
     formData.parentRelationship.trim() !== "" &&
     formData.parentContactNo.trim().length >= 11 &&
-    (formData.isReportingPersonCurrentParent !== "No" || formData.specifiedRelationship.trim() !== "") &&
+    formData.isReportingPersonCurrentParent !== "" &&
+    (formData.isReportingPersonCurrentParent === "Yes" || (formData.isReportingPersonCurrentParent === "No" && formData.specifiedRelationship.trim() !== "")) &&
     (!selectedProgram.hasProtectionConcern || (formData.reasonForRequest.trim() !== "" && formData.briefDescription.trim() !== "")) &&
     (!selectedProgram.hasEmergencyInfo || (formData.emergencyType.trim() !== "" && (formData.emergencyDate.trim() !== "" || formData.emergencyDateTime.trim() !== "") && formData.briefDescription.trim() !== "")) &&
     (!selectedProgram.hasPsychosocialReason || (formData.reasonForRequest.trim() !== "" && formData.briefDescription.trim() !== "")) &&
@@ -1796,47 +1797,47 @@ export default function ChildWelfareApplicationWizard({
 
               {/* I. IMPORMASYON NG BATA / APLIKANTE (DISABLED & PRE-FILLED FROM USER PROFILE) */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase text-gray-800 tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                  <User className="w-4 h-4 text-blue-600" />
+                <h4 className="text-xs font-bold uppercase text-gray-800 dark:text-slate-100 tracking-wider flex items-center gap-1.5 border-b border-gray-100 dark:border-slate-800 pb-2">
+                  <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   {language === "tl" ? "I. IMPORMASYON NG APLIKANTE / BATA" : language === "bis" ? "I. IMPORMASYON SA APLIKANTE / BATA" : "I. APPLICANT / CHILD INFORMATION"}
                 </h4>
 
                 {/* Row 1: QC ID & First Name */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "QC ID (Opsyonal / Kung mayroon)" : language === "bis" ? "QC ID (Opsyonal / Kung anaa)" : "QC ID (Optional / If available)"}</label>
-                    <input type="text" disabled value={formData.qcidNumber} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "QC ID (Opsyonal / Kung mayroon)" : language === "bis" ? "QC ID (Opsyonal / Kung anaa)" : "QC ID (Optional / If available)"}</label>
+                    <input type="text" disabled value={formData.qcidNumber} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 font-mono focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Pangalan (First Name) *" : language === "bis" ? "Unang Ngalan (First Name) *" : "First Name *"}</label>
-                    <input type="text" disabled value={formData.firstName} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Pangalan (First Name) *" : language === "bis" ? "Unang Ngalan (First Name) *" : "First Name *"}</label>
+                    <input type="text" disabled value={formData.firstName} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                 </div>
 
                 {/* Row 2: Middle Name, Last Name, Suffix */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Gitnang Pangalan (Middle Name)" : language === "bis" ? "Tunga nga Ngalan (Middle Name)" : "Middle Name"}</label>
-                    <input type="text" disabled value={formData.middleName} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Gitnang Pangalan (Middle Name)" : language === "bis" ? "Tunga nga Ngalan (Middle Name)" : "Middle Name"}</label>
+                    <input type="text" disabled value={formData.middleName} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Apelyido (Last Name) *" : language === "bis" ? "Apelyido (Last Name) *" : "Last Name *"}</label>
-                    <input type="text" disabled value={formData.lastName} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Apelyido (Last Name) *" : language === "bis" ? "Apelyido (Last Name) *" : "Last Name *"}</label>
+                    <input type="text" disabled value={formData.lastName} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Suffix (Jr., Sr., III, atbp.)" : language === "bis" ? "Suffix (Jr., Sr., III, ug uban pa)" : "Suffix (Jr., Sr., III, etc.)"}</label>
-                    <input type="text" disabled value={formData.suffix} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Suffix (Jr., Sr., III, atbp.)" : language === "bis" ? "Suffix (Jr., Sr., III, ug uban pa)" : "Suffix (Jr., Sr., III, etc.)"}</label>
+                    <input type="text" disabled value={formData.suffix} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                 </div>
 
                 {/* Row 3: Nationality, Date of Birth, Age */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Nasyonalidad *" : language === "bis" ? "Nasyonalidad *" : "Nationality *"}</label>
-                    <input type="text" disabled value={formData.nationality || "FILIPINO"} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Nasyonalidad *" : language === "bis" ? "Nasyonalidad *" : "Nationality *"}</label>
+                    <input type="text" disabled value={formData.nationality || "FILIPINO"} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Petsa ng Kapanganakan (MM/DD/YYYY)" : language === "bis" ? "Petsa sa Pagkatawo (MM/DD/YYYY)" : "Date of Birth (MM/DD/YYYY)"}</label>
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Petsa ng Kapanganakan (MM/DD/YYYY)" : language === "bis" ? "Petsa sa Pagkatawo (MM/DD/YYYY)" : "Date of Birth (MM/DD/YYYY)"}</label>
                     <input
                       type="text"
                       disabled
@@ -1845,58 +1846,58 @@ export default function ChildWelfareApplicationWizard({
                           ? `${formData.dobMonth}/${formData.dobDay}/${formData.dobYear}`
                           : [formData.dobMonth, formData.dobDay, formData.dobYear].filter(Boolean).join("/")
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed"
+                      className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Edad *" : language === "bis" ? "Edad *" : "Age *"}</label>
-                    <input type="text" disabled value={formData.age} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Edad *" : language === "bis" ? "Edad *" : "Age *"}</label>
+                    <input type="text" disabled value={formData.age} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                 </div>
 
                 {/* Row 4: Gender / Sex, Civil Status, Contact Number */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Kasarian *" : language === "bis" ? "Kasarian *" : "Gender / Sex *"}</label>
-                    <input type="text" disabled value={formData.sex} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Kasarian *" : language === "bis" ? "Kasarian *" : "Gender / Sex *"}</label>
+                    <input type="text" disabled value={formData.sex} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Katayuang Sibil" : language === "bis" ? "Sibil nga Kahimtang" : "Civil Status"}</label>
-                    <input type="text" disabled value={formData.civilStatus} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Katayuang Sibil" : language === "bis" ? "Sibil nga Kahimtang" : "Civil Status"}</label>
+                    <input type="text" disabled value={formData.civilStatus} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Numero ng Telepono" : language === "bis" ? "Numero sa Telepono" : "Contact Number"}</label>
-                    <input type="text" disabled value={formData.contactNo} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 font-mono focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Numero ng Telepono" : language === "bis" ? "Numero sa Telepono" : "Contact Number"}</label>
+                    <input type="text" disabled value={formData.contactNo} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 font-mono focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                 </div>
 
                 {/* Row 5: House / Building Number, Street, Barangay */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Numero ng Bahay / Gusali" : language === "bis" ? "Numero sa Balay / Edipisyo" : "House / Building Number"}</label>
-                    <input type="text" disabled value={formData.addressHouseNo} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Numero ng Bahay / Gusali" : language === "bis" ? "Numero sa Balay / Edipisyo" : "House / Building Number"}</label>
+                    <input type="text" disabled value={formData.addressHouseNo} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Kalye (Street)" : language === "bis" ? "Dalan (Street)" : "Street"}</label>
-                    <input type="text" disabled value={formData.addressStreet} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Kalye (Street)" : language === "bis" ? "Dalan (Street)" : "Street"}</label>
+                    <input type="text" disabled value={formData.addressStreet} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-700">{language === "tl" ? "Barangay" : language === "bis" ? "Barangay" : "Barangay"}</label>
-                    <input type="text" disabled value={formData.barangay} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed" />
+                    <label className="text-xs font-semibold text-gray-700 dark:text-slate-300">{language === "tl" ? "Barangay" : language === "bis" ? "Barangay" : "Barangay"}</label>
+                    <input type="text" disabled value={formData.barangay} className="w-full border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none bg-gray-100 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 cursor-not-allowed" />
                   </div>
                 </div>
               </div>
 
               {/* II. PARENT / GUARDIAN / REPORTING PERSON INFORMATION */}
-              <div className="space-y-4 pt-3 border-t border-gray-200">
-                <h4 className="text-xs font-bold uppercase text-gray-800 tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                  <Users className="w-4 h-4 text-blue-600" />
+              <div className="space-y-4 pt-3 border-t border-gray-200 dark:border-slate-800">
+                <h4 className="text-xs font-bold uppercase text-gray-800 dark:text-slate-100 tracking-wider flex items-center gap-1.5 border-b border-gray-100 dark:border-slate-800 pb-2">
+                  <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   {t("parentGuardianTitle") || (language === "tl" ? "II. IMPORMASYON NG MAGULANG / GUARDIAN / NAG-UULAT" : language === "bis" ? "II. IMPORMASYON SA GINIKANAN / GUARDIAN / TIG-REPORT" : "II. PARENT / GUARDIAN / REPORTING PERSON INFORMATION")}
                 </h4>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.parentFullName.trim() ? "text-red-600" : "text-gray-700"}`}>
+                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.parentFullName.trim() ? "text-red-600 dark:text-red-400" : "text-gray-700 dark:text-slate-300"}`}>
                       {language === "tl" ? "Buong Pangalan *" : language === "bis" ? "Tibuok Ngalan *" : "Full Name *"}
                     </label>
                     <input
@@ -1904,20 +1905,20 @@ export default function ChildWelfareApplicationWizard({
                       value={formData.parentFullName}
                       onChange={(e) => updateField("parentFullName", e.target.value.replace(/[^a-zA-Z\sñÑ.-]/g, "").toUpperCase())}
                       placeholder={language === "tl" ? "Ilagay ang Buong Pangalan" : "Enter Full Name"}
-                      className={`w-full h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                        attemptedNext && !formData.parentFullName.trim() ? "border-red-500" : "border-gray-300"
+                      className={`w-full h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${
+                        attemptedNext && !formData.parentFullName.trim() ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-slate-700"
                       }`}
                     />
                   </div>
                   <div>
-                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.parentRelationship ? "text-red-600" : "text-gray-700"}`}>
+                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.parentRelationship ? "text-red-600 dark:text-red-400" : "text-gray-700 dark:text-slate-300"}`}>
                       {language === "tl" ? "Relasyon sa Bata *" : language === "bis" ? "Relasyon sa Bata *" : "Relationship to Child *"}
                     </label>
                     <select
                       value={formData.parentRelationship}
                       onChange={(e) => updateField("parentRelationship", e.target.value)}
-                      className={`w-full h-10 border rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                        attemptedNext && !formData.parentRelationship ? "border-red-500" : "border-gray-300"
+                      className={`w-full h-10 border rounded-lg px-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                        attemptedNext && !formData.parentRelationship ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-slate-700"
                       }`}
                     >
                       <option value="">{language === "tl" ? "Piliin ang Relasyon" : language === "bis" ? "Pilia ang Relasyon" : "Select Relationship"}</option>
@@ -1934,7 +1935,7 @@ export default function ChildWelfareApplicationWizard({
                     </select>
                   </div>
                   <div>
-                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && formData.parentContactNo.length < 11 ? "text-red-600" : "text-gray-700"}`}>
+                    <label className={`block text-xs font-semibold mb-1 ${attemptedNext && formData.parentContactNo.length < 11 ? "text-red-600 dark:text-red-400" : "text-gray-700 dark:text-slate-300"}`}>
                       {language === "tl" ? "Numero ng Telepono *" : language === "bis" ? "Numero sa Telepono *" : "Contact Number *"}
                     </label>
                     <input
@@ -1943,54 +1944,65 @@ export default function ChildWelfareApplicationWizard({
                       value={formData.parentContactNo}
                       onChange={(e) => updateField("parentContactNo", e.target.value.replace(/\D/g, ""))}
                       placeholder={language === "tl" ? "Ilagay ang Contact Number" : "Enter Contact Number"}
-                      className={`w-full h-10 rounded-lg border px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                        attemptedNext && formData.parentContactNo.length < 11 ? "border-red-500" : "border-gray-300"
+                      className={`w-full h-10 rounded-lg border px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${
+                        attemptedNext && formData.parentContactNo.length < 11 ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-slate-700"
                       }`}
                     />
                   </div>
                 </div>
 
                 {/* Additional Information */}
-                <div className="mt-4 pt-3 border-t border-gray-100 bg-gray-50/60 p-4 rounded-xl space-y-3">
-                  <h5 className="text-xs font-bold uppercase text-gray-700 tracking-wider">
+                <div className={`mt-4 pt-3 border-t p-4 rounded-xl space-y-3 transition-colors ${
+                  attemptedNext && !formData.isReportingPersonCurrentParent
+                    ? "border-red-400 bg-red-50/50 dark:bg-red-950/20 dark:border-red-800"
+                    : "border-gray-200 dark:border-slate-800 bg-gray-50/80 dark:bg-slate-800/60"
+                }`}>
+                  <h5 className="text-xs font-bold uppercase text-gray-700 dark:text-slate-300 tracking-wider">
                     {language === "tl" ? "Karagdagang Impormasyon" : "Additional Information"}
                   </h5>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">
+                    <label className={`block text-xs font-semibold mb-2 ${
+                      attemptedNext && !formData.isReportingPersonCurrentParent ? "text-red-600 dark:text-red-400" : "text-gray-700 dark:text-slate-200"
+                    }`}>
                       {language === "tl"
                         ? "Ang nag-uulat ba ang kasalukuyang magulang/guardian ng bata? *"
                         : "Is the reporting person the child's current parent/guardian? *"}
                     </label>
                     <div className="flex items-center gap-6">
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-slate-200 cursor-pointer">
                         <input
                           type="radio"
                           name="isReportingPersonCurrentParent"
                           value="Yes"
                           checked={formData.isReportingPersonCurrentParent === "Yes"}
                           onChange={() => updateField("isReportingPersonCurrentParent", "Yes")}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
                         />
                         <span>{language === "tl" ? "Oo (Yes)" : "Yes"}</span>
                       </label>
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-slate-200 cursor-pointer">
                         <input
                           type="radio"
                           name="isReportingPersonCurrentParent"
                           value="No"
                           checked={formData.isReportingPersonCurrentParent === "No"}
                           onChange={() => updateField("isReportingPersonCurrentParent", "No")}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
                         />
                         <span>{language === "tl" ? "Hindi (No)" : "No"}</span>
                       </label>
                     </div>
+                    {attemptedNext && !formData.isReportingPersonCurrentParent && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 font-medium">
+                        {language === "tl" ? "Mangyaring pumili ng opsyon (Oo o Hindi) *" : "Please select an option (Yes or No) *"}
+                      </p>
+                    )}
                   </div>
 
                   {formData.isReportingPersonCurrentParent === "No" && (
                     <div className="pt-2">
-                      <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.specifiedRelationship.trim() ? "text-red-600" : "text-gray-700"}`}>
+                      <label className={`block text-xs font-semibold mb-1 ${attemptedNext && !formData.specifiedRelationship.trim() ? "text-red-600 dark:text-red-400" : "text-gray-700 dark:text-slate-200"}`}>
                         {language === "tl" ? "Kung Hindi, tukuyin ang relasyon sa bata: *" : "If No, specify relationship to the child: *"}
                       </label>
                       <input
@@ -1998,8 +2010,8 @@ export default function ChildWelfareApplicationWizard({
                         value={formData.specifiedRelationship}
                         onChange={(e) => updateField("specifiedRelationship", e.target.value.replace(/[^a-zA-Z\sñÑ.-]/g, ""))}
                         placeholder={language === "tl" ? "Ilagay ang relasyon" : "Enter relationship"}
-                        className={`w-full max-w-md h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white ${
-                          attemptedNext && !formData.specifiedRelationship.trim() ? "border-red-500" : "border-gray-300"
+                        className={`w-full max-w-md h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${
+                          attemptedNext && !formData.specifiedRelationship.trim() ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-slate-700"
                         }`}
                       />
                     </div>
@@ -2009,20 +2021,20 @@ export default function ChildWelfareApplicationWizard({
 
               {/* SPECIFIC PROGRAM DETAILS */}
               {selectedProgram.hasProtectionConcern && (
-                <div className="space-y-4 pt-3 border-t border-gray-200">
-                  <h4 className="text-xs font-bold uppercase text-gray-800 tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <ShieldAlert className="w-4 h-4 text-rose-600" />
+                <div className="space-y-4 pt-3 border-t border-gray-200 dark:border-slate-800">
+                  <h4 className="text-xs font-bold uppercase text-gray-800 dark:text-slate-100 tracking-wider flex items-center gap-1.5 border-b border-gray-100 dark:border-slate-800 pb-2">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     {language === "tl" ? "ALALAHANIN SA PROTEKSYON NG BATA" : language === "bis" ? "KABALAKA SA PROTEKSYON SA BATA" : "CHILD PROTECTION CONCERN"}
                   </h4>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       {language === "tl" ? "Dahilan ng Ulat / Tulong *" : language === "bis" ? "Rason sa Pag-report / Tabang *" : "Reason for Report / Assistance *"}
                     </label>
                     <select
                       value={formData.reasonForRequest}
                       onChange={(e) => updateField("reasonForRequest", e.target.value)}
-                      className="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="w-full h-10 border border-gray-300 dark:border-slate-700 rounded-lg px-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                     >
                       <option value="">
                         {language === "tl" ? "Pumili ng sitwasyon / dahilan..." : language === "bis" ? "Pilia ang sitwasyon / rason..." : "Select situation / reason..."}
@@ -2043,7 +2055,7 @@ export default function ChildWelfareApplicationWizard({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       {language === "tl" ? "Maikling Paglalarawan ng Sitwasyon / Insidente *" : language === "bis" ? "Mubo nga Deskripsyon sa Hitabo *" : "Brief Description of the Concern / Incident *"}
                     </label>
                     <textarea
@@ -2057,13 +2069,13 @@ export default function ChildWelfareApplicationWizard({
                           ? "Ihulagway kung unsay nahitabo o ngano kinahanglan ug dinaliang proteksyon ang bata..."
                           : "Please describe what happened or why the child needs urgent protection..."
                       }
-                      className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="w-full rounded-lg border border-gray-300 dark:border-slate-700 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
                         {language === "tl"
                           ? "Kasalukuyan bang nasa agarang panganib ang bata? *"
                           : language === "bis"
@@ -2075,7 +2087,7 @@ export default function ChildWelfareApplicationWizard({
                           { val: "Yes", label: language === "tl" ? "Oo (Yes)" : language === "bis" ? "Oo (Yes)" : "Yes" },
                           { val: "No", label: language === "tl" ? "Hindi (No)" : language === "bis" ? "Dili (No)" : "No" },
                         ].map((v) => (
-                          <label key={v.val} className="flex items-center gap-2 text-xs font-medium text-gray-800 cursor-pointer">
+                          <label key={v.val} className="flex items-center gap-2 text-xs font-medium text-gray-800 dark:text-slate-200 cursor-pointer">
                             <input
                               type="radio"
                               name="childProtectionDanger"
@@ -2090,7 +2102,7 @@ export default function ChildWelfareApplicationWizard({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
                         {language === "tl"
                           ? "Kasalukuyan bang nasa ligtas na lugar ang bata? *"
                           : language === "bis"
@@ -2102,7 +2114,7 @@ export default function ChildWelfareApplicationWizard({
                           { val: "Yes", label: language === "tl" ? "Oo (Yes)" : language === "bis" ? "Oo (Yes)" : "Yes" },
                           { val: "No", label: language === "tl" ? "Hindi (No)" : language === "bis" ? "Dili (No)" : "No" },
                         ].map((v) => (
-                          <label key={v.val} className="flex items-center gap-2 text-xs font-medium text-gray-800 cursor-pointer">
+                          <label key={v.val} className="flex items-center gap-2 text-xs font-medium text-gray-800 dark:text-slate-200 cursor-pointer">
                             <input
                               type="radio"
                               name="childProtectionSafe"
@@ -2122,21 +2134,21 @@ export default function ChildWelfareApplicationWizard({
 
               {/* 2. Emergency Assistance Specific */}
               {selectedProgram.hasEmergencyInfo && (
-                <div className="space-y-4 pt-3 border-t border-gray-200">
-                  <h4 className="text-xs font-bold uppercase text-gray-800 tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <Activity className="w-4 h-4 text-amber-600" />
+                <div className="space-y-4 pt-3 border-t border-gray-200 dark:border-slate-800">
+                  <h4 className="text-xs font-bold uppercase text-gray-800 dark:text-slate-100 tracking-wider flex items-center gap-1.5 border-b border-gray-100 dark:border-slate-800 pb-2">
+                    <Activity className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     {language === "tl" ? "III. DETALYE NG EMERHENSIYA" : language === "bis" ? "III. DETALYE SA EMERHENSIYA" : "III. EMERGENCY DETAILS"}
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                         {language === "tl" ? "Uri ng Emerhensiya *" : language === "bis" ? "Matang sa Emerhensiya *" : "Type of Emergency *"}
                       </label>
                       <select
                         value={formData.emergencyType}
                         onChange={(e) => updateField("emergencyType", e.target.value)}
-                        className="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full h-10 border border-gray-300 dark:border-slate-700 rounded-lg px-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                       >
                         <option value="Emergency Medical Assistance">Emergency Medical Assistance</option>
                         <option value="Emergency Food Assistance">Emergency Food Assistance</option>
@@ -2148,7 +2160,7 @@ export default function ChildWelfareApplicationWizard({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                         {language === "tl" ? "Tinatayang Petsa ng Insidente *" : language === "bis" ? "Petsa sa Hitabo *" : "Approximate Date of Incident / Need *"}
                       </label>
                       <input
@@ -2159,11 +2171,11 @@ export default function ChildWelfareApplicationWizard({
                           updateField("emergencyDate", val)
                           updateField("emergencyDateTime", [val, formData.emergencyTime].filter(Boolean).join(" at "))
                         }}
-                        className="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                        className="w-full h-10 border border-gray-300 dark:border-slate-700 rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                         {language === "tl" ? "Oras ng Insidente / Pangangailangan" : language === "bis" ? "Oras sa Hitabo" : "Time of Incident / Need"}
                       </label>
                       <input
@@ -2174,13 +2186,13 @@ export default function ChildWelfareApplicationWizard({
                           updateField("emergencyTime", val)
                           updateField("emergencyDateTime", [formData.emergencyDate, val].filter(Boolean).join(" at "))
                         }}
-                        className="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                        className="w-full h-10 border border-gray-300 dark:border-slate-700 rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       {language === "tl" ? "Maikling Paglalarawan ng Sitwasyong Pang-emerhensiya *" : language === "bis" ? "Mubo nga Deskripsyon sa Sitwasyon sa Emerhensiya *" : "Brief Description of the Emergency Situation *"}
                     </label>
                     <textarea
@@ -2194,7 +2206,7 @@ export default function ChildWelfareApplicationWizard({
                           ? "Ihulagway kung unsay nahitabo ug unsang tabang ang gikinahanglan..."
                           : "Please explain what happened and the urgent assistance required..."
                       }
-                      className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="w-full rounded-lg border border-gray-300 dark:border-slate-700 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -2202,20 +2214,20 @@ export default function ChildWelfareApplicationWizard({
 
               {/* 3. Psychosocial Support Specific */}
               {selectedProgram.hasPsychosocialReason && (
-                <div className="space-y-4 pt-3 border-t border-gray-200">
-                  <h4 className="text-xs font-bold uppercase text-gray-800 tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <HeartHandshake className="w-4 h-4 text-purple-600" />
+                <div className="space-y-4 pt-3 border-t border-gray-200 dark:border-slate-800">
+                  <h4 className="text-xs font-bold uppercase text-gray-800 dark:text-slate-100 tracking-wider flex items-center gap-1.5 border-b border-gray-100 dark:border-slate-800 pb-2">
+                    <HeartHandshake className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     PSYCHOSOCIAL SUPPORT DETAILS
                   </h4>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       Reason for Seeking Counseling / Psychosocial Support *
                     </label>
                     <select
                       value={formData.reasonForRequest}
                       onChange={(e) => updateField("reasonForRequest", e.target.value)}
-                      className="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="w-full h-10 border border-gray-300 dark:border-slate-700 rounded-lg px-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                     >
                       <option value="">Pumili ng dahilan...</option>
                       <option value="Trauma / Post-Traumatic Support">Trauma / Post-Traumatic Support</option>
