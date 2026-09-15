@@ -162,6 +162,9 @@ app.use('/api', (req, res, next) => {
 // API Routes
 app.use('/api/aics', aicsRoutes);
 app.use('/api/activity-log', activityLogRoutes);
+app.use('/activity-log', activityLogRoutes);
+app.use('/api/activity_log', activityLogRoutes);
+app.use('/activity_log', activityLogRoutes);
 app.use('/api/solo-parent', soloParentRoutes);
 app.use('/solo-parent', soloParentRoutes);
 app.use('/api/child-welfare', childWelfareRoutes);

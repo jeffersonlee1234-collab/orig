@@ -87,7 +87,7 @@ export function MaskedText({
       };
 
       // Non-blocking fetch to backend audit trail
-      fetch(`${API_BASE}/activity-log`, {
+      fetch(`${API_BASE}/api/activity-log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
