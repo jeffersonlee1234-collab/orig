@@ -73,6 +73,55 @@ export interface ApplicationRecord {
   [key: string]: any
 }
 
+export function parseAppDate(rawDate?: any): Date {
+  if (!rawDate) return new Date()
+  if (rawDate instanceof Date) {
+    return isNaN(rawDate.getTime()) ? new Date() : rawDate
+  }
+  const str = String(rawDate).trim()
+  if (!str || str.toLowerCase() === "invalid date" || str.toLowerCase() === "undefined" || str.toLowerCase() === "null") {
+    return new Date()
+  }
+
+  // Standard date parse
+  const d = new Date(str)
+  if (!isNaN(d.getTime())) return d
+
+  // Clean hyphen-spaced time format: "9/15/2026 - 11:10 AM" -> "9/15/2026 11:10 AM"
+  const cleanStr = str.replace(/\s*-\s*/g, " ").replace(/\s+at\s+/i, " ")
+  const d2 = new Date(cleanStr)
+  if (!isNaN(d2.getTime())) return d2
+
+  // Match "M/D/YYYY" or "YYYY-M-D"
+  const parts = str.match(/^(\d{1,4})[\/\-](\d{1,2})[\/\-](\d{1,4})/)
+  if (parts) {
+    if (parts[1].length === 4) {
+      const year = Number(parts[1])
+      const month = Number(parts[2]) - 1
+      const day = Number(parts[3])
+      const dateObj = new Date(year, month, day)
+      if (!isNaN(dateObj.getTime())) return dateObj
+    } else {
+      const month = Number(parts[1]) - 1
+      const day = Number(parts[2])
+      const year = Number(parts[3])
+      const dateObj = new Date(year, month, day)
+      if (!isNaN(dateObj.getTime())) return dateObj
+    }
+  }
+
+  return new Date()
+}
+
+export function formatAppDate(rawDate?: any): string {
+  const d = parseAppDate(rawDate)
+  return d.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
 export function isTrainingApplication(app?: { assistance?: string; assistanceCategory?: string } | null) {
   if (!app) return false
   const cat = String(app.assistanceCategory || "").toLowerCase()
@@ -1838,7 +1887,7 @@ export default function MyApplications() {
               applicationNo: d.referenceNo || d.applicationId || "N/A",
               assistance: d.assistanceTitle || d.payload?.assistance || "Social Assistance",
               assistanceCategory: d.category || d.payload?.assistanceCategory || "General",
-              dateApplied: d.payload?.dateApplied || new Date(d.archivedAt || Date.now()).toLocaleDateString("en-PH"),
+              dateApplied: formatAppDate(d.payload?.dateApplied || d.archivedAt || Date.now()),
               status: d.status || d.payload?.status || "Approved",
               applicantName:
                 d.applicantName || d.payload?.applicantName || `${userProfile.firstName} ${userProfile.lastName}`,
@@ -1848,11 +1897,7 @@ export default function MyApplications() {
                 `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
               contactNumber: d.payload?.contactNumber || userProfile.mobileNumber,
               email: d.email || userProfile.email,
-              deletedAt: new Date(d.archivedAt || Date.now()).toLocaleDateString("en-PH", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }),
+              deletedAt: formatAppDate(d.archivedAt || Date.now()),
             }))
 
             // Merge unique
@@ -1864,7 +1909,7 @@ export default function MyApplications() {
             })
           }
         } catch (err) {
-          console.warn("Could not fetch deleted applications:", err)
+          console.warn("Could not fetch remote deleted apps:", err)
         }
 
         if (isMounted) {
@@ -1891,16 +1936,14 @@ export default function MyApplications() {
               .map((app: any) => {
                 const rawType = (app.assistance_type || "Transportation").replace(/\s*assistance/gi, "").trim()
                 const cleanAssistance = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
+                const rawDate = app.created_at || app.date_applied || app.submittedAt || Date.now()
 
                 return {
                   applicationNo: app.qc_id || app.reference_no || app.reference_number || qcId,
                   assistance: cleanAssistance,
                   assistanceCategory: "AICS",
-                  dateApplied: new Date(app.created_at || Date.now()).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }),
+                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  dateApplied: formatAppDate(rawDate),
                   status:
                     app.status === "approved"
                       ? "Approved"
@@ -1998,15 +2041,14 @@ export default function MyApplications() {
                 String(p.type || "").toLowerCase().includes("booklet") ||
                 String(p.category || "").toLowerCase().includes("booklet")
 
+              const rawDate = p.submittedAt || p.submitted_at || p.created_at || p.dateApplied || p.date_applied || Date.now()
+
               return {
                 applicationNo: p.assignedIdNumber || p.referenceNumber || p.qcidNo || qcId,
                 assistance: serviceTitle,
                 assistanceCategory: isPwd ? "PWD" : "Senior Citizen",
-                dateApplied: new Date(p.submittedAt || p.created_at || Date.now()).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }),
+                rawTimestamp: parseAppDate(rawDate).getTime(),
+                dateApplied: formatAppDate(rawDate),
                 status: appStatus,
                 applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
                 dateOfBirth: p.dateOfBirth || userProfile.birthDateDisplay,
@@ -2061,40 +2103,40 @@ export default function MyApplications() {
           if (Array.isArray(spApps) && spApps.length > 0) {
             const mappedSp: ApplicationRecord[] = spApps
               .filter(isUserMatch)
-              .map((app: any) => ({
-                applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
-                assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
-                assistanceCategory: "Solo Parent",
-                dateApplied: new Date(app.created_at || app.submittedAt || Date.now()).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }),
-                status:
-                  app.application_status === "approved" || app.status === "approved"
-                    ? "Approved"
-                    : app.application_status === "released" || app.status === "released"
-                    ? "Released"
-                    : app.application_status === "for_release" || app.status === "for_release"
-                    ? "For Release"
-                    : "Under Review",
-                applicantName:
-                  [app.first_name || app.firstName, app.last_name || app.lastName].filter(Boolean).join(" ") ||
-                  `${userProfile.firstName} ${userProfile.lastName}`,
-                dateOfBirth: userProfile.birthDateDisplay,
-                address:
-                  app.address ||
-                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                contactNumber: app.contact_no || app.contact_number || app.contactNo || userProfile.mobileNumber,
-                email: app.email || userProfile.email,
-                remarks:
-                  app.admin_notes ||
-                  (app.application_status === "approved" || app.status === "approved"
-                    ? app.assigned_id_number || app.solo_parent_id_number
-                      ? `Approved. Official ID: ${app.assigned_id_number || app.solo_parent_id_number}`
-                      : "Application approved"
-                    : "Under review"),
-              }))
+              .map((app: any) => {
+                const rawDate = app.created_at || app.submittedAt || app.submitted_at || Date.now()
+                return {
+                  applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
+                  assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
+                  assistanceCategory: "Solo Parent",
+                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  dateApplied: formatAppDate(rawDate),
+                  status:
+                    app.application_status === "approved" || app.status === "approved"
+                      ? "Approved"
+                      : app.application_status === "released" || app.status === "released"
+                      ? "Released"
+                      : app.application_status === "for_release" || app.status === "for_release"
+                      ? "For Release"
+                      : "Under Review",
+                  applicantName:
+                    [app.first_name || app.firstName, app.last_name || app.lastName].filter(Boolean).join(" ") ||
+                    `${userProfile.firstName} ${userProfile.lastName}`,
+                  dateOfBirth: userProfile.birthDateDisplay,
+                  address:
+                    app.address ||
+                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                  contactNumber: app.contact_no || app.contact_number || app.contactNo || userProfile.mobileNumber,
+                  email: app.email || userProfile.email,
+                  remarks:
+                    app.admin_notes ||
+                    (app.application_status === "approved" || app.status === "approved"
+                      ? app.assigned_id_number || app.solo_parent_id_number
+                        ? `Approved. Official ID: ${app.assigned_id_number || app.solo_parent_id_number}`
+                        : "Application approved"
+                      : "Under review"),
+                }
+              })
             allFoundApps.push(...mappedSp)
           }
         } catch (err) {
@@ -2132,39 +2174,39 @@ export default function MyApplications() {
           if (Array.isArray(cwApps) && cwApps.length > 0) {
             const mappedCw: ApplicationRecord[] = cwApps
               .filter(isUserMatch)
-              .map((app: any) => ({
-                applicationNo: app.reference_number || app.referenceNumber || qcId,
-                assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
-                assistanceCategory: "Child Welfare",
-                dateApplied: new Date(app.created_at || app.submittedAt || Date.now()).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }),
-                status:
-                  app.application_status === "approved" || app.status === "approved"
-                    ? "Approved"
-                    : app.application_status === "released" || app.status === "released" || app.application_status === "completed" || app.status === "completed"
-                    ? "Released"
-                    : app.application_status === "rejected" || app.status === "rejected"
-                    ? "Rejected"
-                    : "Under Review",
-                applicantName: app.child_name || app.childName || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
-                dateOfBirth: userProfile.birthDateDisplay,
-                address:
-                  app.address ||
-                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                contactNumber: app.guardian_contact_no || app.parentContactNo || app.contact_number || userProfile.mobileNumber,
-                email: app.guardian_email || app.email || userProfile.email,
-                remarks:
-                  app.application_status === "approved" || app.status === "approved"
-                    ? `Aprubado para sa Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()}) - Nakatala sa Financial Aid & Appointments`
-                    : app.application_status === "released" || app.status === "released"
-                    ? `Na-release na ang Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()})`
-                    : app.application_status === "rejected" || app.status === "rejected"
-                    ? (app.rejection_reason ? `Tinanggihan: ${app.rejection_reason}` : "Tinanggihan")
-                    : "Kasalukuyang sinusuri (Under review)",
-              }))
+              .map((app: any) => {
+                const rawDate = app.created_at || app.submittedAt || app.submitted_at || Date.now()
+                return {
+                  applicationNo: app.reference_number || app.referenceNumber || qcId,
+                  assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
+                  assistanceCategory: "Child Welfare",
+                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  dateApplied: formatAppDate(rawDate),
+                  status:
+                    app.application_status === "approved" || app.status === "approved"
+                      ? "Approved"
+                      : app.application_status === "released" || app.status === "released" || app.application_status === "completed" || app.status === "completed"
+                      ? "Released"
+                      : app.application_status === "rejected" || app.status === "rejected"
+                      ? "Rejected"
+                      : "Under Review",
+                  applicantName: app.child_name || app.childName || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
+                  dateOfBirth: userProfile.birthDateDisplay,
+                  address:
+                    app.address ||
+                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                  contactNumber: app.guardian_contact_no || app.parentContactNo || app.contact_number || userProfile.mobileNumber,
+                  email: app.guardian_email || app.email || userProfile.email,
+                  remarks:
+                    app.application_status === "approved" || app.status === "approved"
+                      ? `Aprubado para sa Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()}) - Nakatala sa Financial Aid & Appointments`
+                      : app.application_status === "released" || app.status === "released"
+                      ? `Na-release na ang Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()})`
+                      : app.application_status === "rejected" || app.status === "rejected"
+                      ? (app.rejection_reason ? `Tinanggihan: ${app.rejection_reason}` : "Tinanggihan")
+                      : "Kasalukuyang sinusuri (Under review)",
+                }
+              })
             allFoundApps.push(...mappedCw)
           }
         } catch (err) {
@@ -2242,6 +2284,8 @@ export default function MyApplications() {
                   ? "Approved"
                   : "Under Review"
 
+                const rawDate = l.created_at || l.submittedAt || l.submitted_at || Date.now()
+
                 return {
                   applicationNo: l.reference_number || l.referenceNumber || l.qcid || qcId,
                   assistance: l.proposed_business_name || l.business_name || l.businessName
@@ -2250,11 +2294,8 @@ export default function MyApplications() {
                     ? `Livelihood: ${l.livelihood_type}`
                     : "Livelihood Assistance",
                   assistanceCategory: "Livelihood",
-                  dateApplied: new Date(l.created_at || Date.now()).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }),
+                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  dateApplied: formatAppDate(rawDate),
                   status: statusVal,
                   applicantName:
                     l.applicant_name ||
@@ -2339,16 +2380,14 @@ export default function MyApplications() {
                   : "Under Review"
 
                 const courseName = t.trainingName || t.training_name || t.program_title || t.course_title || t.training_course || "Skills Training"
+                const rawDate = t.submittedAt || t.submitted_at || t.created_at || Date.now()
 
                 return {
                   applicationNo: t.referenceNumber || t.reference_number || t.qcid || qcId,
                   assistance: `Gov Services Training: ${courseName}`,
                   assistanceCategory: "Training Program",
-                  dateApplied: new Date(t.submittedAt || t.submitted_at || t.created_at || Date.now()).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }),
+                  rawTimestamp: parseAppDate(rawDate).getTime(),
+                  dateApplied: formatAppDate(rawDate),
                   status: statusVal,
                   applicantName:
                     t.applicantInfo?.fullName ||
@@ -2381,8 +2420,8 @@ export default function MyApplications() {
 
         // Sort newest applications first so latest submissions appear right at the top
         allFoundApps.sort((a, b) => {
-          const timeA = new Date(a.dateApplied).getTime() || 0
-          const timeB = new Date(b.dateApplied).getTime() || 0
+          const timeA = a.rawTimestamp || parseAppDate(a.dateApplied).getTime() || 0
+          const timeB = b.rawTimestamp || parseAppDate(b.dateApplied).getTime() || 0
           return timeB - timeA
         })
 
