@@ -31,6 +31,7 @@ import {
   type SyncedDisbursementRecord,
 } from "../../utils/financialAidSync"
 import { getApplicantPhotoUrl, ApplicantPhotoDisplay } from "./pwd-senior-citizen"
+import MaskedText from "../ui/masked-text"
 
 interface ApplicationDocument {
   name: string
@@ -2052,18 +2053,44 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allSubmis
                     value={
                       <span className="inline-flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5" style={{ color: "var(--ink-faint)" }} />
-                        {app.contactNo || "—"}
+                        <MaskedText
+                          value={app.contactNo}
+                          type="phone"
+                          showButtonLabel
+                          auditSubject={displayName(app)}
+                          auditField="Contact Number"
+                          auditModule="Solo Parent & Child Welfare"
+                        />
                       </span>
                     }
                   />
-                  <Field label="QCID number" value={app.qcidNumber || "—"} />
+                  <Field
+                    label="QCID number"
+                    value={
+                      <MaskedText
+                        value={app.qcidNumber}
+                        type="id"
+                        showButtonLabel
+                        auditSubject={displayName(app)}
+                        auditField="QCID Number"
+                        auditModule="Solo Parent & Child Welfare"
+                      />
+                    }
+                  />
                   <Field
                     label="Email address"
                     value={
                       app.email ? (
                         <span className="inline-flex items-center gap-1.5">
                           <Mail className="h-3.5 w-3.5" style={{ color: "var(--ink-faint)" }} />
-                          {app.email}
+                          <MaskedText
+                            value={app.email}
+                            type="email"
+                            showButtonLabel
+                            auditSubject={displayName(app)}
+                            auditField="Email Address"
+                            auditModule="Solo Parent & Child Welfare"
+                          />
                         </span>
                       ) : (
                         "—"

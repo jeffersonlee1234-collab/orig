@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { API_BASE as APP_API_BASE } from '../../config/api'
 import { getSavedProfilePhoto } from '../../utils/profilePhoto'
 import { FIXED_ASSISTANCE_AMOUNTS } from '../../utils/financialAidSync'
+import MaskedText from '../ui/masked-text'
 
 const API_BASE = `${APP_API_BASE}/api/aics`
 
@@ -338,7 +339,15 @@ export default function AICS() {
                       style={{ borderBottomColor: DESIGN.colors.border, cursor: 'pointer' }}
                       className="border-b hover:bg-gray-50"
                     >
-                      <td style={{ color: DESIGN.colors.foreground, opacity: 0.7, fontSize: '13px', fontFamily: 'monospace' }} className="py-3 px-4">{app.qc_id || app.reference_no}</td>
+                      <td style={{ color: DESIGN.colors.foreground, opacity: 0.7, fontSize: '13px', fontFamily: 'monospace' }} className="py-3 px-4">
+                        <MaskedText
+                          value={app.qc_id || app.reference_no}
+                          type="id"
+                          auditSubject={fullName(app)}
+                          auditField="QCID / Reference No"
+                          auditModule="AICS"
+                        />
+                      </td>
                       <td style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 500 }} className="py-3 px-4">{fullName(app)}</td>
                       <td style={{ color: DESIGN.colors.foreground, opacity: 0.7, fontSize: '14px' }} className="py-3 px-4">{app.assistance_type}</td>
                       <td style={{ color: DESIGN.colors.foreground, opacity: 0.7, fontSize: '14px' }} className="py-3 px-4">{formatDate(app.created_at)}</td>
@@ -409,7 +418,16 @@ export default function AICS() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label style={labelStyle}>Reference No.</label>
-                      <p style={{ color: DESIGN.colors.foreground, fontSize: '16px', fontWeight: 700, fontFamily: 'monospace', marginTop: '8px' }}>{reviewingApp.qc_id || reviewingApp.reference_no}</p>
+                      <div style={{ color: DESIGN.colors.foreground, fontSize: '15px', fontWeight: 700, fontFamily: 'monospace', marginTop: '8px' }}>
+                        <MaskedText
+                          value={reviewingApp.qc_id || reviewingApp.reference_no}
+                          type="id"
+                          showButtonLabel
+                          auditSubject={fullName(reviewingApp)}
+                          auditField="Reference No"
+                          auditModule="AICS"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label style={labelStyle}>Date Applied</label>
@@ -420,7 +438,16 @@ export default function AICS() {
                   <div style={{ borderTopColor: DESIGN.colors.border }} className="pt-4 border-t grid grid-cols-2 gap-4">
                     <div>
                       <label style={labelStyle}>QC ID Number</label>
-                      <p style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>{reviewingApp.qc_id || '—'}</p>
+                      <div style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>
+                        <MaskedText
+                          value={reviewingApp.qc_id}
+                          type="id"
+                          showButtonLabel
+                          auditSubject={fullName(reviewingApp)}
+                          auditField="QC ID Number"
+                          auditModule="AICS"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label style={labelStyle}>Nationality</label>
@@ -432,7 +459,16 @@ export default function AICS() {
                     </div>
                     <div>
                       <label style={labelStyle}>Birth Date</label>
-                      <p style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>{reviewingApp.birth_date || '—'}</p>
+                      <div style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>
+                        <MaskedText
+                          value={reviewingApp.birth_date}
+                          type="birthdate"
+                          showButtonLabel
+                          auditSubject={fullName(reviewingApp)}
+                          auditField="Birth Date"
+                          auditModule="AICS"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label style={labelStyle}>Age</label>
@@ -448,7 +484,16 @@ export default function AICS() {
                     </div>
                     <div>
                       <label style={labelStyle}>Phone Number</label>
-                      <p style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>{reviewingApp.phone || '—'}</p>
+                      <div style={{ color: DESIGN.colors.foreground, fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>
+                        <MaskedText
+                          value={reviewingApp.phone}
+                          type="phone"
+                          showButtonLabel
+                          auditSubject={fullName(reviewingApp)}
+                          auditField="Phone Number"
+                          auditModule="AICS"
+                        />
+                      </div>
                     </div>
                   </div>
 

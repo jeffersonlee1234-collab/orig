@@ -40,6 +40,7 @@ import {
   isTrainingService,
 } from "../../utils/financialAidSync"
 import { useLanguage } from "../ui/language-context"
+import MaskedText from "../ui/masked-text"
 
 export type ApplicationStatus =
   | "Pending"
@@ -2771,7 +2772,7 @@ export default function MyApplications() {
               </span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xl sm:text-2xl font-mono font-black text-blue-700">
-                  {selectedApp.applicationNo}
+                  <MaskedText value={selectedApp.applicationNo} type="id" showButtonLabel />
                 </span>
               </div>
             </div>
@@ -2800,15 +2801,21 @@ export default function MyApplications() {
             </div>
             <div>
               <span className="text-gray-400 block font-medium">Date of Birth:</span>
-              <span className="font-medium text-gray-900">{selectedApp.dateOfBirth}</span>
+              <span className="font-medium text-gray-900">
+                <MaskedText value={selectedApp.dateOfBirth} type="birthdate" showButtonLabel />
+              </span>
             </div>
             <div>
               <span className="text-gray-400 block font-medium">Contact Number:</span>
-              <span className="font-mono font-medium text-gray-900">{selectedApp.contactNumber}</span>
+              <span className="font-mono font-medium text-gray-900">
+                <MaskedText value={selectedApp.contactNumber} type="phone" showButtonLabel />
+              </span>
             </div>
             <div>
               <span className="text-gray-400 block font-medium">Email Address:</span>
-              <span className="font-medium text-gray-900 truncate block">{selectedApp.email || "N/A"}</span>
+              <span className="font-medium text-gray-900 truncate block">
+                <MaskedText value={selectedApp.email} type="email" showButtonLabel />
+              </span>
             </div>
           </div>
 
@@ -3441,7 +3448,7 @@ export default function MyApplications() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
-                        {app.applicationNo}
+                        <MaskedText value={app.applicationNo} type="id" />
                       </span>
                       <span
                         className={`text-xs px-2 py-0.5 rounded font-medium border ${
@@ -3482,7 +3489,9 @@ export default function MyApplications() {
                   </div>
                   <div>
                     <span className="text-gray-400 dark:text-slate-400 block">Contact Number:</span>
-                    <span className="font-mono text-gray-800 dark:text-slate-200">{app.contactNumber}</span>
+                    <span className="font-mono text-gray-800 dark:text-slate-200">
+                      <MaskedText value={app.contactNumber} type="phone" />
+                    </span>
                   </div>
                 </div>
 

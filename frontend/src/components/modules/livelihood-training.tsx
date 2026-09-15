@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import TrainingProgramAdmin from "./training-program-admin"
+import MaskedText from "../ui/masked-text"
 
 // ---- Unified Interfaces ----
 export type ApplicationStatus = "pending" | "under_review" | "approved" | "rejected" | "needs_revision"
@@ -681,16 +682,31 @@ function ReviewModal({
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">QCID / Application Ref</p>
-                <p className="text-foreground font-semibold mt-0.5 font-mono text-xs">
-                  {app.qcid || app.referenceNumber}
-                </p>
+                <div className="font-semibold text-foreground mt-0.5 font-mono text-xs">
+                  <MaskedText
+                    value={app.qcid || app.referenceNumber}
+                    type="id"
+                    showButtonLabel
+                    auditSubject={fullName}
+                    auditField="QCID / Reference"
+                    auditModule="Livelihood & Training"
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Date of Birth / Sex</p>
-                <p className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
+                <div className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                  {app.dateOfBirth || "N/A"} ({app.sex || "N/A"})
-                </p>
+                  <MaskedText
+                    value={app.dateOfBirth}
+                    type="birthdate"
+                    showButtonLabel
+                    auditSubject={fullName}
+                    auditField="Date of Birth"
+                    auditModule="Livelihood & Training"
+                  />
+                  {app.sex && <span className="text-xs font-normal text-muted-foreground">({app.sex})</span>}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Civil Status</p>
@@ -698,17 +714,31 @@ function ReviewModal({
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Contact Number</p>
-                <p className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
+                <div className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                  {app.mobileNo || "N/A"}
-                </p>
+                  <MaskedText
+                    value={app.mobileNo}
+                    type="phone"
+                    showButtonLabel
+                    auditSubject={fullName}
+                    auditField="Contact Number"
+                    auditModule="Livelihood & Training"
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Email Address</p>
-                <p className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
+                <div className="text-foreground font-semibold mt-0.5 flex items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  {app.email || "N/A"}
-                </p>
+                  <MaskedText
+                    value={app.email}
+                    type="email"
+                    showButtonLabel
+                    auditSubject={fullName}
+                    auditField="Email Address"
+                    auditModule="Livelihood & Training"
+                  />
+                </div>
               </div>
               <div className="col-span-full">
                 <p className="text-xs text-muted-foreground">Registered Address</p>

@@ -24,6 +24,7 @@ import {
   type SyncedDisbursementRecord,
 } from "../../utils/financialAidSync"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import MaskedText from "../ui/masked-text"
 
 // ---- Types for collected form data from user submissions ----
 interface ApplicationDocument {
@@ -2018,7 +2019,18 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm p-4 rounded-lg" style={{ background: "var(--surface-sunk)" }}>
               <Field
                 label={isAssistance ? "QC Reference Number" : "QC ID Number"}
-                value={<span className="font-mono font-bold text-blue-700">{app.referenceNumber || (app as any).qcid || "—"}</span>}
+                value={
+                  <span className="font-mono font-bold text-blue-700">
+                    <MaskedText
+                      value={app.referenceNumber || (app as any).qcid || "—"}
+                      type="id"
+                      showButtonLabel
+                      auditSubject={displayName(app)}
+                      auditField="QCID / Reference Number"
+                      auditModule="PWD & Senior Citizen"
+                    />
+                  </span>
+                }
               />
               <Field label="Full name" value={displayName(app)} />
               <Field label="Nationality" value={(app as any).nationality || "FILIPINO"} />
@@ -2027,7 +2039,14 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                 value={
                   <span className="inline-flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5" style={{ color: "var(--ink-faint)" }} />
-                    {app.dateOfBirth}
+                    <MaskedText
+                      value={app.dateOfBirth}
+                      type="birthdate"
+                      showButtonLabel
+                      auditSubject={displayName(app)}
+                      auditField="Date of Birth"
+                      auditModule="PWD & Senior Citizen"
+                    />
                   </span>
                 }
               />
@@ -2039,7 +2058,14 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                   value={
                     <span className="inline-flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5" style={{ color: "var(--ink-faint)" }} />
-                      {contactNumber || "—"}
+                      <MaskedText
+                        value={contactNumber}
+                        type="phone"
+                        showButtonLabel
+                        auditSubject={displayName(app)}
+                        auditField="Phone Number"
+                        auditModule="PWD & Senior Citizen"
+                      />
                     </span>
                   }
                 />
@@ -2055,7 +2081,14 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
                     value={
                       <span className="inline-flex items-center gap-1.5 text-blue-700 font-medium truncate">
                         <Mail className="h-3.5 w-3.5 shrink-0 text-blue-600" />
-                        {emailAddress}
+                        <MaskedText
+                          value={emailAddress}
+                          type="email"
+                          showButtonLabel
+                          auditSubject={displayName(app)}
+                          auditField="Email Address"
+                          auditModule="PWD & Senior Citizen"
+                        />
                       </span>
                     }
                   />

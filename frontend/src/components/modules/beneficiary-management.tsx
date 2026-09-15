@@ -302,8 +302,16 @@ function BeneficiaryProfileModal({
                     {vt?.label}
                   </span>
                   {b.qcidNumber && (
-                    <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-mono">
-                      QCID: {b.qcidNumber}
+                    <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-mono inline-flex items-center gap-1.5">
+                      <span className="font-sans font-semibold">QCID:</span>
+                      <MaskedText
+                        value={b.qcidNumber}
+                        type="id"
+                        showButtonLabel
+                        auditSubject={b.fullName}
+                        auditField="QCID"
+                        auditModule="Beneficiary Management"
+                      />
                     </span>
                   )}
                 </div>
@@ -347,12 +355,31 @@ function BeneficiaryProfileModal({
                   value={
                     <span className="inline-flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <MaskedText value={b.contactNo} type="phone" />
+                      <MaskedText
+                        value={b.contactNo}
+                        type="phone"
+                        showButtonLabel
+                        auditSubject={b.fullName}
+                        auditField="Contact Number"
+                        auditModule="Beneficiary Management"
+                      />
                     </span>
                   }
                 />
                 <Field label="Date Registered" value={formatDate(b.dateRegistered)} />
-                <Field label="Email Address" value={<MaskedText value={b.email} type="email" />} />
+                <Field
+                  label="Email Address"
+                  value={
+                    <MaskedText
+                      value={b.email}
+                      type="email"
+                      showButtonLabel
+                      auditSubject={b.fullName}
+                      auditField="Email Address"
+                      auditModule="Beneficiary Management"
+                    />
+                  }
+                />
                 <Field label="Civil Status" value={b.civilStatus || "—"} />
                 <div className="col-span-2">
                   <Field

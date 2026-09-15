@@ -13,6 +13,27 @@ async function logActivity({ actor, actorRole, action, module, referenceNo, subj
   }
 }
 
+// POST /api/activity-log
+// Mag-record ng activity log mula sa client (hal. UNMASK_PII audit)
+exports.createActivityLog = async (req, res) => {
+  try {
+    const { actor, actorRole, action, module, referenceNo, subject, detail } = req.body;
+    await logActivity({
+      actor: actor || 'Staff',
+      actorRole: actorRole || 'Staff',
+      action: action || 'UNMASK_PII',
+      module: module || 'Data Privacy',
+      referenceNo: referenceNo || null,
+      subject: subject || 'PII Verification',
+      detail: detail || null,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error in createActivityLog:', err);
+    res.status(500).json({ error: 'Failed to record activity log' });
+  }
+};
+
 // GET /api/activity-log
 // Ibinabalik lang ang mga entries na hindi pa deleted (deleted_at IS NULL)
 exports.getActivityLog = async (req, res) => {

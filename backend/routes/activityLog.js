@@ -6,6 +6,7 @@ const activityLogController = require('../controllers/activityLogController');
 // para hindi ma-match ang "deleted" bilang isang :id value.
 router.get('/deleted', activityLogController.getDeletedActivityLog);
 router.get('/', activityLogController.getActivityLog);
+router.post('/', activityLogController.createActivityLog);
 
 router.patch('/:id/soft-delete', activityLogController.softDeleteActivity);
 router.patch('/:id/restore', activityLogController.restoreActivity);

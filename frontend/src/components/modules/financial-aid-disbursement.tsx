@@ -23,6 +23,7 @@ import {
   getDeletedDisbursementKeys,
 } from "../../utils/financialAidSync"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import MaskedText from "../ui/masked-text"
 
 export { FIXED_ASSISTANCE_AMOUNTS, type DisbursementStage, type SyncedDisbursementRecord }
 
@@ -772,9 +773,17 @@ export default function FinancialAidDisbursement() {
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-gray-50">
-                <span className="text-gray-500">Application Reference:</span>
+                <span className="text-gray-500">Application Reference / QCID:</span>
                 <span className="font-mono text-blue-700 font-semibold">
-                  {selectedDetailsRecord.applicationRef}
+                  <MaskedText
+                    value={selectedDetailsRecord.applicationRef}
+                    type="id"
+                    showButtonLabel
+                    auditSubject={selectedDetailsRecord.applicantName}
+                    auditField="Application Ref / QCID"
+                    auditModule="Financial Aid Disbursement"
+                    referenceNo={selectedDetailsRecord.disbursementId}
+                  />
                 </span>
               </div>
 

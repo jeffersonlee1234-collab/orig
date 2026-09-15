@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { subscribeToRealtimeChanges, notifyApplicationChange } from "../../utils/realtimeSync"
+import MaskedText from "../ui/masked-text"
 
 // =====================================================================================
 // Types
@@ -250,9 +251,33 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
               </span>
             </div>
             <h2 className="text-lg md:text-xl font-bold text-slate-900 truncate">{c.beneficiaryName}</h2>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">
-              BENEFICIARY ID: <strong className="text-slate-700">{c.beneficiaryId}</strong> • APPLICATION REF: <strong className="text-slate-700">{c.applicationId}</strong>
-            </p>
+            <div className="text-xs text-slate-500 font-mono mt-1 flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-1">
+                <span className="font-sans font-semibold text-slate-600">QCID:</span>
+                <MaskedText
+                  value={c.beneficiaryId}
+                  type="id"
+                  showButtonLabel
+                  auditSubject={c.beneficiaryName}
+                  auditField="QCID / Beneficiary ID"
+                  auditModule="Case Management"
+                  referenceNo={c.caseNumber}
+                />
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-sans font-semibold text-slate-600">REF:</span>
+                <MaskedText
+                  value={c.applicationId}
+                  type="id"
+                  showButtonLabel
+                  auditSubject={c.beneficiaryName}
+                  auditField="Application Ref"
+                  auditModule="Case Management"
+                  referenceNo={c.caseNumber}
+                />
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -295,12 +320,23 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
             <div className="space-y-6">
               {/* Beneficiary Information */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 md:p-5">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-200/60 pb-2">
+                <div className="flex items-center justify-between mb-3 border-b border-slate-200/60 pb-2 flex-wrap gap-2">
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <User className="h-4 w-4 text-blue-600" />
                     Beneficiary Information
                   </h3>
-                  <span className="text-xs font-mono text-slate-500">QCID: {c.beneficiaryId}</span>
+                  <span className="text-xs font-mono text-slate-500 inline-flex items-center gap-1">
+                    <span className="font-sans font-semibold">QCID:</span>
+                    <MaskedText
+                      value={c.beneficiaryId}
+                      type="id"
+                      showButtonLabel
+                      auditSubject={c.beneficiaryName}
+                      auditField="QCID"
+                      auditModule="Case Management"
+                      referenceNo={c.caseNumber}
+                    />
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 text-xs">
                   <div>
@@ -322,10 +358,18 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
                   </div>
                   <div>
                     <span className="text-slate-500">Contact Number</span>
-                    <p className="font-semibold text-slate-900 mt-0.5 flex items-center gap-1">
+                    <div className="font-semibold text-slate-900 mt-0.5 flex items-center gap-1">
                       <Phone className="h-3 w-3 text-slate-400" />
-                      {c.contactNo || "—"}
-                    </p>
+                      <MaskedText
+                        value={c.contactNo}
+                        type="phone"
+                        showButtonLabel
+                        auditSubject={c.beneficiaryName}
+                        auditField="Contact Number"
+                        auditModule="Case Management"
+                        referenceNo={c.caseNumber}
+                      />
+                    </div>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-slate-500">Complete Address</span>
