@@ -21,9 +21,7 @@ import {
   Shield,
   Building,
   ShieldCheck,
-  Activity,
   Layers,
-  Sparkles,
 } from "lucide-react"
 
 import { useLanguage, type Language } from "./language-context"
