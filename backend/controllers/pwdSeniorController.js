@@ -289,7 +289,11 @@ exports.getAllApplications = async (req, res) => {
         referenceNumber: row.reference_number,
         category: row.category,
         type: row.type,
-        submittedAt: row.submitted_at || row.created_at,
+        submittedAt: row.submitted_at || row.created_at || extra.submittedAt || extra.created_at || extra.dateSubmitted || (row.id && String(row.id).match(/\b(1\d{11,12})\b/) ? new Date(Number(String(row.id).match(/\b(1\d{11,12})\b/)[1])).toISOString() : null) || null,
+        created_at: row.created_at || row.submitted_at || extra.created_at || extra.createdAt || extra.submittedAt || null,
+        submitted_at: row.submitted_at || row.created_at || extra.submitted_at || extra.submittedAt || null,
+        date_applied: row.submitted_at || row.created_at || extra.dateApplied || extra.date_applied || null,
+        dateApplied: row.submitted_at || row.created_at || extra.dateApplied || extra.date_applied || null,
         userId: row.user_id || extra.userId || extra.user_id || '',
         user_id: row.user_id || extra.user_id || extra.userId || '',
         qcid: row.qcid || extra.qcid || extra.qcidNo || extra.qcidNumber || '',
@@ -473,11 +477,12 @@ exports.createApplication = async (req, res) => {
           emergency_first_name, emergency_last_name, emergency_contact_person, emergency_contact_no,
           emergency_relationship, emergency_address, emergency_residential_address,
           house_no, street, barangay, city, blood_type, nationality, existing_id_number,
-          existing_booklet_number, reason_for_renewal, reason_for_replacement, extra_data
+          existing_booklet_number, reason_for_renewal, reason_for_replacement, extra_data,
+          submitted_at, created_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
           $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-          $31, $32, $33, $34, $35, $36, $37, $38, $39
+          $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
         )`,
         [
           newApp.id,
@@ -519,6 +524,8 @@ exports.createApplication = async (req, res) => {
           newApp.reasonForRenewal,
           newApp.reasonForReplacement,
           JSON.stringify(body),
+          newApp.submittedAt || new Date().toISOString(),
+          newApp.submittedAt || new Date().toISOString(),
         ]
       );
     } catch (dbErr) {

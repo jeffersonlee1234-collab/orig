@@ -82,6 +82,7 @@ export function parseAppDate(rawDate?: any): Date | null {
   if (
     !str ||
     str.toLowerCase() === "invalid date" ||
+    str.toLowerCase() === "pending date" ||
     str.toLowerCase() === "undefined" ||
     str.toLowerCase() === "null" ||
     str === "0"
@@ -119,9 +120,77 @@ export function parseAppDate(rawDate?: any): Date | null {
   return null
 }
 
-export function formatAppDate(rawDate?: any, fallbackDate?: any): string {
-  const d = parseAppDate(rawDate) || parseAppDate(fallbackDate)
-  if (!d) return "Pending Date"
+export function extractAnyDateFromApp(app: any): Date {
+  if (!app) return new Date()
+
+  // 1. Try explicit date fields
+  const candidates = [
+    app.submittedAt,
+    app.submitted_at,
+    app.created_at,
+    app.date_applied,
+    app.dateApplied,
+    app.date_submitted,
+    app.dateSubmitted,
+    app.application_date,
+    app.applicationDate,
+    app.date,
+    app.updated_at,
+    app.updatedAt,
+    app.form_data?.submittedAt,
+    app.form_data?.dateSubmitted,
+    app.form_data?.created_at,
+    app.extra_data?.submittedAt,
+    app.extra_data?.dateSubmitted,
+    app.extra_data?.created_at,
+    app.payload?.dateApplied,
+    app.payload?.submittedAt,
+    app.payload?.created_at,
+    app.approvedDate,
+    app.approved_date,
+    app.archivedAt,
+    app.archived_at,
+  ]
+
+  for (const c of candidates) {
+    if (c) {
+      const parsed = parseAppDate(c)
+      if (parsed && !isNaN(parsed.getTime())) {
+        return parsed
+      }
+    }
+  }
+
+  // 2. Try documents uploadedAt
+  const docs = app.documents || app.uploaded_documents || app.uploadedDocuments
+  if (Array.isArray(docs)) {
+    for (const d of docs) {
+      if (d?.uploadedAt || d?.uploaded_at || d?.date) {
+        const parsed = parseAppDate(d.uploadedAt || d.uploaded_at || d.date)
+        if (parsed && !isNaN(parsed.getTime())) {
+          return parsed
+        }
+      }
+    }
+  }
+
+  // 3. Try timestamp embedded in id or referenceNumber (e.g. APP-SNR-AST-1789438285863 or 1789438285863)
+  const idStr = String(app.id || app.referenceNumber || app.reference_number || app.applicationNo || "")
+  const match = idStr.match(/\b(1\d{11,12})\b/)
+  if (match) {
+    const ts = Number(match[1])
+    const d = new Date(ts)
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+      return d
+    }
+  }
+
+  // 4. Default to current date
+  return new Date()
+}
+
+export function formatAppDate(rawDate?: any, appObject?: any): string {
+  const d = parseAppDate(rawDate) || (appObject ? extractAnyDateFromApp(appObject) : null) || new Date()
   return d.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
@@ -1890,22 +1959,27 @@ export default function MyApplications() {
             4000
           )
           if (delData?.applications && Array.isArray(delData.applications)) {
-            const mappedDel: ApplicationRecord[] = delData.applications.map((d: any) => ({
-              applicationNo: d.referenceNo || d.applicationId || "N/A",
-              assistance: d.assistanceTitle || d.payload?.assistance || "Social Assistance",
-              assistanceCategory: d.category || d.payload?.assistanceCategory || "General",
-              dateApplied: formatAppDate(d.payload?.dateApplied || d.archivedAt || Date.now()),
-              status: d.status || d.payload?.status || "Approved",
-              applicantName:
-                d.applicantName || d.payload?.applicantName || `${userProfile.firstName} ${userProfile.lastName}`,
-              dateOfBirth: d.payload?.dateOfBirth || userProfile.birthDateDisplay,
-              address:
-                d.payload?.address ||
-                `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-              contactNumber: d.payload?.contactNumber || userProfile.mobileNumber,
-              email: d.email || userProfile.email,
-              deletedAt: formatAppDate(d.archivedAt || Date.now()),
-            }))
+            const mappedDel: ApplicationRecord[] = delData.applications.map((d: any) => {
+              const targetObj = d.payload || d
+              const appDate = extractAnyDateFromApp(targetObj)
+              return {
+                applicationNo: d.referenceNo || d.applicationId || "N/A",
+                assistance: d.assistanceTitle || d.payload?.assistance || "Social Assistance",
+                assistanceCategory: d.category || d.payload?.assistanceCategory || "General",
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(d.payload?.dateApplied || d.archivedAt, targetObj),
+                status: d.status || d.payload?.status || "Approved",
+                applicantName:
+                  d.applicantName || d.payload?.applicantName || `${userProfile.firstName} ${userProfile.lastName}`,
+                dateOfBirth: d.payload?.dateOfBirth || userProfile.birthDateDisplay,
+                address:
+                  d.payload?.address ||
+                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                contactNumber: d.payload?.contactNumber || userProfile.mobileNumber,
+                email: d.email || userProfile.email,
+                deletedAt: formatAppDate(d.archivedAt || Date.now()),
+              }
+            })
 
             // Merge unique
             const mapKeys = new Set(initialDeleted.map((i) => i.applicationNo + i.assistance))
@@ -1951,14 +2025,14 @@ export default function MyApplications() {
                   app.date_submitted ||
                   app.date ||
                   app.updated_at
-                const parsedDate = parseAppDate(rawDate)
+                const appDate = extractAnyDateFromApp(app)
 
                 return {
                   applicationNo: app.qc_id || app.reference_no || app.reference_number || qcId,
                   assistance: cleanAssistance,
                   assistanceCategory: "AICS",
-                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                  dateApplied: formatAppDate(rawDate),
+                  rawTimestamp: appDate.getTime(),
+                  dateApplied: formatAppDate(rawDate, app),
                   status:
                     app.status === "approved"
                       ? "Approved"
@@ -2065,14 +2139,14 @@ export default function MyApplications() {
                 p.date_submitted ||
                 p.dateSubmitted ||
                 p.updated_at
-              const parsedDate = parseAppDate(rawDate)
+              const appDate = extractAnyDateFromApp(p)
 
               return {
                 applicationNo: p.assignedIdNumber || p.referenceNumber || p.qcidNo || qcId,
                 assistance: serviceTitle,
                 assistanceCategory: isPwd ? "PWD" : "Senior Citizen",
-                rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                dateApplied: formatAppDate(rawDate),
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(rawDate, p),
                 status: appStatus,
                 applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
                 dateOfBirth: p.dateOfBirth || userProfile.birthDateDisplay,
@@ -2139,14 +2213,14 @@ export default function MyApplications() {
                   app.extra_data?.submittedAt ||
                   app.extra_data?.dateSubmitted ||
                   app.updated_at
-                const parsedDate = parseAppDate(rawDate)
+                const appDate = extractAnyDateFromApp(app)
 
                 return {
                   applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
                   assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
                   assistanceCategory: "Solo Parent",
-                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                  dateApplied: formatAppDate(rawDate),
+                  rawTimestamp: appDate.getTime(),
+                  dateApplied: formatAppDate(rawDate, app),
                   status:
                     app.application_status === "approved" || app.status === "approved"
                       ? "Approved"
@@ -2223,14 +2297,14 @@ export default function MyApplications() {
                   app.form_data?.dateSubmitted ||
                   app.form_data?.created_at ||
                   app.updated_at
-                const parsedDate = parseAppDate(rawDate)
+                const appDate = extractAnyDateFromApp(app)
 
                 return {
                   applicationNo: app.reference_number || app.referenceNumber || qcId,
                   assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
                   assistanceCategory: "Child Welfare",
-                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                  dateApplied: formatAppDate(rawDate),
+                  rawTimestamp: appDate.getTime(),
+                  dateApplied: formatAppDate(rawDate, app),
                   status:
                     app.application_status === "approved" || app.status === "approved"
                       ? "Approved"
@@ -2342,7 +2416,7 @@ export default function MyApplications() {
                   l.date_submitted ||
                   l.application_date ||
                   l.updated_at
-                const parsedDate = parseAppDate(rawDate)
+                const appDate = extractAnyDateFromApp(l)
 
                 return {
                   applicationNo: l.reference_number || l.referenceNumber || l.qcid || qcId,
@@ -2352,8 +2426,8 @@ export default function MyApplications() {
                     ? `Livelihood: ${l.livelihood_type}`
                     : "Livelihood Assistance",
                   assistanceCategory: "Livelihood",
-                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                  dateApplied: formatAppDate(rawDate),
+                  rawTimestamp: appDate.getTime(),
+                  dateApplied: formatAppDate(rawDate, l),
                   status: statusVal,
                   applicantName:
                     l.applicant_name ||
@@ -2446,14 +2520,14 @@ export default function MyApplications() {
                   t.dateApplied ||
                   t.date_submitted ||
                   t.updated_at
-                const parsedDate = parseAppDate(rawDate)
+                const appDate = extractAnyDateFromApp(t)
 
                 return {
                   applicationNo: t.referenceNumber || t.reference_number || t.qcid || qcId,
                   assistance: `Gov Services Training: ${courseName}`,
                   assistanceCategory: "Training Program",
-                  rawTimestamp: parsedDate ? parsedDate.getTime() : 0,
-                  dateApplied: formatAppDate(rawDate),
+                  rawTimestamp: appDate.getTime(),
+                  dateApplied: formatAppDate(rawDate, t),
                   status: statusVal,
                   applicantName:
                     t.applicantInfo?.fullName ||
