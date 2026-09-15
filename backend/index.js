@@ -220,22 +220,12 @@ app.delete('/api/cleanup-user/:nameOrRef', async (req, res) => {
       const del = await db.query(
         `DELETE FROM solo_parent_applications 
          WHERE LOWER(first_name || ' ' || last_name) LIKE LOWER($1)
-            OR user_id::text LIKE $1 OR reference_number LIKE $1 OR qcid_number LIKE $1`,
+            OR LOWER(guardian_first_name || ' ' || guardian_last_name) LIKE LOWER($1)
+            OR user_id::text LIKE $1 OR reference_number LIKE $1 OR qcid_number LIKE $1 OR child_name ILIKE $1`,
         [term]
       );
-      summary.solo_parent = del.rowCount;
+      summary.solo_parent_child_welfare = del.rowCount;
     } catch (e) { summary.solo_parent_error = e.message; }
-
-    // 6. Child Welfare
-    try {
-      const del = await db.query(
-        `DELETE FROM child_welfare_applications 
-         WHERE LOWER(guardian_first_name || ' ' || guardian_last_name) LIKE LOWER($1)
-            OR user_id::text LIKE $1 OR reference_number LIKE $1 OR child_name ILIKE $1`,
-        [term]
-      );
-      summary.child_welfare = del.rowCount;
-    } catch (e) { summary.child_welfare_error = e.message; }
 
     // 7. Livelihood
     try {

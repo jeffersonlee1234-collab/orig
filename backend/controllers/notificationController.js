@@ -174,15 +174,16 @@ exports.getNotifications = async (req, res) => {
         });
       } catch (_) {}
 
-      // Collect from child_welfare_applications
+      // Collect from child welfare records in solo_parent_applications
       try {
         const cwRes = await db.query(
           `SELECT reference_number, user_id 
-           FROM child_welfare_applications 
-           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
-              OR COALESCE(reference_number::text, '') = ANY($1::text[]))
-              OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4))`,
+           FROM solo_parent_applications 
+           WHERE module_type = 'CHILD_WELFARE'
+             AND ((COALESCE(user_id::text, '') = ANY($1::text[]) 
+               OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+               OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
+               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4)))`,
           [identifiers, userEmail, userFn, userLn]
         );
         cwRes.rows.forEach((r) => {
@@ -434,10 +435,11 @@ exports.getNotifications = async (req, res) => {
       try {
         const cwRes = await db.query(
           `SELECT id, reference_number, user_id, application_status, rejection_reason, created_at, updated_at, guardian_email, category_title, approved_amount, form_data
-           FROM child_welfare_applications 
-           WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(reference_number::text, '') = ANY($1::text[]))
-              OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
-              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4))
+           FROM solo_parent_applications 
+           WHERE module_type = 'CHILD_WELFARE'
+             AND ((COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(reference_number::text, '') = ANY($1::text[]))
+               OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
+               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4)))
            ORDER BY created_at DESC`,
           [identifiers, userEmail, userFn, userLn]
         );

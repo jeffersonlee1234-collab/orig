@@ -1645,8 +1645,8 @@ exports.getAllUsers = async (req, res) => {
         INSERT INTO users (email, password, first_name, last_name, middle_name, mobile_number, role, status, is_email_verified, created_at)
         SELECT DISTINCT ON (LOWER(guardian_email))
           LOWER(guardian_email), '${defaultHash}', guardian_first_name, guardian_last_name, guardian_middle_name, guardian_contact_no, 'user', 'active', true, created_at
-        FROM child_welfare_applications
-        WHERE guardian_email IS NOT NULL AND guardian_email != '' AND LOWER(guardian_email) NOT IN (SELECT LOWER(email) FROM users)
+        FROM solo_parent_applications
+        WHERE module_type = 'CHILD_WELFARE' AND guardian_email IS NOT NULL AND guardian_email != '' AND LOWER(guardian_email) NOT IN (SELECT LOWER(email) FROM users)
         ON CONFLICT (email) DO NOTHING;
 
         -- Sync Livelihood applicants into users
@@ -1727,11 +1727,11 @@ exports.getAllUsers = async (req, res) => {
               [userEmail, userQcid]
             ).catch(() => ({ rows: [{ count: 0 }] })),
             db.query(
-              `SELECT COUNT(*) FROM solo_parent_applications WHERE user_id = $1 OR (email IS NOT NULL AND LOWER(email) = $2) OR (qcid_number IS NOT NULL AND qcid_number = $3)`,
+              `SELECT COUNT(*) FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND (user_id = $1 OR (email IS NOT NULL AND LOWER(email) = $2) OR (qcid_number IS NOT NULL AND qcid_number = $3))`,
               [userIdStr, userEmail, userQcid]
             ).catch(() => ({ rows: [{ count: 0 }] })),
             db.query(
-              `SELECT COUNT(*) FROM child_welfare_applications WHERE user_id = $1 OR (guardian_email IS NOT NULL AND LOWER(guardian_email) = $2) OR (email IS NOT NULL AND LOWER(email) = $2)`,
+              `SELECT COUNT(*) FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE' AND (user_id = $1 OR (guardian_email IS NOT NULL AND LOWER(guardian_email) = $2) OR (email IS NOT NULL AND LOWER(email) = $2))`,
               [userIdStr, userEmail]
             ).catch(() => ({ rows: [{ count: 0 }] })),
             db.query(
@@ -1885,11 +1885,11 @@ exports.getUserById = async (req, res) => {
         [userEmail, userQcid]
       ).catch(() => ({ rows: [] })),
       db.query(
-        `SELECT reference_number, 'Solo Parent' as category, application_type as type, application_status as status, solo_parent_id_number, assigned_id_number, created_at FROM solo_parent_applications WHERE user_id = $1 OR LOWER(email) = $2 OR qcid_number = $3`,
+        `SELECT reference_number, 'Solo Parent' as category, application_type as type, application_status as status, solo_parent_id_number, assigned_id_number, created_at FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND (user_id = $1 OR LOWER(email) = $2 OR qcid_number = $3)`,
         [userIdStr, userEmail, userQcid]
       ).catch(() => ({ rows: [] })),
       db.query(
-        `SELECT reference_number, 'Child Welfare' as category, program_type as type, application_status as status, created_at FROM child_welfare_applications WHERE user_id = $1 OR LOWER(guardian_email) = $2 OR LOWER(email) = $2`,
+        `SELECT reference_number, 'Child Welfare' as category, category_title as type, application_status as status, created_at FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE' AND (user_id = $1 OR LOWER(guardian_email) = $2 OR LOWER(email) = $2)`,
         [userIdStr, userEmail]
       ).catch(() => ({ rows: [] })),
       db.query(

@@ -77,7 +77,6 @@ async function initCaseManagementTables() {
       ALTER TABLE aics_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE solo_parent_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
-      ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE livelihood_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE training_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
     `);
@@ -105,8 +104,8 @@ exports.getAllCases = async (req, res) => {
     ] = await Promise.all([
       db.query(`SELECT * FROM aics_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM pwd_senior_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released', 'verified') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
-      db.query(`SELECT * FROM solo_parent_applications WHERE LOWER(COALESCE(application_status, '')) IN ('approved', 'completed', 'for_release', 'released', 'active') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
-      db.query(`SELECT * FROM child_welfare_applications WHERE LOWER(COALESCE(application_status, '')) IN ('approved', 'completed', 'for_release', 'released', 'active') OR LOWER(COALESCE(category_title, '')) LIKE '%nutrition%' OR LOWER(COALESCE(primary_reason_for_assistance, '')) LIKE '%nutrition%' ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND LOWER(COALESCE(application_status, '')) IN ('approved', 'completed', 'for_release', 'released', 'active') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE' AND (LOWER(COALESCE(application_status, '')) IN ('approved', 'completed', 'for_release', 'released', 'active') OR LOWER(COALESCE(category_title, '')) LIKE '%nutrition%' OR LOWER(COALESCE(primary_reason_for_assistance, '')) LIKE '%nutrition%') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM livelihood_applications WHERE LOWER(COALESCE(application_status, '')) IN ('approved', 'completed', 'for_processing', 'for_release', 'released') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM training_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'enrolled', 'graduated') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM appointments ORDER BY created_at DESC`).catch(() => ({ rows: [] })),

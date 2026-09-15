@@ -88,19 +88,20 @@ async function cleanup() {
       console.log('solo_parent_applications cleanup error:', e.message);
     }
 
-    // 6. Delete Child Welfare applications
+    // 6. Delete Solo Parent & Child Welfare applications
     try {
       const cwRes = await db.query(
-        `DELETE FROM child_welfare_applications 
-         WHERE guardian_first_name ILIKE $1 
-            OR guardian_last_name ILIKE $3 
-            OR reference_number ILIKE $2 
-            OR child_name ILIKE $1`,
+        `DELETE FROM solo_parent_applications 
+         WHERE (module_type = 'CHILD_WELFARE')
+           AND (guardian_first_name ILIKE $1 
+             OR guardian_last_name ILIKE $3 
+             OR reference_number ILIKE $2 
+             OR child_name ILIKE $1)`,
         [term, refTerm, millaresTerm]
       );
       console.log(`Deleted ${cwRes.rowCount} Child Welfare applications.`);
     } catch (e) {
-      console.log('child_welfare_applications cleanup error:', e.message);
+      console.log('child_welfare cleanup error:', e.message);
     }
 
     // 7. Delete Livelihood applications

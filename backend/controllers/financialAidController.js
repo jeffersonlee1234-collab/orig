@@ -260,9 +260,6 @@ exports.getDisbursements = async (req, res) => {
           AND application_ref NOT IN (
             SELECT reference_number FROM solo_parent_applications WHERE application_status = 'approved'
           )
-          AND application_ref NOT IN (
-            SELECT reference_number FROM child_welfare_applications WHERE application_status = 'approved'
-          )
         )
       `);
     } catch (_) {}
@@ -355,8 +352,8 @@ exports.getDisbursements = async (req, res) => {
     try {
       const approvedChildWelfare = await db.query(
         `SELECT reference_number, category_title, primary_reason_for_assistance, guardian_first_name, guardian_middle_name, guardian_last_name, approved_amount, updated_at, created_at
-         FROM child_welfare_applications 
-         WHERE application_status IN ('approved', 'completed', 'for_release')`
+         FROM solo_parent_applications 
+         WHERE module_type = 'CHILD_WELFARE' AND application_status IN ('approved', 'completed', 'for_release')`
       );
       for (const row of approvedChildWelfare.rows) {
         const disbCheck = await db.query(
@@ -634,7 +631,7 @@ exports.deleteDisbursement = async (req, res) => {
     // 2. Also delete from underlying application tables so it does not auto-repopulate
     if (appRef) {
       await Promise.allSettled([
-        db.query(`DELETE FROM child_welfare_applications WHERE reference_number = $1 OR id::text = $1`, [appRef]),
+        db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'CHILD_WELFARE') AND (reference_number = $1 OR id::text = $1)`, [appRef]),
         db.query(`DELETE FROM pwd_senior_applications WHERE reference_number = $1 OR id::text = $1`, [appRef]),
         db.query(`DELETE FROM livelihood_applications WHERE reference_number = $1 OR id::text = $1`, [appRef]),
         db.query(`DELETE FROM aics_applications WHERE reference_no = $1 OR reference_number = $1 OR id::text = $1`, [appRef]),
@@ -669,7 +666,7 @@ exports.deleteUserDisbursements = async (req, res) => {
     );
 
     await Promise.allSettled([
-      db.query(`DELETE FROM child_welfare_applications WHERE reference_number ILIKE $1 OR guardian_first_name ILIKE $1 OR guardian_last_name ILIKE $1`, [term]),
+      db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'CHILD_WELFARE') AND (reference_number ILIKE $1 OR guardian_first_name ILIKE $1 OR guardian_last_name ILIKE $1)`, [term]),
       db.query(`DELETE FROM pwd_senior_applications WHERE reference_number ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1`, [term]),
       db.query(`DELETE FROM livelihood_applications WHERE reference_number ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1`, [term]),
       db.query(`DELETE FROM aics_applications WHERE reference_no ILIKE $1 OR reference_number ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1`, [term]),

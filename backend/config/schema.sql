@@ -61,24 +61,24 @@ CREATE TABLE IF NOT EXISTS aics_documents (
 
 CREATE INDEX IF NOT EXISTS idx_aics_documents_app_id ON aics_documents(application_id);
 
--- 4. Solo Parent Applications Table
+-- 4. Solo Parent & Child Welfare Applications Table (Unified)
 CREATE TABLE IF NOT EXISTS solo_parent_applications (
   id SERIAL PRIMARY KEY,
   reference_number VARCHAR(100) UNIQUE NOT NULL,
   user_id VARCHAR(100) NOT NULL,
+  module_type VARCHAR(50) DEFAULT 'SOLO_PARENT', -- 'SOLO_PARENT' or 'CHILD_WELFARE'
   application_status VARCHAR(50) DEFAULT 'draft',
-  application_type VARCHAR(50) NOT NULL, -- 'new', 'renewal', 'loss'
+  application_type VARCHAR(50), -- 'new', 'renewal', 'loss' for solo parent
   is_resident BOOLEAN DEFAULT true,
 
-  -- For New Application:
+  -- For Solo Parent Application:
   classification_id VARCHAR(100),
   classification_title VARCHAR(255),
-
-  -- For Renewal & Lost ID:
   solo_parent_id_number VARCHAR(100),
+  assigned_id_number VARCHAR(100),
   is_id_verified BOOLEAN DEFAULT false,
 
-  -- Personal Information (New, Renewal, Lost ID):
+  -- Personal Information:
   first_name VARCHAR(150),
   middle_name VARCHAR(150),
   last_name VARCHAR(150),
@@ -96,31 +96,21 @@ CREATE TABLE IF NOT EXISTS solo_parent_applications (
   address_city_municipality VARCHAR(255),
   qcid_number VARCHAR(100),
   email VARCHAR(150),
+  applicant_photo TEXT,
+  photo_url TEXT,
+  blood_type VARCHAR(20),
 
-  -- Documents & Workflow:
-  required_document_ids JSONB DEFAULT '[]'::jsonb,
-  uploaded_documents JSONB DEFAULT '[]'::jsonb,
-  rejection_reason TEXT,
-  admin_notes TEXT,
-  approved_by VARCHAR(100),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+  -- Emergency Information:
+  emergency_first_name VARCHAR(100),
+  emergency_last_name VARCHAR(100),
+  emergency_name VARCHAR(200),
+  emergency_contact_no VARCHAR(50),
+  emergency_relationship VARCHAR(100),
+  emergency_address TEXT,
 
-CREATE INDEX IF NOT EXISTS idx_solo_parent_user_id ON solo_parent_applications(user_id);
-CREATE INDEX IF NOT EXISTS idx_solo_parent_reference ON solo_parent_applications(reference_number);
-CREATE INDEX IF NOT EXISTS idx_solo_parent_status ON solo_parent_applications(application_status);
-
--- 5. Child Welfare Applications Table
-CREATE TABLE IF NOT EXISTS child_welfare_applications (
-  id SERIAL PRIMARY KEY,
-  reference_number VARCHAR(100) UNIQUE NOT NULL,
-  user_id VARCHAR(100) NOT NULL,
-  application_status VARCHAR(50) DEFAULT 'draft',
+  -- Child Welfare Specific Fields:
   category_id VARCHAR(100),
   category_title VARCHAR(255),
-  required_document_ids JSONB DEFAULT '[]'::jsonb,
-  uploaded_documents JSONB DEFAULT '[]'::jsonb,
   guardian_first_name VARCHAR(150),
   guardian_middle_name VARCHAR(150),
   guardian_last_name VARCHAR(150),
@@ -132,10 +122,6 @@ CREATE TABLE IF NOT EXISTS child_welfare_applications (
   guardian_contact_no VARCHAR(50),
   guardian_email VARCHAR(150),
   guardian_valid_id VARCHAR(100),
-  address_house_no VARCHAR(100),
-  address_street VARCHAR(255),
-  address_barangay VARCHAR(255),
-  address_city_municipality VARCHAR(255),
   child_name VARCHAR(255),
   child_sex VARCHAR(50),
   child_birthday VARCHAR(50),
@@ -165,19 +151,31 @@ CREATE TABLE IF NOT EXISTS child_welfare_applications (
   other_govt_assistance_received VARCHAR(50),
   other_govt_program TEXT,
   additional_info TEXT,
+
+  -- JSONB Form Data / Arrays:
+  form_data JSONB DEFAULT '{}'::jsonb,
+  family_members JSONB DEFAULT '[]'::jsonb,
+  extra_data JSONB DEFAULT '{}'::jsonb,
+
+  -- Documents & Workflow:
+  required_document_ids JSONB DEFAULT '[]'::jsonb,
+  uploaded_documents JSONB DEFAULT '[]'::jsonb,
   rejection_reason TEXT,
   admin_notes TEXT,
   approved_by VARCHAR(100),
   approved_amount VARCHAR(100),
+  is_archived BOOLEAN DEFAULT false,
+  archived_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_child_welfare_user_id ON child_welfare_applications(user_id);
-CREATE INDEX IF NOT EXISTS idx_child_welfare_reference ON child_welfare_applications(reference_number);
-CREATE INDEX IF NOT EXISTS idx_child_welfare_status ON child_welfare_applications(application_status);
+CREATE INDEX IF NOT EXISTS idx_solo_parent_user_id ON solo_parent_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_solo_parent_reference ON solo_parent_applications(reference_number);
+CREATE INDEX IF NOT EXISTS idx_solo_parent_status ON solo_parent_applications(application_status);
+CREATE INDEX IF NOT EXISTS idx_solo_parent_module ON solo_parent_applications(module_type);
 
--- 6. Appointments Table
+-- 5. Appointments Table
 CREATE TABLE IF NOT EXISTS appointments (
   id SERIAL PRIMARY KEY,
   reference_no VARCHAR(100) NOT NULL,

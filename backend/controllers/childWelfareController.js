@@ -213,7 +213,7 @@ async function getUniqueReferenceNumber(baseRef) {
   let candidate = clean;
   let attempt = 0;
   while (true) {
-    const existing = await db.query('SELECT id FROM child_welfare_applications WHERE reference_number = $1', [candidate]);
+    const existing = await db.query('SELECT id FROM solo_parent_applications WHERE reference_number = $1', [candidate]);
     if (existing.rows.length === 0) {
       return candidate;
     }
@@ -225,83 +225,7 @@ async function getUniqueReferenceNumber(baseRef) {
 let childColsInitialized = false;
 async function initChildWelfareColumns() {
   if (childColsInitialized) return;
-  const columnDefs = [
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_amount VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS uploaded_documents JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS form_data JSONB DEFAULT '{}'::jsonb",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_id VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS category_title VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS required_document_ids JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_first_name VARCHAR(150)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_middle_name VARCHAR(150)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_last_name VARCHAR(150)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_sex VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_date_of_birth VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_age INTEGER",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_civil_status VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_relationship_to_child VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_contact_no VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS guardian_valid_id VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_house_no VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_street VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_barangay VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS address_city_municipality VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_sex VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birthday VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_age INTEGER",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_daycare VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_birth_certificate VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_grade_level VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_school_address TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_enrollment_status VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_special_needs_specify TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS household_members VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS children_studying VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS monthly_household_income VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS main_source_income VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_financial_support TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_types JSONB DEFAULT '[]'::jsonb",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS support_other TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS primary_reason_for_assistance TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS specific_needs TEXT",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS estimated_amount_needed VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS urgency VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS child_living_arrangement VARCHAR(100)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_needing_assistance VARCHAR(10)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_children_count VARCHAR(50)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_assistance_received VARCHAR(10)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS other_govt_program VARCHAR(255)",
-    "ALTER TABLE child_welfare_applications ADD COLUMN IF NOT EXISTS additional_info TEXT",
-  ];
-
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS child_welfare_applications (
-        id SERIAL PRIMARY KEY,
-        reference_number VARCHAR(100) UNIQUE NOT NULL,
-        user_id VARCHAR(100) NOT NULL,
-        application_status VARCHAR(50) DEFAULT 'draft',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `);
-  } catch (err) {
-    console.warn('[Child Welfare Table Init]:', err.message);
-  }
-
-  for (const colQuery of columnDefs) {
-    try {
-      await db.query(colQuery);
-    } catch {}
-  }
+  childColsInitialized = true;
 }
 initChildWelfareColumns();
 
@@ -314,7 +238,7 @@ exports.createApplication = async (req, res) => {
     // Clean up any unsubmitted draft records so they never block new attempts
     if (userId && String(userId) !== '0') {
       await db.query(
-        `DELETE FROM child_welfare_applications WHERE user_id = $1 AND application_status = 'draft'`,
+        `DELETE FROM solo_parent_applications WHERE user_id = $1 AND application_status = 'draft' AND module_type = 'CHILD_WELFARE'`,
         [String(userId)]
       ).catch(() => {});
     }
@@ -386,8 +310,8 @@ exports.createApplication = async (req, res) => {
     const initialDocs = applicationData?.documents || req.body.documents || applicationData?.uploadedDocuments || [];
 
     const result = await db.query(
-      `INSERT INTO child_welfare_applications (
-        reference_number, user_id, application_status, category_id, category_title, required_document_ids,
+      `INSERT INTO solo_parent_applications (
+        reference_number, user_id, module_type, application_status, category_id, category_title, required_document_ids,
         guardian_first_name, guardian_middle_name, guardian_last_name, guardian_sex, guardian_date_of_birth,
         guardian_age, guardian_civil_status, guardian_relationship_to_child, guardian_contact_no,
         guardian_email, guardian_valid_id,
@@ -401,7 +325,7 @@ exports.createApplication = async (req, res) => {
         child_living_arrangement, other_children_needing_assistance, other_children_count,
         other_govt_assistance_received, other_govt_program, additional_info, form_data, uploaded_documents
       ) VALUES (
-        $1, $2, $3, $4, $5, $6,
+        $1, $2, 'CHILD_WELFARE', $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
         $12, $13, $14, $15,
         $16, $17,
@@ -486,7 +410,9 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     const appResult = await db.query(
-      'SELECT id, uploaded_documents, extra_data, form_data FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      `SELECT id, uploaded_documents, extra_data, form_data 
+       FROM solo_parent_applications 
+       WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
     if (appResult.rows.length === 0) {
@@ -532,7 +458,7 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(uploadedDocuments), realAppId]
     );
 
@@ -541,7 +467,7 @@ exports.uploadDocuments = async (req, res) => {
     if (isPhotoDoc && photoFile && photoFile.fileUrl) {
       try {
         await db.query(
-          `UPDATE child_welfare_applications 
+          `UPDATE solo_parent_applications 
            SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), '{applicantPhoto}', to_jsonb($1::text), true)
            WHERE id = $2`,
           [photoFile.fileUrl, realAppId]
@@ -563,7 +489,9 @@ exports.removeDocument = async (req, res) => {
     const { applicationId, documentId, filename } = req.params;
 
     const appResult = await db.query(
-      'SELECT id, uploaded_documents FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      `SELECT id, uploaded_documents 
+       FROM solo_parent_applications 
+       WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
     if (appResult.rows.length === 0) {
@@ -590,7 +518,7 @@ exports.removeDocument = async (req, res) => {
         }
 
         await db.query(
-          'UPDATE child_welfare_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
+          'UPDATE solo_parent_applications SET uploaded_documents = $1, updated_at = NOW() WHERE id = $2',
           [JSON.stringify(uploadedDocuments), realAppId]
         );
 
@@ -612,7 +540,9 @@ exports.submitApplication = async (req, res) => {
     const { applicationId } = req.params;
 
     const appResult = await db.query(
-      'SELECT id, reference_number FROM child_welfare_applications WHERE CAST(id AS TEXT) = $1 OR reference_number = $1',
+      `SELECT id, reference_number 
+       FROM solo_parent_applications 
+       WHERE module_type = 'CHILD_WELFARE' AND (CAST(id AS TEXT) = $1 OR reference_number = $1)`,
       [String(applicationId)]
     );
     if (appResult.rows.length === 0) {
@@ -623,7 +553,7 @@ exports.submitApplication = async (req, res) => {
     const application = appResult.rows[0];
 
     await db.query(
-      `UPDATE child_welfare_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
+      `UPDATE solo_parent_applications SET application_status = 'pending', updated_at = NOW() WHERE id = $1`,
       [realAppId]
     );
 
@@ -639,7 +569,10 @@ exports.submitApplication = async (req, res) => {
 exports.getApplicationByReference = async (req, res) => {
   try {
     const { referenceNumber } = req.params;
-    const result = await db.query('SELECT * FROM child_welfare_applications WHERE reference_number = $1', [referenceNumber]);
+    const result = await db.query(
+      `SELECT * FROM solo_parent_applications WHERE reference_number = $1 AND module_type = 'CHILD_WELFARE'`,
+      [referenceNumber]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -703,7 +636,9 @@ exports.getUserApplications = async (req, res) => {
     }
 
     const result = await db.query(
-      `SELECT * FROM child_welfare_applications WHERE ${orClauses.join(' OR ')} ORDER BY created_at DESC`,
+      `SELECT * FROM solo_parent_applications 
+       WHERE module_type = 'CHILD_WELFARE' AND (${orClauses.join(' OR ')}) 
+       ORDER BY created_at DESC`,
       params
     );
     const cleanRows = (result.rows || []).map(sanitizeAppRow);
@@ -731,12 +666,12 @@ exports.getAllApplications = async (req, res) => {
       });
     }
 
-    let query = 'SELECT * FROM child_welfare_applications';
+    let query = `SELECT * FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`;
     const params = [];
 
     if (status && status !== 'all') {
       params.push(status);
-      query += ` WHERE application_status = $${params.length}`;
+      query += ` AND application_status = $${params.length}`;
     }
 
     query += ' ORDER BY created_at DESC';
@@ -747,10 +682,12 @@ exports.getAllApplications = async (req, res) => {
 
     const result = await db.query(query, params);
 
-    const countParams = (status && status !== 'all') ? [status] : [];
-    const countQuery = (status && status !== 'all')
-      ? 'SELECT COUNT(*) FROM child_welfare_applications WHERE application_status = $1'
-      : 'SELECT COUNT(*) FROM child_welfare_applications';
+    const countParams = [];
+    let countQuery = `SELECT COUNT(*) FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`;
+    if (status && status !== 'all') {
+      countParams.push(status);
+      countQuery += ` AND application_status = $${countParams.length}`;
+    }
     const countResult = await db.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count, 10);
 
@@ -776,7 +713,10 @@ exports.getAllApplications = async (req, res) => {
 exports.getApplicationById = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    const result = await db.query('SELECT * FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const result = await db.query(
+      `SELECT * FROM solo_parent_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
+      [applicationId]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -789,7 +729,6 @@ exports.getApplicationById = async (req, res) => {
 // Update application status (admin) — may approved_amount para dito
 exports.updateApplicationStatus = async (req, res) => {
   try {
-    await initChildWelfareColumns();
     const { applicationId } = req.params;
     const { status, adminNotes, rejectionReason, approvedAmount, referenceNumber, reference_number } = req.body;
 
@@ -806,14 +745,15 @@ exports.updateApplicationStatus = async (req, res) => {
 
     try {
       const q = await db.query(
-        `UPDATE child_welfare_applications
+        `UPDATE solo_parent_applications
          SET application_status = $1,
              admin_notes = COALESCE($2, admin_notes),
              rejection_reason = $3,
              approved_by = $4,
              approved_amount = $5,
              updated_at = NOW()
-         WHERE reference_number = $6
+         WHERE module_type = 'CHILD_WELFARE' AND (
+               reference_number = $6
             OR reference_number = $7
             OR reference_number = $8
             OR id::text = $6
@@ -821,6 +761,7 @@ exports.updateApplicationStatus = async (req, res) => {
             OR LOWER(reference_number) = LOWER($6)
             OR LOWER(reference_number) = LOWER($7)
             OR LOWER(reference_number) = LOWER($8)
+         )
          RETURNING *`,
         [
           status,
@@ -840,15 +781,17 @@ exports.updateApplicationStatus = async (req, res) => {
       console.warn('[DB Error] Child Welfare update failed, trying fallback:', dbErr.message);
       try {
         const fallbackQ = await db.query(
-          `UPDATE child_welfare_applications
+          `UPDATE solo_parent_applications
            SET application_status = $1, updated_at = NOW()
-           WHERE reference_number = $2
+           WHERE module_type = 'CHILD_WELFARE' AND (
+                 reference_number = $2
               OR reference_number = $3
               OR reference_number = $4
               OR id::text = $2
               OR id::text = $4
               OR LOWER(reference_number) = LOWER($2)
               OR LOWER(reference_number) = LOWER($3)
+           )
            RETURNING *`,
           [status, applicationId, targetRef, cleanId]
         );
@@ -863,13 +806,15 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!app) {
       try {
         const broadQ = await db.query(
-          `UPDATE child_welfare_applications
+          `UPDATE solo_parent_applications
            SET application_status = $1,
                approved_amount = COALESCE($2, approved_amount),
                updated_at = NOW()
-           WHERE reference_number ILIKE '%' || $3 || '%'
+           WHERE module_type = 'CHILD_WELFARE' AND (
+                 reference_number ILIKE '%' || $3 || '%'
               OR form_data->>'referenceNumber' = $3
               OR guardian_email = $3
+           )
            RETURNING *`,
           [status, finalAmount, cleanId || targetRef]
         );
@@ -966,14 +911,17 @@ exports.updateApplicationStatus = async (req, res) => {
 exports.cancelApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    const appResult = await db.query('SELECT * FROM child_welfare_applications WHERE id = $1', [applicationId]);
+    const appResult = await db.query(
+      `SELECT * FROM solo_parent_applications WHERE id = $1 AND module_type = 'CHILD_WELFARE'`,
+      [applicationId]
+    );
     if (appResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
     if (appResult.rows[0].application_status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Only pending applications can be cancelled' });
     }
-    await db.query(`UPDATE child_welfare_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
+    await db.query(`UPDATE solo_parent_applications SET application_status = 'cancelled', updated_at = NOW() WHERE id = $1`, [applicationId]);
     invalidateChildCache();
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });
   } catch (error) {
@@ -986,13 +934,16 @@ exports.deleteApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
-      await db.query('DELETE FROM child_welfare_applications');
+      await db.query(`DELETE FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`);
       invalidateChildCache();
       return res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^CW-/, '').trim();
     await db.query(
-      'DELETE FROM child_welfare_applications WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 RETURNING id',
+      `DELETE FROM solo_parent_applications 
+       WHERE module_type = 'CHILD_WELFARE' 
+         AND (id::text = $1 OR reference_number = $1 OR reference_number = $2) 
+       RETURNING id`,
       [cleanId, applicationId]
     );
     invalidateChildCache();
@@ -1006,7 +957,7 @@ exports.deleteApplication = async (req, res) => {
 // Clear all child welfare applications (admin test cleanup)
 exports.clearApplications = async (req, res) => {
   try {
-    await db.query('DELETE FROM child_welfare_applications');
+    await db.query(`DELETE FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE'`);
     invalidateChildCache();
     res.status(200).json({ success: true, message: 'All Child Welfare applications cleared successfully' });
   } catch (error) {

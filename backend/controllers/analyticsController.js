@@ -19,8 +19,8 @@ exports.getAnalyticsOverview = async (req, res) => {
       db.query(`SELECT id, status, created_at, category, type FROM pwd_senior_applications WHERE (is_archived IS NOT true)`).catch(() => 
         db.query(`SELECT id, status, created_at, category, type FROM pwd_senior_applications`).catch(() => ({ rows: [] }))
       ),
-      db.query(`SELECT id, application_status as status, created_at, application_type FROM solo_parent_applications WHERE application_status != 'draft' AND (is_archived IS NOT true)`).catch(() => ({ rows: [] })),
-      db.query(`SELECT id, application_status as status, created_at FROM child_welfare_applications WHERE application_status != 'draft' AND (is_archived IS NOT true)`).catch(() => ({ rows: [] })),
+      db.query(`SELECT id, application_status as status, created_at, application_type FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND application_status != 'draft' AND (is_archived IS NOT true)`).catch(() => ({ rows: [] })),
+      db.query(`SELECT id, application_status as status, created_at FROM solo_parent_applications WHERE module_type = 'CHILD_WELFARE' AND application_status != 'draft' AND (is_archived IS NOT true)`).catch(() => ({ rows: [] })),
       db.query(`SELECT id, application_status as status, created_at FROM livelihood_applications WHERE (is_archived IS NOT true)`).catch(() => ({ rows: [] })),
       db.query(`SELECT id, fixed_amount, assistance_type, status, date_approved, released_date, created_at FROM financial_aid_disbursements WHERE (is_archived IS NOT true)`).catch(() => 
         db.query(`SELECT id, fixed_amount, assistance_type, status, date_approved, released_date, created_at FROM financial_aid_disbursements`).catch(() => ({ rows: [] }))

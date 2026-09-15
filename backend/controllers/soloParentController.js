@@ -781,7 +781,8 @@ exports.getUserApplications = async (req, res) => {
     const result = await db.query(
       `SELECT *
        FROM solo_parent_applications
-       WHERE ${orClauses.join(' OR ')}
+       WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+         AND (${orClauses.join(' OR ')})
        ORDER BY id DESC`,
       params
     );
@@ -817,14 +818,14 @@ exports.getAllApplications = async (req, res) => {
       });
     }
 
-    let query = 'SELECT * FROM solo_parent_applications';
+    let query = `SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`;
     const params = [];
 
     if (status && status !== 'all') {
       params.push(status);
-      query += ` WHERE application_status = $${params.length}`;
+      query += ` AND application_status = $${params.length}`;
     } else {
-      query += ` WHERE application_status != 'draft'`;
+      query += ` AND application_status != 'draft'`;
     }
 
     query += ' ORDER BY id DESC';
@@ -839,7 +840,7 @@ exports.getAllApplications = async (req, res) => {
       rows = result.rows || [];
     } catch (dbErr) {
       console.warn('[getAllApplications] Query warning, fallback to simple select:', dbErr.message);
-      const simple = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 200');
+      const simple = await db.query(`SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
       rows = simple.rows || [];
     }
 
@@ -862,7 +863,7 @@ exports.getAllApplications = async (req, res) => {
   } catch (error) {
     console.error('Error fetching applications:', error);
     try {
-      const emergency = await db.query('SELECT * FROM solo_parent_applications ORDER BY id DESC LIMIT 200');
+      const emergency = await db.query(`SELECT * FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) ORDER BY id DESC LIMIT 200`);
       const cleanRows = (emergency.rows || []).map(sanitizeAppRow);
       return res.status(200).json({
         success: true,
@@ -1090,7 +1091,8 @@ exports.checkEligibility = async (req, res) => {
 
     const pendingQuery = `
       SELECT * FROM solo_parent_applications
-      WHERE (${orClauses.join(' OR ')})
+      WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+      AND (${orClauses.join(' OR ')})
       AND application_status = 'pending'
       AND (
         application_type = $${typeParamIdx}
@@ -1119,7 +1121,8 @@ exports.checkEligibility = async (req, res) => {
     if (req.query.reapply !== 'true') {
       const approvedQuery = `
         SELECT * FROM solo_parent_applications
-        WHERE (${orClauses.join(' OR ')})
+        WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+        AND (${orClauses.join(' OR ')})
         AND application_status IN ('approved', 'completed', 'for_release', 'active')
         AND (
           $${typeParamIdx} = 'new'
@@ -1146,7 +1149,8 @@ exports.checkEligibility = async (req, res) => {
       // 3. Check if user has a rejected application for this type (if not reapplying)
       const rejectedQuery = `
         SELECT * FROM solo_parent_applications
-        WHERE (${orClauses.join(' OR ')})
+        WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+        AND (${orClauses.join(' OR ')})
         AND application_status = 'rejected'
         AND (
           $${typeParamIdx} = 'new'
@@ -1252,13 +1256,16 @@ exports.deleteApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     if (applicationId === 'clear-all' || applicationId === 'clear') {
-      await db.query('DELETE FROM solo_parent_applications');
+      await db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
       invalidateSoloCache();
       return res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
     }
     const cleanId = String(applicationId).replace(/^SP-/, '').trim();
     await db.query(
-      'DELETE FROM solo_parent_applications WHERE id::text = $1 OR reference_number = $1 OR reference_number = $2 RETURNING id',
+      `DELETE FROM solo_parent_applications 
+       WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+         AND (id::text = $1 OR reference_number = $1 OR reference_number = $2) 
+       RETURNING id`,
       [cleanId, applicationId]
     );
     invalidateSoloCache();
@@ -1272,7 +1279,7 @@ exports.deleteApplication = async (req, res) => {
 // Clear all solo parent applications (admin test cleanup)
 exports.clearApplications = async (req, res) => {
   try {
-    await db.query('DELETE FROM solo_parent_applications');
+    await db.query(`DELETE FROM solo_parent_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)`);
     invalidateSoloCache();
     res.status(200).json({ success: true, message: 'All Solo Parent applications cleared successfully' });
   } catch (error) {
@@ -1295,7 +1302,8 @@ exports.verifySoloParentId = async (req, res) => {
     // 1. Search in DB for existing application
     const query = `
       SELECT * FROM solo_parent_applications
-      WHERE (
+      WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL)
+      AND (
         solo_parent_id_number = $1
         OR assigned_id_number = $1
         OR reference_number = $1

@@ -82,22 +82,6 @@ exports.archiveApplication = async (req, res) => {
       }
     }
 
-    // 4. Child Welfare
-    if (catUpper.includes('CHILD') || catUpper.includes('WELFARE') || !updatedInDb) {
-      try {
-        const q = await db.query(
-          `UPDATE child_welfare_applications
-           SET is_archived = true, archived_at = NOW()
-           WHERE id::text = $1 OR reference_number = $1 OR id::text = $2
-           RETURNING id, reference_number`,
-          [targetId, targetRef]
-        );
-        if (q.rowCount > 0) updatedInDb = true;
-      } catch (e) {
-        console.warn('Child welfare soft delete query failed:', e.message);
-      }
-    }
-
     // 5. Livelihood
     if (catUpper.includes('LIVELIHOOD') || !updatedInDb) {
       try {
@@ -300,18 +284,6 @@ exports.restoreApplication = async (req, res) => {
       console.warn('Solo parent restore query failed:', e.message);
     }
 
-    // 4. Child Welfare
-    try {
-      await db.query(
-        `UPDATE child_welfare_applications
-         SET is_archived = false, archived_at = NULL
-         WHERE id::text = $1 OR reference_number = $1 OR id::text = $2`,
-        [targetId, targetRef]
-      );
-    } catch (e) {
-      console.warn('Child welfare restore query failed:', e.message);
-    }
-
     // 5. Livelihood
     try {
       await db.query(
@@ -405,14 +377,6 @@ exports.permanentDeleteApplication = async (req, res) => {
       await db.query(
         `DELETE FROM solo_parent_applications
          WHERE id::text = $1 OR reference_number = $1 OR qcid_number = $1 OR id::text = $2`,
-        [targetId, targetRef]
-      );
-    } catch (e) {}
-
-    try {
-      await db.query(
-        `DELETE FROM child_welfare_applications
-         WHERE id::text = $1 OR reference_number = $1 OR id::text = $2`,
         [targetId, targetRef]
       );
     } catch (e) {}
