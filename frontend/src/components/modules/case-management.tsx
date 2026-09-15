@@ -196,10 +196,12 @@ function authHeaders(): Record<string, string> {
 interface CaseDetailsModalProps {
   c: CaseRecord
   onClose: () => void
+  onUpdateStatus?: (caseNumber: string, newStatus: CaseStatus) => Promise<void>
 }
 
-function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
+function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "appointment" | "financial" | "referrals" | "monitoring" | "timeline">("overview")
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
   const referrals = c.referrals || []
   const monitoringLogs = c.monitoringLogs || []
@@ -655,11 +657,36 @@ function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-3 shrink-0">
+          <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500">
-              Current Case Status: <strong className="text-slate-800 uppercase">{c.status}</strong>
+              Case Status:
             </span>
+            {onUpdateStatus ? (
+              <select
+                disabled={isUpdatingStatus}
+                value={c.status}
+                onChange={async (e) => {
+                  const val = e.target.value as CaseStatus
+                  try {
+                    setIsUpdatingStatus(true)
+                    await onUpdateStatus(c.caseNumber, val)
+                  } catch (err) {
+                    console.error("Failed to update status:", err)
+                  } finally {
+                    setIsUpdatingStatus(false)
+                  }
+                }}
+                className="px-2.5 py-1 text-xs font-bold border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="open">OPEN</option>
+                <option value="monitoring">UNDER MONITORING</option>
+                <option value="referred">REFERRED</option>
+                <option value="closed">CLOSED</option>
+              </select>
+            ) : (
+              <span className="text-xs font-bold text-slate-800 uppercase">{c.status}</span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -1103,6 +1130,7 @@ export default function CaseManagement() {
         <CaseDetailsModal
           c={activeCase}
           onClose={() => setActiveCase(null)}
+          onUpdateStatus={handleUpdateStatus}
         />
       )}
     </div>
