@@ -13,8 +13,8 @@ router.post('/verify-otp', botProtection, authController.verifyOtp);
 // POST /api/auth/register (Bot Protection + Honeypot verification)
 router.post('/register', botProtection, authController.register);
 
-// POST /api/auth/login (Rate limit & brute-force + Bot Protection)
-router.post('/login', loginRateLimiter, botProtection, authController.login);
+// POST /api/auth/login (Rate limit & brute-force protection)
+router.post('/login', loginRateLimiter, authController.login);
 
 // GET /api/auth/lockout-status
 router.get('/lockout-status', authController.getLockoutStatus);

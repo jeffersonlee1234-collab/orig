@@ -9,19 +9,7 @@ module.exports = function botProtection(req, res, next) {
   try {
     const body = req.body || {};
 
-    // 1. Honeypot Trap Check:
-    // Any value in invisible honeypot fields indicates an automated bot
-    const honeypotFields = ['website_url_hp', 'bot_trap_field', 'address_confirm_hidden'];
-    for (const field of honeypotFields) {
-      if (body[field] && String(body[field]).trim().length > 0) {
-        console.warn(`[BOT PROTECTION] Blocked automated bot submission. Honeypot field "${field}" was filled.`);
-        return res.status(400).json({
-          success: false,
-          isBotBlocked: true,
-          message: 'Automated submission detected. Request rejected.',
-        });
-      }
-    }
+    // 1. Honeypot check disabled to prevent false positives with browser autofill (Chrome, Edge, Safari, Password managers)
 
     // 2. Submission Speed Velocity (Only checked if interactionTimeMs is provided)
     if (typeof body.interactionTimeMs === 'number' && body.interactionTimeMs > 0) {
