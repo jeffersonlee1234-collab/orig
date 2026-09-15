@@ -30,17 +30,8 @@ async function ensureTables() {
           ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
           ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
-          DO $$
-          BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_notification_state') THEN
-              INSERT INTO user_notifications (user_id, notif_id, is_read, is_dismissed, updated_at)
-              SELECT user_identifier, notif_id, is_read, is_dismissed, updated_at
-              FROM user_notification_state
-              ON CONFLICT DO NOTHING;
-              
-              DROP TABLE IF EXISTS user_notification_state CASCADE;
-            END IF;
-          END $$;
+          -- Unconditionally drop duplicate table
+          DROP TABLE IF EXISTS user_notification_state CASCADE;
 
           CREATE INDEX IF NOT EXISTS idx_user_notif_user_id ON user_notifications(user_id);
           CREATE INDEX IF NOT EXISTS idx_user_notif_notif_id ON user_notifications(notif_id);

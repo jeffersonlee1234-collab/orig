@@ -128,6 +128,15 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+app.all('/api/admin/consolidate-notifications', async (req, res) => {
+  try {
+    await db.query('DROP TABLE IF EXISTS user_notification_state CASCADE');
+    res.json({ success: true, message: 'Table user_notification_state dropped successfully. Only user_notifications remains.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Disable HTTP caching for dynamic API routes to prevent mobile browser stale caching
 app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
