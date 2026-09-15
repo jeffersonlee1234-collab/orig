@@ -117,7 +117,7 @@ export interface CaseRecord {
 // Helpers & Tokens
 // =====================================================================================
 
-const programColors: Record<ModuleKey, string> = {
+const programColors: Record<string, string> = {
   AICS: "bg-blue-50 text-blue-700 border-blue-200",
   PWD: "bg-purple-50 text-purple-700 border-purple-200",
   "Senior Citizen": "bg-amber-50 text-amber-700 border-amber-200",
@@ -125,9 +125,16 @@ const programColors: Record<ModuleKey, string> = {
   "Child Welfare": "bg-emerald-50 text-emerald-700 border-emerald-200",
   Livelihood: "bg-teal-50 text-teal-700 border-teal-200",
   "Training Program": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "PWD & Senior Citizen": "bg-purple-50 text-purple-700 border-purple-200",
+  "Solo Parent & Child Welfare": "bg-rose-50 text-rose-700 border-rose-200",
 }
 
-const statusMeta: Record<CaseStatus, { label: string; chip: string; dot: string; icon: ReactElement }> = {
+function getProgramColor(program?: string) {
+  if (!program) return "bg-slate-50 text-slate-700 border-slate-200"
+  return programColors[program] || "bg-slate-50 text-slate-700 border-slate-200"
+}
+
+const statusMeta: Record<string, { label: string; chip: string; dot: string; icon: ReactElement }> = {
   open: {
     label: "OPEN",
     chip: "bg-blue-50 text-blue-700 border-blue-200",
@@ -154,10 +161,20 @@ const statusMeta: Record<CaseStatus, { label: string; chip: string; dot: string;
   },
 }
 
-const priorityMeta: Record<CasePriority, { label: string; chip: string }> = {
+function getStatusMeta(status?: string) {
+  const s = String(status || "open").toLowerCase()
+  return statusMeta[s] || statusMeta.open
+}
+
+const priorityMeta: Record<string, { label: string; chip: string }> = {
   high: { label: "HIGH", chip: "bg-red-100 text-red-700 border-red-200" },
   medium: { label: "MEDIUM", chip: "bg-amber-100 text-amber-700 border-amber-200" },
   low: { label: "LOW", chip: "bg-slate-100 text-slate-700 border-slate-200" },
+}
+
+function getPriorityMeta(priority?: string) {
+  const p = String(priority || "medium").toLowerCase()
+  return priorityMeta[p] || priorityMeta.medium
 }
 
 function formatDate(dateStr?: string) {
@@ -176,8 +193,6 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" }
 }
 
-
-
 // =====================================================================================
 // Case Details Modal Component
 // =====================================================================================
@@ -190,6 +205,10 @@ interface CaseDetailsModalProps {
 function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "appointment" | "financial" | "referrals" | "monitoring" | "timeline">("overview")
 
+  const referrals = c.referrals || []
+  const monitoringLogs = c.monitoringLogs || []
+  const timeline = c.timeline || []
+
   // Close on Escape key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -201,8 +220,9 @@ function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onClose])
 
-  const sm = statusMeta[c.status] || statusMeta.open
-  const pm = priorityMeta[c.priority] || priorityMeta.medium
+  const sm = getStatusMeta(c.status)
+  const pm = getPriorityMeta(c.priority)
+  const progColor = getProgramColor(c.linkedProgram)
 
   return (
     <div
@@ -220,7 +240,7 @@ function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
               <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-900 text-white">
                 {c.caseNumber}
               </span>
-              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${programColors[c.linkedProgram]}`}>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${progColor}`}>
                 {c.linkedProgram}
               </span>
               <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${sm.chip}`}>
@@ -250,10 +270,10 @@ function CaseDetailsModal({ c, onClose }: CaseDetailsModalProps) {
           {[
             { key: "overview", label: "Overview & Beneficiary", icon: <User className="h-3.5 w-3.5" /> },
             { key: "appointment", label: `Appointment ${c.linkedAppointment ? "✓" : ""}`, icon: <Calendar className="h-3.5 w-3.5" /> },
-            { key: "financial", label: `Financial Aid ${c.linkedFinancialAid ? `(₱${c.linkedFinancialAid.fixedAmount.toLocaleString()})` : ""}`, icon: <Wallet className="h-3.5 w-3.5" /> },
-            { key: "referrals", label: `Referrals (${c.referrals.length})`, icon: <Send className="h-3.5 w-3.5" /> },
-            { key: "monitoring", label: `Monitoring (${c.monitoringLogs.length})`, icon: <Activity className="h-3.5 w-3.5" /> },
-            { key: "timeline", label: `Case Timeline (${c.timeline.length})`, icon: <History className="h-3.5 w-3.5" /> },
+            { key: "financial", label: `Financial Aid ${c.linkedFinancialAid ? `(₱${(c.linkedFinancialAid.fixedAmount || 0).toLocaleString()})` : ""}`, icon: <Wallet className="h-3.5 w-3.5" /> },
+            { key: "referrals", label: `Referrals (${referrals.length})`, icon: <Send className="h-3.5 w-3.5" /> },
+            { key: "monitoring", label: `Monitoring (${monitoringLogs.length})`, icon: <Activity className="h-3.5 w-3.5" /> },
+            { key: "timeline", label: `Case Timeline (${timeline.length})`, icon: <History className="h-3.5 w-3.5" /> },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -973,8 +993,11 @@ export default function CaseManagement() {
           </div>
         ) : (
           filteredCases.map((c) => {
-            const sm = statusMeta[c.status] || statusMeta.open
-            const pm = priorityMeta[c.priority] || priorityMeta.medium
+            const sm = getStatusMeta(c.status)
+            const pm = getPriorityMeta(c.priority)
+            const progColor = getProgramColor(c.linkedProgram)
+            const referrals = c.referrals || []
+            const monitoringLogs = c.monitoringLogs || []
 
             return (
               <div
@@ -993,7 +1016,7 @@ export default function CaseManagement() {
                         <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
                           {c.caseNumber}
                         </span>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${programColors[c.linkedProgram]}`}>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${progColor}`}>
                           {c.linkedProgram}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${pm.chip}`}>
@@ -1042,23 +1065,23 @@ export default function CaseManagement() {
                         }`}
                       >
                         <Wallet className="h-3.5 w-3.5" />
-                        ₱{c.linkedFinancialAid.fixedAmount.toLocaleString()} ({c.linkedFinancialAid.status})
+                        ₱{(c.linkedFinancialAid.fixedAmount || 0).toLocaleString()} ({c.linkedFinancialAid.status})
                       </span>
                     ) : null}
 
                     {/* Referral count badge */}
-                    {c.referrals.length > 0 && (
+                    {referrals.length > 0 && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
                         <Send className="h-3 w-3" />
-                        {c.referrals.length} Ref
+                        {referrals.length} Ref
                       </span>
                     )}
 
                     {/* Monitoring count badge */}
-                    {c.monitoringLogs.length > 0 && (
+                    {monitoringLogs.length > 0 && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
                         <Activity className="h-3 w-3" />
-                        {c.monitoringLogs.length} Mon
+                        {monitoringLogs.length} Mon
                       </span>
                     )}
                   </div>

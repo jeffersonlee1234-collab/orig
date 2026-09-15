@@ -14,17 +14,19 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-const AICS = lazy(() => import("../modules/aics"))
-const PWDSeniorCitizen = lazy(() => import("../modules/pwd-senior-citizen"))
-const SoloParentChildWelfare = lazy(() => import("../modules/solo-parent-child-welfare"))
-const LivelihoodTraining = lazy(() => import("../modules/livelihood-training"))
-const Appointments = lazy(() => import("../modules/appointments"))
-const FinancialAidDisbursement = lazy(() => import("../modules/financial-aid-disbursement"))
-const Reports = lazy(() => import("../modules/reports"))
-const ActivityLog = lazy(() => import("../modules/activity-log"))
-const CaseManagement = lazy(() => import("../modules/case-management"))
-const BeneficiaryManagement = lazy(() => import("../modules/beneficiary-management"))
-const UserManagement = lazy(() => import("../modules/user-management"))
+import { lazyWithRetry } from "../../utils/lazyWithRetry"
+
+const AICS = lazyWithRetry(() => import("../modules/aics"))
+const PWDSeniorCitizen = lazyWithRetry(() => import("../modules/pwd-senior-citizen"))
+const SoloParentChildWelfare = lazyWithRetry(() => import("../modules/solo-parent-child-welfare"))
+const LivelihoodTraining = lazyWithRetry(() => import("../modules/livelihood-training"))
+const Appointments = lazyWithRetry(() => import("../modules/appointments"))
+const FinancialAidDisbursement = lazyWithRetry(() => import("../modules/financial-aid-disbursement"))
+const Reports = lazyWithRetry(() => import("../modules/reports"))
+const ActivityLog = lazyWithRetry(() => import("../modules/activity-log"))
+const CaseManagement = lazyWithRetry(() => import("../modules/case-management"))
+const BeneficiaryManagement = lazyWithRetry(() => import("../modules/beneficiary-management"))
+const UserManagement = lazyWithRetry(() => import("../modules/user-management"))
 
 export type ModuleRoute = {
   path: string

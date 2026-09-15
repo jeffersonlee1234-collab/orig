@@ -8,20 +8,23 @@ import { moduleRoutes, defaultModulePath } from "./components/layout/routes"
 import { LanguageProvider } from "./components/ui/language-context"
 import { SessionInactivityWatcher } from "./components/ui/session-inactivity-modal"
 
-// Lazy loaded Entry & Public pages
-const LandingPage = lazy(() => import("./pages/landing"))
-const Login = lazy(() => import("./components/entry-login/Login").then((m) => ({ default: m.Login })))
-const Register = lazy(() => import("./components/entry-login/Register").then((m) => ({ default: m.Register })))
-const ResetPassword = lazy(() => import("./components/entry-login/ResetPassword").then((m) => ({ default: m.ResetPassword })))
+import { lazyWithRetry } from "./utils/lazyWithRetry"
+import { ErrorBoundary } from "./components/ui/error-boundary"
+
+// Lazy loaded Entry & Public pages with auto-recovery on deploy updates
+const LandingPage = lazyWithRetry(() => import("./pages/landing"))
+const Login = lazyWithRetry(() => import("./components/entry-login/Login").then((m) => ({ default: m.Login })))
+const Register = lazyWithRetry(() => import("./components/entry-login/Register").then((m) => ({ default: m.Register })))
+const ResetPassword = lazyWithRetry(() => import("./components/entry-login/ResetPassword").then((m) => ({ default: m.ResetPassword })))
 
 // Lazy loaded Resident Portal pages
-const CitizenGuideHub = lazy(() => import("./components/user-portal/citizen-guide-hub"))
-const AICSUser = lazy(() => import("./components/user-portal/aics-user"))
-const ApplyPWDSenior = lazy(() => import("./components/user-portal/apply-pwd-senior"))
-const ApplySoloParent = lazy(() => import("./components/user-portal/apply-solo-parent"))
-const ApplyLivelihood = lazy(() => import("./components/user-portal/apply-livelihood"))
-const ApplyFinancialAid = lazy(() => import("./components/user-portal/apply-financial-aid"))
-const MyApplications = lazy(() => import("./components/user-portal/my-applications"))
+const CitizenGuideHub = lazyWithRetry(() => import("./components/user-portal/citizen-guide-hub"))
+const AICSUser = lazyWithRetry(() => import("./components/user-portal/aics-user"))
+const ApplyPWDSenior = lazyWithRetry(() => import("./components/user-portal/apply-pwd-senior"))
+const ApplySoloParent = lazyWithRetry(() => import("./components/user-portal/apply-solo-parent"))
+const ApplyLivelihood = lazyWithRetry(() => import("./components/user-portal/apply-livelihood"))
+const ApplyFinancialAid = lazyWithRetry(() => import("./components/user-portal/apply-financial-aid"))
+const MyApplications = lazyWithRetry(() => import("./components/user-portal/my-applications"))
 
 function PageLoadingFallback() {
   return (
@@ -90,60 +93,71 @@ export default function App() {
     <LanguageProvider>
       <BrowserRouter>
         <SessionInactivityWatcher />
-        <Suspense fallback={<PageLoadingFallback />}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={!auth.isAuthenticated ? <LandingPage /> : <Navigate to={auth.homePath} replace />} />
-            <Route path="/login" element={!auth.isAuthenticated ? <Login /> : <Navigate to={auth.homePath} replace />} />
-            <Route path="/register" element={!auth.isAuthenticated ? <Register /> : <Navigate to={auth.homePath} replace />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={!auth.isAuthenticated ? <LandingPage /> : <Navigate to={auth.homePath} replace />} />
+              <Route path="/login" element={!auth.isAuthenticated ? <Login /> : <Navigate to={auth.homePath} replace />} />
+              <Route path="/register" element={!auth.isAuthenticated ? <Register /> : <Navigate to={auth.homePath} replace />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Staff / Admin Routes */}
-            <Route
-              element={
-                auth.isStaff ? (
-                  <SocialServicesLayout />
-                ) : (
-                  <Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />
-                )
-              }
-            >
-              <Route index element={<Navigate to={defaultModulePath} replace />} />
-              {moduleRoutes.map((mod) => (
-                <Route
-                  key={mod.path}
-                  path={mod.path.slice(1)}
-                  element={<mod.Component />}
-                />
-              ))}
-            </Route>
+              {/* Staff / Admin Routes */}
+              <Route
+                element={
+                  auth.isStaff ? (
+                    <SocialServicesLayout />
+                  ) : (
+                    <Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />
+                  )
+                }
+              >
+                <Route index element={<Navigate to={defaultModulePath} replace />} />
+                {moduleRoutes.map((mod) => (
+                  <Route
+                    key={mod.path}
+                    path={mod.path.slice(1)}
+                    element={<mod.Component />}
+                  />
+                ))}
 
-            {/* Resident Routes */}
-            <Route
-              element={
-                auth.isResident ? (
-                  <UserLayout />
-                ) : (
-                  <Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />
-                )
-              }
-            >
-              <Route path="/portal" element={<Navigate to="/portal/overview" replace />} />
-              <Route path="/portal/overview" element={<CitizenGuideHub />} />
-              <Route path="/portal/guide" element={<CitizenGuideHub />} />
-              <Route path="/portal/aics" element={<AICSUser />} />
-              <Route path="/portal/apply-pwd-senior" element={<ApplyPWDSenior />} />
-              <Route path="/portal/apply-solo-parent" element={<ApplySoloParent />} />
-              <Route path="/portal/apply-livelihood" element={<ApplyLivelihood />} />
-              <Route path="/portal/apply-financial-aid" element={<ApplyFinancialAid />} />
-              <Route path="/portal/financial-aid" element={<ApplyFinancialAid />} />
-              <Route path="/portal/my-applications" element={<MyApplications />} />
-            </Route>
+                {/* Aliases for URL encoding / spaces */}
+                <Route path="case management" element={<Navigate to="/case-management" replace />} />
+                <Route path="case%20management" element={<Navigate to="/case-management" replace />} />
+                <Route path="modules/case-management" element={<Navigate to="/case-management" replace />} />
+              </Route>
 
-            {/* Fallback / Catch All */}
-            <Route path="*" element={<Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />} />
-          </Routes>
-        </Suspense>
+              {/* Resident Routes */}
+              <Route
+                element={
+                  auth.isResident ? (
+                    <UserLayout />
+                  ) : (
+                    <Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />
+                  )
+                }
+              >
+                <Route path="/portal" element={<Navigate to="/portal/overview" replace />} />
+                <Route path="/portal/overview" element={<CitizenGuideHub />} />
+                <Route path="/portal/guide" element={<CitizenGuideHub />} />
+                <Route path="/portal/aics" element={<AICSUser />} />
+                <Route path="/portal/apply-pwd-senior" element={<ApplyPWDSenior />} />
+                <Route path="/portal/apply-solo-parent" element={<ApplySoloParent />} />
+                <Route path="/portal/apply-livelihood" element={<ApplyLivelihood />} />
+                <Route path="/portal/apply-financial-aid" element={<ApplyFinancialAid />} />
+                <Route path="/portal/financial-aid" element={<ApplyFinancialAid />} />
+                <Route path="/portal/my-applications" element={<MyApplications />} />
+              </Route>
+
+              {/* URL with space fallback outside layout */}
+              <Route path="/case management" element={<Navigate to="/case-management" replace />} />
+              <Route path="/case%20management" element={<Navigate to="/case-management" replace />} />
+
+              {/* Fallback / Catch All */}
+              <Route path="*" element={<Navigate to={auth.isAuthenticated ? auth.homePath : "/login"} replace />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </LanguageProvider>
   )

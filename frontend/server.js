@@ -83,16 +83,19 @@ if (fs.existsSync(distPath)) {
     }
   }));
 
-  // 2. Handle missing / stale JS/CSS chunk requests from old browser sessions without throwing MIME error
+  // 2. Handle missing / stale JS/CSS chunk requests from old browser sessions without throwing MIME or invariant errors
   app.use('/assets', (req, res) => {
     if (req.path.endsWith('.js') || req.path.endsWith('.mjs')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       return res.status(200).send(`
         console.warn("[App Update] New version deployed. Reloading page...");
-        if (!sessionStorage.getItem("__auto_reloaded_for_build")) {
+        if (typeof window !== "undefined" && !sessionStorage.getItem("__auto_reloaded_for_build")) {
           sessionStorage.setItem("__auto_reloaded_for_build", "true");
           window.location.reload();
+        }
+        export default function StaleChunkFallback() {
+          return null;
         }
       `);
     }
