@@ -191,13 +191,6 @@ export default function TrainingProgramAdmin() {
               ? "Administrasyon sa Training Program ug Skills Registry"
               : "Pangasiwaan ng Training Program at Talaan ng Kasanayan"}
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {isEn
-              ? "Review resident applications, confirm training schedules, track live attendance, and monitor Certificates of Completion."
-              : isBis
-              ? "Susiha ang mga aplikasyon sa residente, kumpirmaha ang iskedyul, subaya ang attendance, ug bantayi ang Certificate of Completion."
-              : "Suriin ang mga aplikasyon ng residente, kumpirmahin ang mga iskedyul, subaybayan ang attendance, at subaybayan ang Certificate of Completion."}
-          </p>
         </div>
       </div>
 
