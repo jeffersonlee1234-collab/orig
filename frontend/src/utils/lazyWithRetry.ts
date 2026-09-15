@@ -1,4 +1,4 @@
-import { lazy, ComponentType } from "react"
+import { lazy, type ComponentType } from "react"
 
 export function lazyWithRetry<T extends ComponentType<any>>(
   componentImport: () => Promise<{ default: T } | any>

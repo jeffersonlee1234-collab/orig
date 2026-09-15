@@ -218,19 +218,24 @@ CREATE INDEX IF NOT EXISTS idx_disb_id ON financial_aid_disbursements(disburseme
 CREATE INDEX IF NOT EXISTS idx_disb_ref ON financial_aid_disbursements(application_ref);
 CREATE INDEX IF NOT EXISTS idx_disb_status ON financial_aid_disbursements(status);
 
--- 8. User Notifications Table
+-- 8. User Notifications Table (Single Consolidated Table)
 CREATE TABLE IF NOT EXISTS user_notifications (
   id SERIAL PRIMARY KEY,
-  user_id VARCHAR(100),
-  title VARCHAR(255) NOT NULL,
-  description TEXT NOT NULL,
+  user_id VARCHAR(150),
+  notif_id VARCHAR(255),
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
   is_read BOOLEAN DEFAULT false,
+  is_dismissed BOOLEAN DEFAULT false,
   application_ref VARCHAR(100),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_notifs_user ON user_notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_notifs_notif_id ON user_notifications(notif_id);
 CREATE INDEX IF NOT EXISTS idx_user_notifs_read ON user_notifications(is_read);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notifs_user_notif ON user_notifications(user_id, notif_id) WHERE notif_id IS NOT NULL;
 
 -- 9. Livelihood Applications Table
 CREATE TABLE IF NOT EXISTS livelihood_applications (

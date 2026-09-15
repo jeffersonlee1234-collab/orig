@@ -9,25 +9,43 @@ async function ensureTables() {
         await db.query(`
           CREATE TABLE IF NOT EXISTS user_notifications (
             id SERIAL PRIMARY KEY,
-            user_id VARCHAR(100),
-            title VARCHAR(255) NOT NULL,
-            description TEXT NOT NULL,
+            user_id VARCHAR(150),
+            notif_id VARCHAR(255),
+            title VARCHAR(255) NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
             is_read BOOLEAN DEFAULT false,
             is_dismissed BOOLEAN DEFAULT false,
             application_ref VARCHAR(100),
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-          );
-          CREATE TABLE IF NOT EXISTS user_notification_state (
-            id SERIAL PRIMARY KEY,
-            user_identifier VARCHAR(150) NOT NULL,
-            notif_id VARCHAR(255) NOT NULL,
-            is_read BOOLEAN DEFAULT false,
-            is_dismissed BOOLEAN DEFAULT false,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
-          CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_state_user_notif ON user_notification_state(user_identifier, notif_id);
+
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS user_id VARCHAR(150);
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS notif_id VARCHAR(255);
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT '';
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT false;
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS application_ref VARCHAR(100);
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+          ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+          DO $$
+          BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_notification_state') THEN
+              INSERT INTO user_notifications (user_id, notif_id, is_read, is_dismissed, updated_at)
+              SELECT user_identifier, notif_id, is_read, is_dismissed, updated_at
+              FROM user_notification_state
+              ON CONFLICT DO NOTHING;
+              
+              DROP TABLE IF EXISTS user_notification_state CASCADE;
+            END IF;
+          END $$;
+
           CREATE INDEX IF NOT EXISTS idx_user_notif_user_id ON user_notifications(user_id);
+          CREATE INDEX IF NOT EXISTS idx_user_notif_notif_id ON user_notifications(notif_id);
           CREATE INDEX IF NOT EXISTS idx_user_notif_app_ref ON user_notifications(application_ref);
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_user_notif ON user_notifications(user_id, notif_id) WHERE notif_id IS NOT NULL;
         `);
       } catch (err) {
         console.warn('Warning creating notification tables:', err.message);
@@ -222,8 +240,8 @@ exports.getNotifications = async (req, res) => {
       try {
         const stateRes = await db.query(
           `SELECT notif_id, is_read, is_dismissed, updated_at 
-           FROM user_notification_state 
-           WHERE user_identifier = ANY($1::text[])`,
+           FROM user_notifications 
+           WHERE user_id = ANY($1::text[]) AND notif_id IS NOT NULL`,
           [identifiers]
         );
         stateRes.rows.forEach((r) => {
@@ -258,17 +276,18 @@ exports.getNotifications = async (req, res) => {
 
     // 2. Fetch direct user_notifications
     try {
-      let query = `SELECT * FROM user_notifications ORDER BY created_at DESC LIMIT 50`;
+      let query = `SELECT * FROM user_notifications WHERE (notif_id IS NULL OR notif_id NOT LIKE '__ALL__') ORDER BY created_at DESC LIMIT 50`;
       let params = [];
       if (identifiers.length > 0) {
         query = `SELECT * FROM user_notifications 
-                 WHERE COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[])
+                 WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[]))
+                   AND (notif_id IS NULL OR notif_id NOT LIKE '__ALL__')
                  ORDER BY created_at DESC LIMIT 50`;
         params = [identifiers];
       }
       const directRes = await db.query(query, params);
       directRes.rows.forEach((r) => {
-        const notifId = `db-notif-${r.id}`;
+        const notifId = r.notif_id || `db-notif-${r.id}`;
         if (!isItemDismissed(notifId, r.created_at) && !r.is_dismissed) {
           items.push({
             id: notifId,
@@ -733,7 +752,7 @@ exports.markAsRead = async (req, res) => {
     if (id && id.startsWith('db-notif-')) {
       const dbId = id.replace('db-notif-', '');
       try {
-        await db.query(`UPDATE user_notifications SET is_read = true WHERE id::text = $1`, [dbId]);
+        await db.query(`UPDATE user_notifications SET is_read = true, updated_at = NOW() WHERE id::text = $1`, [dbId]);
       } catch (_) {}
     }
 
@@ -741,21 +760,21 @@ exports.markAsRead = async (req, res) => {
     for (const ident of targetIdentifiers) {
       try {
         await db.query(
-          `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at)
-           VALUES ($1, $2, true, false, NOW())
-           ON CONFLICT (user_identifier, notif_id)
+          `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at)
+           VALUES ($1, $2, '', '', true, false, NOW())
+           ON CONFLICT (user_id, notif_id) WHERE notif_id IS NOT NULL
            DO UPDATE SET is_read = true, updated_at = NOW()`,
           [ident, id]
         );
       } catch (insertErr) {
         try {
           const upd = await db.query(
-            `UPDATE user_notification_state SET is_read = true, updated_at = NOW() WHERE user_identifier = $1 AND notif_id = $2`,
+            `UPDATE user_notifications SET is_read = true, updated_at = NOW() WHERE user_id = $1 AND notif_id = $2`,
             [ident, id]
           );
           if (upd.rowCount === 0) {
             await db.query(
-              `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at) VALUES ($1, $2, true, false, NOW())`,
+              `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at) VALUES ($1, $2, '', '', true, false, NOW())`,
               [ident, id]
             );
           }
@@ -778,28 +797,38 @@ exports.markAllAsRead = async (req, res) => {
     const primaryIdent = identifiers[0] || 'default_user';
     const targetIdentifiers = identifiers.length > 0 ? identifiers : [primaryIdent];
 
+    if (identifiers.length > 0) {
+      try {
+        await db.query(
+          `UPDATE user_notifications SET is_read = true, updated_at = NOW()
+           WHERE COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[])`,
+          [identifiers]
+        );
+      } catch (_) {}
+    }
+
     if (Array.isArray(notifIds) && notifIds.length > 0) {
       for (const notifId of notifIds) {
         if (notifId && notifId.startsWith('db-notif-')) {
           const dbId = notifId.replace('db-notif-', '');
           try {
-            await db.query(`UPDATE user_notifications SET is_read = true WHERE id::text = $1`, [dbId]);
+            await db.query(`UPDATE user_notifications SET is_read = true, updated_at = NOW() WHERE id::text = $1`, [dbId]);
           } catch (_) {}
         }
 
         for (const ident of targetIdentifiers) {
           try {
             await db.query(
-              `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at)
-               VALUES ($1, $2, true, false, NOW())
-               ON CONFLICT (user_identifier, notif_id)
+              `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at)
+               VALUES ($1, $2, '', '', true, false, NOW())
+               ON CONFLICT (user_id, notif_id) WHERE notif_id IS NOT NULL
                DO UPDATE SET is_read = true, updated_at = NOW()`,
               [ident, notifId]
             );
           } catch (_) {
             try {
               await db.query(
-                `UPDATE user_notification_state SET is_read = true, updated_at = NOW() WHERE user_identifier = $1 AND notif_id = $2`,
+                `UPDATE user_notifications SET is_read = true, updated_at = NOW() WHERE user_id = $1 AND notif_id = $2`,
                 [ident, notifId]
               );
             } catch (_) {}
@@ -825,7 +854,7 @@ exports.dismissNotification = async (req, res) => {
     if (id && id.startsWith('db-notif-')) {
       const dbId = id.replace('db-notif-', '');
       try {
-        await db.query(`UPDATE user_notifications SET is_dismissed = true WHERE id::text = $1`, [dbId]);
+        await db.query(`UPDATE user_notifications SET is_dismissed = true, updated_at = NOW() WHERE id::text = $1`, [dbId]);
       } catch (_) {}
     }
 
@@ -833,21 +862,21 @@ exports.dismissNotification = async (req, res) => {
     for (const ident of targetIdentifiers) {
       try {
         await db.query(
-          `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at)
-           VALUES ($1, $2, true, true, NOW())
-           ON CONFLICT (user_identifier, notif_id)
+          `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at)
+           VALUES ($1, $2, '', '', true, true, NOW())
+           ON CONFLICT (user_id, notif_id) WHERE notif_id IS NOT NULL
            DO UPDATE SET is_dismissed = true, updated_at = NOW()`,
           [ident, id]
         );
       } catch (insertErr) {
         try {
           const upd = await db.query(
-            `UPDATE user_notification_state SET is_dismissed = true, updated_at = NOW() WHERE user_identifier = $1 AND notif_id = $2`,
+            `UPDATE user_notifications SET is_dismissed = true, updated_at = NOW() WHERE user_id = $1 AND notif_id = $2`,
             [ident, id]
           );
           if (upd.rowCount === 0) {
             await db.query(
-              `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at) VALUES ($1, $2, true, true, NOW())`,
+              `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at) VALUES ($1, $2, '', '', true, true, NOW())`,
               [ident, id]
             );
           }
@@ -874,16 +903,16 @@ exports.dismissAllNotifications = async (req, res) => {
     for (const ident of targetIdentifiers) {
       try {
         await db.query(
-          `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at)
-           VALUES ($1, '__ALL__', true, true, NOW())
-           ON CONFLICT (user_identifier, notif_id)
+          `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at)
+           VALUES ($1, '__ALL__', '', '', true, true, NOW())
+           ON CONFLICT (user_id, notif_id) WHERE notif_id IS NOT NULL
            DO UPDATE SET is_dismissed = true, updated_at = NOW()`,
           [ident]
         );
       } catch (_) {
         try {
           await db.query(
-            `UPDATE user_notification_state SET is_dismissed = true, updated_at = NOW() WHERE user_identifier = $1 AND notif_id = '__ALL__'`,
+            `UPDATE user_notifications SET is_dismissed = true, updated_at = NOW() WHERE user_id = $1 AND notif_id = '__ALL__'`,
             [ident]
           );
         } catch (_) {}
@@ -896,16 +925,16 @@ exports.dismissAllNotifications = async (req, res) => {
         if (notifId && notifId.startsWith('db-notif-')) {
           const dbId = notifId.replace('db-notif-', '');
           try {
-            await db.query(`UPDATE user_notifications SET is_dismissed = true WHERE id::text = $1`, [dbId]);
+            await db.query(`UPDATE user_notifications SET is_dismissed = true, updated_at = NOW() WHERE id::text = $1`, [dbId]);
           } catch (_) {}
         }
 
         for (const ident of targetIdentifiers) {
           try {
             await db.query(
-              `INSERT INTO user_notification_state (user_identifier, notif_id, is_read, is_dismissed, updated_at)
-               VALUES ($1, $2, true, true, NOW())
-               ON CONFLICT (user_identifier, notif_id)
+              `INSERT INTO user_notifications (user_id, notif_id, title, description, is_read, is_dismissed, updated_at)
+               VALUES ($1, $2, '', '', true, true, NOW())
+               ON CONFLICT (user_id, notif_id) WHERE notif_id IS NOT NULL
                DO UPDATE SET is_dismissed = true, updated_at = NOW()`,
               [ident, notifId]
             );
@@ -918,7 +947,7 @@ exports.dismissAllNotifications = async (req, res) => {
     if (identifiers.length > 0) {
       try {
         await db.query(
-          `UPDATE user_notifications SET is_dismissed = true 
+          `UPDATE user_notifications SET is_dismissed = true, updated_at = NOW() 
            WHERE COALESCE(user_id::text, '') = ANY($1::text[]) OR COALESCE(application_ref::text, '') = ANY($1::text[])`,
           [identifiers]
         );

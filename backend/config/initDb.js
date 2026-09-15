@@ -628,40 +628,47 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_training_qcid ON training_applications(qcid);
       CREATE INDEX IF NOT EXISTS idx_training_status ON training_applications(status);
 
-      -- Notifications Tables
+      -- Single Consolidated User Notifications Table
       CREATE TABLE IF NOT EXISTS user_notifications (
         id SERIAL PRIMARY KEY,
-        user_id VARCHAR(100),
-        title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
+        user_id VARCHAR(150),
+        notif_id VARCHAR(255),
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
         is_read BOOLEAN DEFAULT false,
         is_dismissed BOOLEAN DEFAULT false,
         application_ref VARCHAR(100),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
-      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS user_id VARCHAR(150);
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS notif_id VARCHAR(255);
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT '';
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
       ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
       ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT false;
       ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS application_ref VARCHAR(100);
       ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
-      CREATE TABLE IF NOT EXISTS user_notification_state (
-        id SERIAL PRIMARY KEY,
-        user_identifier VARCHAR(150) NOT NULL,
-        notif_id VARCHAR(255) NOT NULL,
-        is_read BOOLEAN DEFAULT false,
-        is_dismissed BOOLEAN DEFAULT false,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      -- Migrate any remaining data from user_notification_state into user_notifications and drop duplicate table
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_notification_state') THEN
+          INSERT INTO user_notifications (user_id, notif_id, is_read, is_dismissed, updated_at)
+          SELECT user_identifier, notif_id, is_read, is_dismissed, updated_at
+          FROM user_notification_state
+          ON CONFLICT DO NOTHING;
+          
+          DROP TABLE IF EXISTS user_notification_state CASCADE;
+        END IF;
+      END $$;
 
-      ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS user_identifier VARCHAR(150);
-      ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS notif_id VARCHAR(255);
-      ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
-      ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT false;
-      ALTER TABLE user_notification_state ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_state_user_notif ON user_notification_state(user_identifier, notif_id);
+      CREATE INDEX IF NOT EXISTS idx_user_notif_user_id ON user_notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_notif_notif_id ON user_notifications(notif_id);
+      CREATE INDEX IF NOT EXISTS idx_user_notif_app_ref ON user_notifications(application_ref);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notif_user_notif ON user_notifications(user_id, notif_id) WHERE notif_id IS NOT NULL;
 
       -- High-Performance Indexes for Query Speed Optimization
       CREATE INDEX IF NOT EXISTS idx_users_qcid ON users(qcid_number);

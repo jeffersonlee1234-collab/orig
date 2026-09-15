@@ -17,10 +17,6 @@ import {
   FileCheck,
   Activity,
   Info,
-  ShieldCheck,
-  Sparkles,
-  Layers,
-  Lock,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { subscribeToRealtimeChanges, notifyApplicationChange } from "../../utils/realtimeSync"

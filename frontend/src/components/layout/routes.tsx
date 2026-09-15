@@ -1,4 +1,3 @@
-import { lazy } from "react"
 import {
   ShieldAlert,
   Users,
