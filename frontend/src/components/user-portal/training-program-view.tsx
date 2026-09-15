@@ -23,6 +23,7 @@ import {
   Unlock,
   Target,
   Printer,
+  Plus,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
 import { getCurrentUserProfile, getLoggedInUserQcid, type LoggedInUserProfile } from "../../utils/userProfile"
@@ -330,11 +331,20 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
               (a: any) =>
                 a.qcid === userQcid ||
                 a.userId === userQcid ||
+                a.referenceNumber === userQcid ||
+                a.referenceNumber?.startsWith(`${userQcid}-`) ||
                 a.applicantInfo?.email?.toLowerCase() === profile.email?.toLowerCase()
             )
             setAllUserApplications(userApps)
             if (userApps.length > 0) {
-              setActiveApplication(userApps[0])
+              const ongoing = userApps.find((a: any) => a.status !== "rejected" && !a.attendance?.completed)
+              setActiveApplication((prev) => {
+                if (prev) {
+                  const refreshed = userApps.find((a: any) => String(a.id) === String(prev.id) || a.referenceNumber === prev.referenceNumber)
+                  if (refreshed) return refreshed
+                }
+                return ongoing || userApps[0]
+              })
               return
             }
           }
@@ -348,11 +358,20 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
           (a: any) =>
             a.qcid === userQcid ||
             a.userId === userQcid ||
+            a.referenceNumber === userQcid ||
+            a.referenceNumber?.startsWith(`${userQcid}-`) ||
             a.applicantInfo?.email?.toLowerCase() === profile.email?.toLowerCase()
         )
         setAllUserApplications(match)
         if (match.length > 0) {
-          setActiveApplication(match[0])
+          const ongoing = match.find((a: any) => a.status !== "rejected" && !a.attendance?.completed)
+          setActiveApplication((prev) => {
+            if (prev) {
+              const refreshed = match.find((a: any) => String(a.id) === String(prev.id) || a.referenceNumber === prev.referenceNumber)
+              if (refreshed) return refreshed
+            }
+            return ongoing || match[0]
+          })
           return
         }
       }
@@ -381,28 +400,30 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
     setIsDetailModalOpen(true)
   }
 
-  // Check if citizen has an ongoing active training
+  // Check if citizen has an ongoing active training (not yet completed, not rejected)
   const hasActiveOngoingTraining = Boolean(
-    activeApplication &&
-      activeApplication.status !== "rejected" &&
-      !activeApplication.attendance?.completed
+    allUserApplications.some(
+      (a) => a.status !== "rejected" && !a.attendance?.completed
+    )
   )
 
   // Handle jump from course to Apply tab
   const handleSelectToApply = (course: TrainingCourse) => {
     if (hasActiveOngoingTraining) {
+      const activeRunning = allUserApplications.find((a) => a.status !== "rejected" && !a.attendance?.completed)
       alert(
         isEn
-          ? `You currently have an active training program (${activeApplication?.trainingName}). You can enroll in a new training course once your current training is completed and certified.`
+          ? `You currently have an active training program (${activeRunning?.trainingName || activeApplication?.trainingName}). You can enroll in a new training course once your current training is completed and certified.`
           : isBis
-          ? `Aduna kay aktibong training karon (${activeApplication?.trainingName}). Makapa-enroll ka sa bag-ong kurso kung mahuman na nimo ang imong kasamtangang pagbansay.`
-          : `May kasalukuyan kang aktibong training program (${activeApplication?.trainingName}). Maaari ka lamang mag-apply sa panibagong kurso kapag natapos mo na ang iyong kasalukuyang pagsasanay at nakuha ang iyong sertipiko.`
+          ? `Aduna kay aktibong training karon (${activeRunning?.trainingName || activeApplication?.trainingName}). Makapa-enroll ka sa bag-ong kurso kung mahuman na nimo ang imong kasamtangang pagbansay.`
+          : `May kasalukuyan kang aktibong training program (${activeRunning?.trainingName || activeApplication?.trainingName}). Maaari ka lamang mag-apply sa panibagong kurso kapag natapos mo na ang iyong kasalukuyang pagsasanay at nakuha ang iyong sertipiko.`
       )
       return
     }
     setSelectedCourse(course)
     setApplyCourseId(course.id)
     setIsDetailModalOpen(false)
+    setIsRevising(true)
     setActiveTab("apply")
     setFormStep("profile")
   }
@@ -457,17 +478,20 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
       if (res.ok) {
         const data = await res.json()
         if (data.success && data.application) {
-          setActiveApplication(data.application)
-          setAllUserApplications((prev) => [data.application, ...prev])
+          const newApp = data.application
+          setActiveApplication(newApp)
+          setAllUserApplications((prev) => [newApp, ...prev.filter((a) => String(a.id) !== String(newApp.id) && a.referenceNumber !== newApp.referenceNumber)])
           // Save in local storage
           const existing = JSON.parse(localStorage.getItem("training_applications") || "[]")
-          localStorage.setItem("training_applications", JSON.stringify([data.application, ...existing]))
+          const filtered = existing.filter((a: any) => String(a.id) !== String(newApp.id) && a.referenceNumber !== newApp.referenceNumber)
+          localStorage.setItem("training_applications", JSON.stringify([newApp, ...filtered]))
         }
       } else {
         // Fallback local creation
+        const candidateSuffix = allUserApplications.length > 0 ? `-${allUserApplications.length}` : ""
         const fallbackApp: TrainingApplicationRecord = {
           id: Date.now(),
-          referenceNumber: `TP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+          referenceNumber: `${userQcid}${candidateSuffix}`,
           qcid: userQcid,
           trainingId: matched.id,
           trainingName: matched.title,
@@ -978,6 +1002,35 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
       {/* ============================================================ */}
       {activeTab === "apply" && (
         <div className="space-y-6 max-w-3xl mx-auto">
+          {/* Multiple Applications History Switcher */}
+          {allUserApplications.length > 1 && (
+            <div className="bg-card border border-border rounded-2xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                {isEn ? "Your Applications History:" : isBis ? "Imong mga Aplikasyon:" : "Iyong mga Aplikasyon:"}
+              </span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                {allUserApplications.map((app) => (
+                  <button
+                    key={app.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveApplication(app)
+                      setIsRevising(false)
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      activeApplication?.id === app.id && !isRevising
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "border border-border bg-muted/20 hover:bg-muted/50 text-foreground"
+                    }`}
+                  >
+                    <span>{app.trainingName}</span>
+                    <span className="text-[10px] font-mono opacity-80">({app.referenceNumber})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Active Application Status Tracker Banner (if any) */}
           {activeApplication && !isRevising && (
             <div className="bg-card border border-border rounded-2xl p-6 shadow-xs space-y-4">
@@ -994,8 +1047,23 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                   </p>
                 </div>
 
-                <div className="text-xs text-muted-foreground">
-                  {isEn ? "Submitted:" : isBis ? "Gisumite:" : "Naisumite:"} {new Date(activeApplication.submittedAt).toLocaleDateString()}
+                <div className="flex items-center gap-2">
+                  {!hasActiveOngoingTraining && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRevising(true)
+                        setFormStep("select")
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>{isEn ? "Apply for Another Course" : isBis ? "Mag-apply og Bag-ong Kurso" : "Mag-apply ng Bagong Kurso"}</span>
+                    </button>
+                  )}
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {isEn ? "Submitted:" : isBis ? "Gisumite:" : "Naisumite:"} {new Date(activeApplication.submittedAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
 
@@ -1029,7 +1097,13 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                   <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm">
                     <CheckCircle2 className="h-4 w-4" />
                     <span>
-                      {isEn
+                      {activeApplication.attendance?.completed
+                        ? isEn
+                          ? "COMPLETED – 100% Training Completed & Certified!"
+                          : isBis
+                          ? "NAHUMAN – 100% Nakompleto ang Pagbansay!"
+                          : "NAKUMPLETO – 100% Natapos ang Pagsasanay at Sertipikado!"
+                        : isEn
                         ? "APPROVED – Your Training Slot is Confirmed!"
                         : isBis
                         ? "NAAPROBAHAN – Kumpirmado ang imong Training Slot!"
@@ -1037,7 +1111,21 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                     </span>
                   </div>
                   <p className="text-xs text-emerald-900/80 dark:text-emerald-200 leading-relaxed">
-                    {isEn ? (
+                    {activeApplication.attendance?.completed ? (
+                      isEn ? (
+                        <>
+                          You have completed all 4 daily sessions in <strong>{activeApplication.trainingName}</strong>. You may view or print your Certificate of Completion in Tab 4, or apply for another training program.
+                        </>
+                      ) : isBis ? (
+                        <>
+                          Nahuman nimo ang tanang 4 ka adlaw sa <strong>{activeApplication.trainingName}</strong>. Mahimo nimong tan-awon ang imong sertipiko sa Tab 4 o mag-apply sa laing kurso.
+                        </>
+                      ) : (
+                        <>
+                          Natapos mo ang lahat ng 4 na araw sa <strong>{activeApplication.trainingName}</strong>. Maaari mong tingnan o i-print ang iyong Certificate of Completion sa Tab 4, o mag-apply sa panibagong kurso.
+                        </>
+                      )
+                    ) : isEn ? (
                       <>
                         You may now attend <strong>{activeApplication.trainingName}</strong>. Your assigned schedule is below and you can track your live session attendance in Tab 3.
                       </>
@@ -1051,14 +1139,29 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                       </>
                     )}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("schedule")}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer w-fit"
-                  >
-                    <span>{isEn ? "Go to Training Schedule" : isBis ? "Adto sa Iskedyul sa Pagbansay" : "Pumunta sa Training Schedule"}</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("schedule")}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer w-fit"
+                    >
+                      <span>{isEn ? "Go to Training Schedule" : isBis ? "Adto sa Iskedyul sa Pagbansay" : "Pumunta sa Training Schedule"}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                    {activeApplication.attendance?.completed && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab("history")
+                          setCertificateModalApp(activeApplication)
+                        }}
+                        className="px-4 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Award className="h-4 w-4" />
+                        <span>{isEn ? "View Certificate" : "Tingnan ang Sertipiko"}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 

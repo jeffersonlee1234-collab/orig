@@ -92,6 +92,29 @@ function generateReference(qcid) {
   return '110000116932100';
 }
 
+async function getUniqueTrainingReference(baseRef) {
+  let clean = String(baseRef || '').trim() || generateReference();
+  let candidate = clean;
+  let attempt = 0;
+  try {
+    while (attempt < 50) {
+      const existing = await db.query(
+        'SELECT id FROM training_applications WHERE reference_number = $1',
+        [candidate]
+      );
+      const inMem = memoryApplications.some((a) => a.referenceNumber === candidate);
+      if ((!existing || existing.rows.length === 0) && !inMem) {
+        return candidate;
+      }
+      attempt++;
+      candidate = `${clean}-${attempt}`;
+    }
+  } catch (e) {
+    console.warn('getUniqueTrainingReference check warning:', e.message);
+  }
+  return candidate;
+}
+
 function loadPersistentApps() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -231,7 +254,7 @@ exports.getApplications = async (req, res) => {
 
       if (qcid) {
         params.push(String(qcid).trim());
-        conditions.push(`(qcid = $${params.length} OR user_id = $${params.length})`);
+        conditions.push(`(qcid = $${params.length} OR user_id = $${params.length} OR reference_number = $${params.length} OR reference_number LIKE $${params.length} || '-%')`);
       } else if (email) {
         params.push(`%${String(email).trim().toLowerCase()}%`);
         conditions.push(`LOWER(applicant_info->>'email') LIKE $${params.length}`);
@@ -243,7 +266,7 @@ exports.getApplications = async (req, res) => {
       query += ' ORDER BY submitted_at DESC, id DESC';
 
       const result = await db.query(query, params);
-      if (result && Array.isArray(result.rows) && result.rows.length > 0) {
+      if (result && Array.isArray(result.rows)) {
         const apps = result.rows.map(mapDbRowToApp);
         return res.status(200).json({
           success: true,
@@ -258,7 +281,7 @@ exports.getApplications = async (req, res) => {
     let list = [...memoryApplications];
     if (qcid) {
       const q = String(qcid).trim();
-      list = list.filter((a) => a.qcid === q || a.userId === q);
+      list = list.filter((a) => a.qcid === q || a.userId === q || a.referenceNumber === q || a.referenceNumber?.startsWith(`${q}-`));
     } else if (email) {
       const em = String(email).trim().toLowerCase();
       list = list.filter((a) => a.applicantInfo?.email?.toLowerCase() === em);
@@ -276,7 +299,7 @@ exports.getApplications = async (req, res) => {
 // POST /api/training/apply
 exports.applyForTraining = async (req, res) => {
   try {
-    const { trainingId, trainingName, applicantInfo, qcid } = req.body;
+    const { trainingId, trainingName, applicantInfo, qcid, referenceNumber } = req.body;
 
     if (!trainingId || !trainingName) {
       return res.status(400).json({ success: false, message: 'Please select a training program.' });
@@ -291,7 +314,8 @@ exports.applyForTraining = async (req, res) => {
     };
 
     const userQcid = qcid || applicantInfo?.qcidNo || applicantInfo?.qcidNumber || '110000116932100';
-    const refNum = generateReference(userQcid);
+    const baseRef = referenceNumber || req.body.reference_number || userQcid;
+    const refNum = await getUniqueTrainingReference(baseRef);
 
     const fullApplicantInfo = {
       fullName: applicantInfo?.fullName || `${applicantInfo?.firstName || ''} ${applicantInfo?.lastName || ''}`.trim(),

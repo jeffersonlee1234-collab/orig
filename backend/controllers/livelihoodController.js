@@ -11,6 +11,29 @@ function generateReference(qcid) {
   return '110000116932100';
 }
 
+async function getUniqueLivelihoodReference(baseRef) {
+  let clean = String(baseRef || '').trim() || generateReference();
+  let candidate = clean;
+  let attempt = 0;
+  try {
+    while (attempt < 50) {
+      const existing = await db.query(
+        'SELECT id FROM livelihood_applications WHERE reference_number = $1',
+        [candidate]
+      );
+      const inMem = memoryApplications.some((a) => a.reference_number === candidate || a.referenceNumber === candidate);
+      if ((!existing || existing.rows.length === 0) && !inMem) {
+        return candidate;
+      }
+      attempt++;
+      candidate = `${clean}-${attempt}`;
+    }
+  } catch (e) {
+    console.warn('getUniqueLivelihoodReference check warning:', e.message);
+  }
+  return candidate;
+}
+
 function loadPersistentApps() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -180,7 +203,8 @@ exports.createApplication = async (req, res) => {
       });
     }
 
-    const referenceNumber = req.body.referenceNumber || req.body.reference_number || req.body.qcidNumber || req.body.qcidNo || req.body.qcId || generateReference(req.body.qcidNumber || req.body.qcidNo || req.body.qcId);
+    const baseRef = req.body.referenceNumber || req.body.reference_number || req.body.qcidNumber || req.body.qcidNo || req.body.qcId || generateReference(req.body.qcidNumber || req.body.qcidNo || req.body.qcId);
+    const referenceNumber = await getUniqueLivelihoodReference(baseRef);
     const parsedAge = age ? parseInt(age, 10) : null;
     const parsedAmount = estimatedAmount ? parseFloat(String(estimatedAmount).replace(/[^0-9.]/g, '')) || 15000 : 15000;
 
@@ -307,10 +331,10 @@ exports.getApplications = async (req, res) => {
 
     if (userId) {
       params.push(userId);
-      conditions.push(`user_id = $${params.length}`);
+      conditions.push(`(user_id = $${params.length} OR qcid = $${params.length} OR reference_number = $${params.length} OR reference_number LIKE $${params.length} || '-%')`);
     } else if (qcid) {
       params.push(qcid);
-      conditions.push(`qcid = $${params.length}`);
+      conditions.push(`(qcid = $${params.length} OR user_id = $${params.length} OR reference_number = $${params.length} OR reference_number LIKE $${params.length} || '-%')`);
     }
 
     if (status && status !== 'all') {
