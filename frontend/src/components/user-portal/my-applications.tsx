@@ -1708,7 +1708,6 @@ export default function MyApplications() {
         const userEmail = (userProfile.email || "").trim().toLowerCase()
         const userFirst = (userProfile.firstName || "").trim().toLowerCase()
         const userLast = (userProfile.lastName || "").trim().toLowerCase()
-        const userFull = `${userFirst} ${userLast}`.trim()
 
         const isUserMatch = (app: any): boolean => {
           if (!app) return false
