@@ -20,6 +20,7 @@ import { API_BASE } from "../../config/api"
 import { useLanguage } from "../ui/language-context"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
+import { formatAppDate } from "./my-applications"
 
 interface DocumentItem {
   id: string
@@ -987,17 +988,8 @@ export default function SeniorCitizenApplicationWizard({
       existingIdNumber ||
       "110000572516915"
 
-    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
-      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate = targetApp?.submittedAt || targetApp?.submitted_at || targetApp?.created_at || targetApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate, targetApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4">
@@ -1143,17 +1135,8 @@ export default function SeniorCitizenApplicationWizard({
 
     const assignedIdNo = (targetApp?.assignedIdNumber || targetApp?.assigned_id_number || "").replace("OSCA-", "SENIOR-")
 
-    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
-      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate2 = targetApp?.submittedAt || targetApp?.submitted_at || targetApp?.created_at || targetApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate2, targetApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">

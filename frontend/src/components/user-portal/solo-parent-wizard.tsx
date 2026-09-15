@@ -24,6 +24,7 @@ import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
+import { formatAppDate } from "./my-applications"
 
 function generateReference(_status?: string | null, qcid?: string) {
   if (qcid && (qcid || "").trim() && qcid !== "110000116932100") return (qcid || "").trim()
@@ -1955,17 +1956,8 @@ export default function SoloParentApplicationWizard({
     const rejectionReason = blockedApp?.rejection_reason || blockedApp?.rejectionReason || blockedApp?.admin_notes || ""
     const displayRef = blockedReference || blockedApp?.reference_number || blockedApp?.referenceNumber || "REF-SP-2026-001"
     const assignedIdNo = blockedApp?.assigned_id_number || blockedApp?.assignedIdNumber || blockedApp?.solo_parent_id_number || blockedApp?.soloParentIdNumber
-    const displayDate = blockedApp?.created_at || blockedApp?.submittedAt
-      ? new Date(blockedApp.created_at || blockedApp.submittedAt).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate = blockedApp?.created_at || blockedApp?.submittedAt || blockedApp?.submitted_at || blockedApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate, blockedApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">

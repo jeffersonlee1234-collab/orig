@@ -541,6 +541,67 @@ exports.getNotifications = async (req, res) => {
       } catch (_) {}
     }
 
+    // 7.2. Fetch PWD & Senior Citizen applications notifications
+    if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
+      try {
+        const pwdSeniorRes = await db.query(
+          `SELECT id, reference_number, category, type, status, assigned_id_number, rejection_reason, created_at, submitted_at, email, first_name, last_name, extra_data
+           FROM pwd_senior_applications
+           WHERE (COALESCE(reference_number::text, '') = ANY($1::text[]) 
+              OR COALESCE(id::text, '') = ANY($1::text[])
+              OR COALESCE(assigned_id_number::text, '') = ANY($1::text[]))
+              OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
+              OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))
+           ORDER BY created_at DESC`,
+          [identifiers, userEmail, userFn, userLn]
+        );
+        pwdSeniorRes.rows.forEach((app) => {
+          const st = String(app.status || '').toLowerCase();
+          if (st === 'approved' || st === 'rejected' || st === 'disapproved' || st === 'completed' || st === 'for_release') {
+            const notifId = `pwd-senior-${app.id || app.reference_number}-${st}`;
+            const appDate = app.submitted_at || app.created_at || new Date().toISOString();
+            if (!isItemDismissed(notifId, appDate)) {
+              const isApproved = st === 'approved' || st === 'completed' || st === 'for_release';
+              const isPwd = String(app.category || '').toUpperCase().includes('PWD');
+              const typeStr = String(app.type || 'new').toLowerCase();
+              const serviceTitle = isPwd
+                ? typeStr === 'assistance'
+                  ? 'PWD Social Assistance'
+                  : typeStr === 'renewal'
+                  ? 'PWD ID Renewal'
+                  : typeStr === 'loss' || typeStr === 'replacement'
+                  ? 'PWD ID Replacement'
+                  : 'PWD ID'
+                : typeStr === 'medicine-booklet'
+                ? 'Senior Citizen Medicine Discount Booklet'
+                : typeStr === 'movie-booklet'
+                ? 'Senior Citizen Movie Booklet'
+                : typeStr === 'social-assistance'
+                ? 'Senior Citizen Social Assistance'
+                : typeStr === 'renewal'
+                ? 'Senior Citizen ID Renewal'
+                : typeStr === 'loss' || typeStr === 'replacement'
+                ? 'Senior Citizen ID Replacement'
+                : 'Senior Citizen ID';
+
+              items.push({
+                id: notifId,
+                title: isApproved ? `${serviceTitle}: Approved` : `${serviceTitle}: Not Approved`,
+                desc: isApproved
+                  ? `Congratulations! Your application for ${serviceTitle} (Ref: ${app.reference_number || app.assigned_id_number || 'N/A'}) has been approved.`
+                  : `${serviceTitle}: ${app.rejection_reason ? `Tinanggihan dahil sa ${app.rejection_reason}` : 'Hindi naaprubahan ang inyong aplikasyon.'} (Ref: ${app.reference_number})`,
+                time: formatManilaTime(appDate),
+                unread: userStateMap[notifId]?.is_read !== undefined ? !userStateMap[notifId].is_read : true,
+                reason: app.rejection_reason || null,
+                reference_no: app.assigned_id_number || app.reference_number,
+                created_at: appDate,
+              });
+            }
+          }
+        });
+      } catch (_) {}
+    }
+
     // 8. Fetch Financial Aid Disbursements & Scheduled Appointments Payouts
     if (identifiers.length > 0 || (userFn && userLn)) {
       try {

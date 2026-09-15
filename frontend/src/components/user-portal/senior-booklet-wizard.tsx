@@ -20,6 +20,7 @@ import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
+import { formatAppDate } from "./my-applications"
 
 export interface UserProfile {
   qcidNo?: string
@@ -1044,18 +1045,8 @@ export default function SeniorBookletWizard({
       blockedApp?.bookletNumber ||
       blockedApp?.existingBookletNumber ||
       bookletNumber
-    const displayDate = blockedApp?.submittedAt || blockedApp?.created_at || blockedApp?.dateSubmitted
-      ? new Date(blockedApp.submittedAt || blockedApp.created_at || blockedApp.dateSubmitted).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : submissionDate ||
-        new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate = blockedApp?.submittedAt || blockedApp?.submitted_at || blockedApp?.created_at || blockedApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate, blockedApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">

@@ -10,6 +10,7 @@ import { useLanguage } from "../ui/language-context"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
+import { formatAppDate, extractAnyDateFromApp } from "./my-applications"
 
 export default function ApplyPWDSenior() {
   const { t, language } = useLanguage()
@@ -534,9 +535,8 @@ export default function ApplyPWDSenior() {
   if (isBlocked && (!bypassedBlock || isAppApproved)) {
     const displayRef = blockedApp?.referenceNumber || blockedApp?.reference_no || blockedApp?.reference_number || blockedApp?.id || blockedApp?.qc_id || blockedApp?.qcid || getLoggedInUserQcid() || "110000572516915"
     const assignedBookletNo = blockedApp?.assignedIdNumber || blockedApp?.assigned_id_number || blockedApp?.bookletNumber || blockedApp?.existingBookletNumber
-    const displayDate = blockedApp?.created_at || blockedApp?.submittedAt || blockedApp?.dateSubmitted
-      ? new Date(blockedApp.created_at || blockedApp.submittedAt || blockedApp.dateSubmitted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-      : new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+    const rawBlockedDate = blockedApp?.created_at || blockedApp?.submittedAt || blockedApp?.submitted_at || blockedApp?.dateSubmitted || blockedApp?.date_submitted
+    const displayDate = formatAppDate(rawBlockedDate, blockedApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">

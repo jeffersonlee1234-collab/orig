@@ -2946,6 +2946,7 @@ export default function PWDSeniorCitizen() {
         }
       }
     }
+    notifyApplicationChange("APPLICATION_APPROVED", "pwd_senior", targetApp?.referenceNumber)
   }
 
   const handleReject = async (id: string, reason: string) => {
@@ -2983,6 +2984,7 @@ export default function PWDSeniorCitizen() {
         }),
       })
       clearApiCache("/api/pwd-senior/applications")
+      notifyApplicationChange("APPLICATION_REJECTED", "pwd_senior", targetApp?.referenceNumber)
     } catch (err) {
       console.warn("Failed updating backend rejection:", err)
     }

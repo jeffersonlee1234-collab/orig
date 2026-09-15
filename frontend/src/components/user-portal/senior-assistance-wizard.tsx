@@ -21,6 +21,7 @@ import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
+import { formatAppDate } from "./my-applications"
 
 export interface UserProfile {
   userId?: string
@@ -811,9 +812,8 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
   if (submitted) {
     const isAppApproved = String(latestSubmittedApp?.status || "").toLowerCase() === "approved" || String(latestSubmittedApp?.status || "").toLowerCase() === "completed" || String(latestSubmittedApp?.status || "").toLowerCase() === "for_release"
     const displayRef = latestSubmittedApp?.referenceNumber || latestSubmittedApp?.reference_no || latestSubmittedApp?.reference_number || referenceNumber || (userProfile as any)?.qcidNo || "110000116932100"
-    const displayDate = latestSubmittedApp?.submittedAt || latestSubmittedApp?.created_at || latestSubmittedApp?.dateSubmitted
-      ? new Date(latestSubmittedApp.submittedAt || latestSubmittedApp.created_at || latestSubmittedApp.dateSubmitted).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-      : (submissionDate || new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }))
+    const rawDate = latestSubmittedApp?.submittedAt || latestSubmittedApp?.submitted_at || latestSubmittedApp?.created_at || latestSubmittedApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate, latestSubmittedApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150">

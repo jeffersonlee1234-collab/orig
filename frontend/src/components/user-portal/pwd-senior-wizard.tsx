@@ -7,6 +7,7 @@ import { notifyApplicationChange } from "../../utils/realtimeSync"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
+import { formatAppDate } from "./my-applications"
 
 type DisabilityClass = "apparent" | "non-apparent" | null
 type IdStatus = "new" | "renewal" | "loss" | null
@@ -1617,17 +1618,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       formData.existingPwdIdNumber ||
       "110000572516915"
 
-    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
-      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate = targetApp?.submittedAt || targetApp?.submitted_at || targetApp?.created_at || targetApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate, targetApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">
@@ -1712,17 +1704,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       targetApp?.assigned_id_number ||
       targetApp?.existingIdNumber
 
-    const displayDate = targetApp?.submittedAt || targetApp?.created_at || targetApp?.dateSubmitted
-      ? new Date(targetApp.submittedAt || targetApp.created_at || targetApp.dateSubmitted).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : new Date().toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+    const rawDate2 = targetApp?.submittedAt || targetApp?.submitted_at || targetApp?.created_at || targetApp?.dateSubmitted
+    const displayDate = formatAppDate(rawDate2, targetApp)
 
     return (
       <div className="p-4 md:p-6 max-w-xl mx-auto space-y-4 animate-in fade-in duration-150 py-8">
