@@ -585,17 +585,19 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
         : null,
     }
 
+    // Instant local state update
     setActiveApplication(updated)
-    const updatedList = allUserApplications.map((a) => (a.id === updated.id ? updated : a))
-    if (!updatedList.some((a) => a.id === updated.id)) {
-      updatedList.unshift(updated)
-    }
-    setAllUserApplications(updatedList)
-
-    try {
-      localStorage.setItem("training_applications", JSON.stringify(updatedList))
-      window.dispatchEvent(new Event("storage"))
-    } catch (_) {}
+    setAllUserApplications((prev) => {
+      const exists = prev.some((a) => String(a.id) === String(updated.id) || a.referenceNumber === updated.referenceNumber)
+      const list = exists
+        ? prev.map((a) => (String(a.id) === String(updated.id) || a.referenceNumber === updated.referenceNumber ? updated : a))
+        : [updated, ...prev]
+      try {
+        localStorage.setItem("training_applications", JSON.stringify(list))
+        window.dispatchEvent(new Event("storage"))
+      } catch (_) {}
+      return list
+    })
 
     try {
       await fetch(`${API_BASE}/api/training/applications/${updated.id}/status`, {
@@ -1597,10 +1599,15 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                   ]).map((sess) => (
                     <div
                       key={sess.day}
+                      onClick={() => {
+                        if (!sess.attended) {
+                          handleUserCheckin(sess.day)
+                        }
+                      }}
                       className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all ${
                         sess.attended
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200 shadow-2xs"
-                          : "bg-muted/15 border-border hover:bg-muted/30"
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200 shadow-2xs cursor-default"
+                          : "bg-muted/15 border-border hover:bg-blue-500/10 hover:border-blue-500/40 cursor-pointer group"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -1612,17 +1619,15 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                             <Check className="h-4 w-4 stroke-[3]" />
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleUserCheckin(sess.day)}
-                            className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer transition-transform hover:scale-105 shadow-xs bg-muted border border-border text-muted-foreground hover:border-blue-400"
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-transform group-hover:scale-105 shadow-xs bg-muted border border-border text-muted-foreground group-hover:border-blue-500 group-hover:bg-blue-500 group-hover:text-white"
                             title={isEn ? "Click to check-in 3 hours" : "I-click para mag-check in (3 oras)"}
                           >
                             D{sess.day}
-                          </button>
+                          </div>
                         )}
                         <div>
-                          <p className="font-bold text-sm text-foreground">
+                          <p className="font-bold text-sm text-foreground group-hover:text-blue-600 transition-colors">
                             Day {sess.day}: {sess.topic}
                           </p>
                           <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
@@ -1640,8 +1645,11 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleUserCheckin(sess.day)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white shadow-xs"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleUserCheckin(sess.day)
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center border border-blue-600 text-blue-600 group-hover:bg-blue-600 group-hover:text-white shadow-xs"
                           >
                             <span>{isEn ? "Check-in Day " + sess.day + " (3h)" : isBis ? "I-check-in Adlaw " + sess.day + " (3h)" : "I-check-in Araw " + sess.day + " (3h)"}</span>
                           </button>
