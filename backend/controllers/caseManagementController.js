@@ -46,34 +46,20 @@ async function initCaseManagementTables() {
         priority VARCHAR(50) NOT NULL DEFAULT 'medium',
         assigned_social_worker VARCHAR(150) DEFAULT 'Admin Social Worker',
         notes TEXT,
+        referrals JSONB DEFAULT '[]'::jsonb,
+        monitoring_logs JSONB DEFAULT '[]'::jsonb,
         closed_at TIMESTAMP,
         closed_reason TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-      CREATE TABLE IF NOT EXISTS case_referrals (
-        id SERIAL PRIMARY KEY,
-        case_number VARCHAR(100) NOT NULL,
-        application_ref VARCHAR(100),
-        referred_to VARCHAR(200) NOT NULL,
-        service_reason TEXT NOT NULL,
-        referred_by VARCHAR(150) DEFAULT 'Admin Social Worker',
-        referral_date VARCHAR(50),
-        status VARCHAR(50) DEFAULT 'pending',
-        remarks TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS case_monitoring (
-        id SERIAL PRIMARY KEY,
-        case_number VARCHAR(100) NOT NULL,
-        application_ref VARCHAR(100),
-        officer_name VARCHAR(150) DEFAULT 'Admin Social Worker',
-        monitoring_date VARCHAR(50),
-        progress_status VARCHAR(100) DEFAULT 'In Progress',
-        notes TEXT,
-        next_action TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      ALTER TABLE case_records ADD COLUMN IF NOT EXISTS referrals JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE case_records ADD COLUMN IF NOT EXISTS monitoring_logs JSONB DEFAULT '[]'::jsonb;
+
+      -- Unconditionally drop duplicate auxiliary tables
+      DROP TABLE IF EXISTS case_referrals CASCADE;
+      DROP TABLE IF EXISTS case_monitoring CASCADE;
+
       ALTER TABLE aics_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
       ALTER TABLE solo_parent_child_welfare_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
@@ -88,7 +74,7 @@ initCaseManagementTables();
 
 exports.getAllCases = async (req, res) => {
   try {
-    // 1. Fetch Approved Applications from all modules
+    // 1. Fetch Approved Applications from all modules and unified case records
     const [
       aicsRes,
       pwdSeniorRes,
@@ -99,8 +85,6 @@ exports.getAllCases = async (req, res) => {
       apptRes,
       financialRes,
       caseRecordsRes,
-      referralsRes,
-      monitoringRes,
     ] = await Promise.all([
       db.query(`SELECT * FROM aics_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM pwd_senior_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released', 'verified') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
@@ -111,45 +95,29 @@ exports.getAllCases = async (req, res) => {
       db.query(`SELECT * FROM appointments ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM financial_aid_disbursements ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM case_records`).catch(() => ({ rows: [] })),
-      db.query(`SELECT * FROM case_referrals ORDER BY created_at ASC`).catch(() => ({ rows: [] })),
-      db.query(`SELECT * FROM case_monitoring ORDER BY created_at ASC`).catch(() => ({ rows: [] })),
     ]);
 
     const appointments = apptRes.rows;
     const financialAids = financialRes.rows;
     const caseRecordsMap = new Map();
+    const referralsMap = new Map();
+    const monitoringMap = new Map();
+
     caseRecordsRes.rows.forEach((r) => {
       caseRecordsMap.set(r.application_ref, r);
       caseRecordsMap.set(r.case_number, r);
-    });
 
-    const referralsMap = new Map();
-    referralsRes.rows.forEach((ref) => {
-      const key = ref.application_ref || ref.case_number;
-      if (!referralsMap.has(key)) referralsMap.set(key, []);
-      referralsMap.get(key).push({
-        id: `REF-${ref.id}`,
-        date: ref.referral_date || new Date(ref.created_at).toISOString().split('T')[0],
-        referredTo: ref.referred_to,
-        reason: ref.service_reason,
-        referredBy: ref.referred_by || 'Admin Social Worker',
-        status: ref.status || 'pending',
-        remarks: ref.remarks || '',
-      });
-    });
+      const savedRefs = Array.isArray(r.referrals) ? r.referrals : (typeof r.referrals === 'string' ? JSON.parse(r.referrals || '[]') : []);
+      const savedMons = Array.isArray(r.monitoring_logs) ? r.monitoring_logs : (typeof r.monitoring_logs === 'string' ? JSON.parse(r.monitoring_logs || '[]') : []);
 
-    const monitoringMap = new Map();
-    monitoringRes.rows.forEach((mon) => {
-      const key = mon.application_ref || mon.case_number;
-      if (!monitoringMap.has(key)) monitoringMap.set(key, []);
-      monitoringMap.get(key).push({
-        id: `MON-${mon.id}`,
-        date: mon.monitoring_date || new Date(mon.created_at).toISOString().split('T')[0],
-        officer: mon.officer_name || 'Admin Social Worker',
-        notes: mon.notes,
-        progressStatus: mon.progress_status || 'In Progress',
-        nextAction: mon.next_action || '',
-      });
+      if (savedRefs.length > 0) {
+        referralsMap.set(r.case_number, savedRefs);
+        referralsMap.set(r.application_ref, savedRefs);
+      }
+      if (savedMons.length > 0) {
+        monitoringMap.set(r.case_number, savedMons);
+        monitoringMap.set(r.application_ref, savedMons);
+      }
     });
 
     function generateAutoReferrals(moduleName, caseType, dateStr, ref, worker) {
@@ -1671,37 +1639,32 @@ exports.addReferral = async (req, res) => {
     const appRef = applicationId || caseNumber;
     const dateStr = referralDate || new Date().toISOString().split('T')[0];
 
-    const result = await db.query(
-      `INSERT INTO case_referrals (
-        case_number, application_ref, referred_to, service_reason,
-        referred_by, referral_date, status, remarks, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-      RETURNING *`,
-      [
-        caseNumber,
-        appRef,
-        referredTo,
-        serviceReason,
-        referredBy || 'Admin Social Worker',
-        dateStr,
-        status || 'pending',
-        remarks || null,
-      ]
-    );
+    const newRef = {
+      id: `REF-${Date.now()}`,
+      date: dateStr,
+      referredTo,
+      reason: serviceReason,
+      referredBy: referredBy || 'Admin Social Worker',
+      status: status || 'pending',
+      remarks: remarks || '',
+      created_at: new Date().toISOString(),
+    };
 
-    // Also ensure case status is updated to 'referred' if currently open
     await db.query(
-      `INSERT INTO case_records (case_number, application_ref, program, status, updated_at)
-       VALUES ($1, $2, 'AICS', 'referred', NOW())
+      `INSERT INTO case_records (case_number, application_ref, program, status, referrals, updated_at)
+       VALUES ($1, $2, 'AICS', 'referred', jsonb_build_array($3::jsonb), NOW())
        ON CONFLICT (case_number)
-       DO UPDATE SET status = CASE WHEN case_records.status = 'open' THEN 'referred' ELSE case_records.status END, updated_at = NOW()`,
-      [caseNumber, appRef]
-    ).catch(() => {});
+       DO UPDATE SET 
+         referrals = COALESCE(case_records.referrals, '[]'::jsonb) || jsonb_build_array($3::jsonb),
+         status = CASE WHEN case_records.status = 'open' THEN 'referred' ELSE case_records.status END,
+         updated_at = NOW()`,
+      [caseNumber, appRef, JSON.stringify(newRef)]
+    );
 
     res.status(201).json({
       success: true,
       message: 'Referral added successfully',
-      referral: result.rows[0],
+      referral: newRef,
     });
   } catch (err) {
     console.error('Error adding referral:', err);
@@ -1721,36 +1684,31 @@ exports.addMonitoring = async (req, res) => {
     const appRef = applicationId || caseNumber;
     const dateStr = monitoringDate || new Date().toISOString().split('T')[0];
 
-    const result = await db.query(
-      `INSERT INTO case_monitoring (
-        case_number, application_ref, officer_name, monitoring_date,
-        notes, progress_status, next_action, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      RETURNING *`,
-      [
-        caseNumber,
-        appRef,
-        officerName || 'Admin Social Worker',
-        dateStr,
-        notes,
-        progressStatus || 'In Progress',
-        nextAction || null,
-      ]
-    );
+    const newLog = {
+      id: `MON-${Date.now()}`,
+      date: dateStr,
+      officer: officerName || 'Admin Social Worker',
+      notes,
+      progressStatus: progressStatus || 'In Progress',
+      nextAction: nextAction || '',
+      created_at: new Date().toISOString(),
+    };
 
-    // Also ensure case status is updated to 'monitoring' if currently open
     await db.query(
-      `INSERT INTO case_records (case_number, application_ref, program, status, updated_at)
-       VALUES ($1, $2, 'AICS', 'monitoring', NOW())
+      `INSERT INTO case_records (case_number, application_ref, program, status, monitoring_logs, updated_at)
+       VALUES ($1, $2, 'AICS', 'monitoring', jsonb_build_array($3::jsonb), NOW())
        ON CONFLICT (case_number)
-       DO UPDATE SET status = CASE WHEN case_records.status = 'open' THEN 'monitoring' ELSE case_records.status END, updated_at = NOW()`,
-      [caseNumber, appRef]
-    ).catch(() => {});
+       DO UPDATE SET 
+         monitoring_logs = COALESCE(case_records.monitoring_logs, '[]'::jsonb) || jsonb_build_array($3::jsonb),
+         status = CASE WHEN case_records.status = 'open' THEN 'monitoring' ELSE case_records.status END,
+         updated_at = NOW()`,
+      [caseNumber, appRef, JSON.stringify(newLog)]
+    );
 
     res.status(201).json({
       success: true,
       message: 'Monitoring log recorded successfully',
-      monitoring: result.rows[0],
+      monitoring: newLog,
     });
   } catch (err) {
     console.error('Error adding monitoring:', err);

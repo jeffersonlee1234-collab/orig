@@ -137,6 +137,20 @@ app.all('/api/admin/consolidate-notifications', async (req, res) => {
   }
 });
 
+app.all('/api/admin/consolidate-cases', async (req, res) => {
+  try {
+    await db.query(`
+      ALTER TABLE case_records ADD COLUMN IF NOT EXISTS referrals JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE case_records ADD COLUMN IF NOT EXISTS monitoring_logs JSONB DEFAULT '[]'::jsonb;
+      DROP TABLE IF EXISTS case_referrals CASCADE;
+      DROP TABLE IF EXISTS case_monitoring CASCADE;
+    `);
+    res.json({ success: true, message: 'Case tables consolidated successfully. Only case_records remains.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Disable HTTP caching for dynamic API routes to prevent mobile browser stale caching
 app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
