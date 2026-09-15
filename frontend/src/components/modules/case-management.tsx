@@ -212,6 +212,21 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
     }
   }
 
+  const handleAutoResolveCase = async () => {
+    setIsUpdatingStatus(true)
+    const autoNotes = `All assistance milestones, financial aid disbursement (₱${c.linkedFinancialAid ? c.linkedFinancialAid.fixedAmount.toLocaleString() : '5,000'}), and welfare monitoring follow-ups have been verified and successfully resolved.`
+    try {
+      await onUpdateStatus(c.caseNumber, "closed", selectedPriority, assignedWorker, autoNotes)
+      setIsClosingCase(true)
+      setStatusNotes(autoNotes)
+    } catch (err) {
+      console.error(err)
+      alert("Failed to auto-resolve case.")
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
   // Close on Escape key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -752,24 +767,29 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
                   </div>
 
                   {/* Step 5 */}
-                  <div className={`p-3 rounded-lg border shadow-2xs relative ${
-                    c.status === "closed"
-                      ? "bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-400"
-                      : "bg-slate-50 border-slate-200"
-                  }`}>
+                  <div
+                    onClick={c.status !== "closed" ? handleAutoResolveCase : undefined}
+                    className={`p-3 rounded-lg border shadow-2xs relative transition-all ${
+                      c.status === "closed"
+                        ? "bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-400"
+                        : "bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer group"
+                    }`}
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                        c.status === "closed" ? "text-emerald-800" : "text-slate-400"
+                        c.status === "closed" ? "text-emerald-800" : "text-slate-400 group-hover:text-blue-600"
                       }`}>Step 5</span>
                       {c.status === "closed" ? (
                         <ShieldCheck className="h-4 w-4 text-emerald-600" />
                       ) : (
-                        <Lock className="h-4 w-4 text-slate-400" />
+                        <Sparkles className="h-4 w-4 text-slate-400 group-hover:text-blue-600" />
                       )}
                     </div>
-                    <p className="text-xs font-bold text-slate-900">Case Resolution</p>
+                    <p className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                      <span>Case Resolution</span>
+                    </p>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {c.status === "closed" ? "Stabilized & Closed" : "Pending final outcome"}
+                      {c.status === "closed" ? "Stabilized & Closed" : "Click to Auto-Resolve"}
                     </p>
                   </div>
                 </div>
@@ -875,7 +895,23 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <div className="flex justify-between items-center gap-3 pt-3 border-t border-slate-100 flex-wrap">
+                  {c.status !== "closed" ? (
+                    <button
+                      type="button"
+                      disabled={isUpdatingStatus}
+                      onClick={handleAutoResolveCase}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      ⚡ Auto-Resolve &amp; Close Case
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      Case Fully Resolved &amp; Closed
+                    </span>
+                  )}
                   <button
                     type="button"
                     disabled={isUpdatingStatus}

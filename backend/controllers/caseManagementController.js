@@ -605,6 +605,36 @@ exports.getAllCases = async (req, res) => {
       return String(s).trim();
     }
 
+    // FULL SYSTEM AUTOMATED CASE RESOLUTION HELPER
+    function computeResolvedCaseStatus(override, fin, mons = [], refs = [], appt = null) {
+      if (override && override.status) {
+        return override.status.toLowerCase();
+      }
+
+      // FULL SYSTEM AUTO-RESOLUTION RULES:
+      // Step 1: Application approved (verified)
+      // Step 2: Financial aid is released / claimed OR non-cash service fulfilled
+      // Step 4: Welfare Monitoring check-ins have been logged
+      const hasReleasedAid = fin && String(fin.status).toUpperCase() === 'RELEASED';
+      const hasMonitoringLogs = mons && mons.length > 0;
+      const hasCompletedAppt = !appt || String(appt.status).toLowerCase() === 'completed' || String(appt.status).toLowerCase() === 'attended';
+
+      // 1. If financial aid is released AND monitoring check-ins are logged -> Automatically RESOLVED & CLOSED
+      if (hasReleasedAid && hasMonitoringLogs) {
+        return 'closed';
+      }
+
+      // 2. If non-cash service with completed appointments and monitoring check-ins -> Automatically RESOLVED & CLOSED
+      if (!fin && hasCompletedAppt && mons && mons.length >= 2) {
+        return 'closed';
+      }
+
+      if (mons && mons.length > 0) return 'monitoring';
+      if (refs && refs.length > 0) return 'referred';
+      if (appt?.status === 'completed' && (!fin || hasReleasedAid)) return 'open';
+      return 'open';
+    }
+
     // Process AICS
     aicsRes.rows.forEach((row, idx) => {
       try {
@@ -629,13 +659,8 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs('AICS', row.assistance_type, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        // Status resolution
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-          else if (appt?.status === 'completed' && (!fin || fin.status === 'RELEASED')) resolvedStatus = 'open';
-        }
+        // Automated status resolution
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         // Build real chronological timeline
         const timeline = [
@@ -790,12 +815,7 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs(prog, row.type, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-          else if (appt?.status === 'completed' && (!fin || fin.status === 'RELEASED')) resolvedStatus = 'open';
-        }
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         const timeline = [
           {
@@ -936,11 +956,7 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs('Solo Parent', row.classification_title, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-        }
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         const timeline = [
           {
@@ -1095,11 +1111,7 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs('Child Welfare', caseType, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-        }
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         const timeline = [
           {
@@ -1239,11 +1251,7 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs('Livelihood', row.business_type, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-        }
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         const timeline = [
           {
@@ -1383,11 +1391,7 @@ exports.getAllCases = async (req, res) => {
           mons = generateAutoMonitoringLogs('Training', row.course_title, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
-        let resolvedStatus = override.status || 'open';
-        if (!override.status) {
-          if (mons.length > 0) resolvedStatus = 'monitoring';
-          else if (refs.length > 0) resolvedStatus = 'referred';
-        }
+        const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
 
         const timeline = [
           {
