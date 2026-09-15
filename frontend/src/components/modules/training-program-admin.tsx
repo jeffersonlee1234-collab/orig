@@ -10,6 +10,7 @@ import { API_BASE } from "../../config/api"
 import { useLanguage } from "../ui/language-context"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 import type { TrainingApplicationRecord } from "../user-portal/training-program-view"
+import MaskedText from "../ui/masked-text"
 
 export default function TrainingProgramAdmin() {
   const { language } = useLanguage()
@@ -330,7 +331,13 @@ export default function TrainingProgramAdmin() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md">
-                      {app.referenceNumber}
+                      <MaskedText
+                        value={app.referenceNumber}
+                        type="id"
+                        auditSubject={app.applicantInfo?.fullName}
+                        auditField="Reference Number"
+                        auditModule="Training Program"
+                      />
                     </span>
                     {app.status === "approved" && (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
@@ -359,9 +366,30 @@ export default function TrainingProgramAdmin() {
                     <h4 className="font-bold text-base text-foreground group-hover:text-purple-600 transition-colors">
                       {app.applicantInfo?.fullName}
                     </h4>
-                    <p className="text-xs text-muted-foreground">
-                      QC ID: <span className="font-mono font-medium text-foreground">{app.qcid}</span> • Brgy. {app.applicantInfo?.barangay} • {app.applicantInfo?.contactNo}
-                    </p>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
+                      <span className="inline-flex items-center gap-1 font-mono font-medium text-foreground">
+                        <span className="font-sans text-muted-foreground font-normal">QC ID:</span>
+                        <MaskedText
+                          value={app.qcid}
+                          type="id"
+                          auditSubject={app.applicantInfo?.fullName}
+                          auditField="QCID"
+                          auditModule="Training Program"
+                        />
+                      </span>
+                      <span>•</span>
+                      <span>Brgy. {app.applicantInfo?.barangay || "Quezon City"}</span>
+                      <span>•</span>
+                      <span className="font-mono">
+                        <MaskedText
+                          value={app.applicantInfo?.contactNo}
+                          type="phone"
+                          auditSubject={app.applicantInfo?.fullName}
+                          auditField="Contact Number"
+                          auditModule="Training Program"
+                        />
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
@@ -428,11 +456,45 @@ export default function TrainingProgramAdmin() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[10px]">QC ID:</span>
-                  <span className="font-mono font-bold text-foreground">{selectedApp.qcid}</span>
+                  <div className="font-mono font-bold text-foreground">
+                    <MaskedText
+                      value={selectedApp.qcid}
+                      type="id"
+                      showButtonLabel
+                      auditSubject={selectedApp.applicantInfo?.fullName}
+                      auditField="QCID"
+                      auditModule="Training Program"
+                      referenceNo={selectedApp.referenceNumber}
+                    />
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[10px]">Contact &amp; Email:</span>
-                  <span className="font-semibold text-foreground">{selectedApp.applicantInfo?.contactNo} • {selectedApp.applicantInfo?.email}</span>
+                  <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                    <MaskedText
+                      value={selectedApp.applicantInfo?.contactNo}
+                      type="phone"
+                      showButtonLabel
+                      auditSubject={selectedApp.applicantInfo?.fullName}
+                      auditField="Contact Number"
+                      auditModule="Training Program"
+                      referenceNo={selectedApp.referenceNumber}
+                    />
+                    {selectedApp.applicantInfo?.email && (
+                      <>
+                        <span>•</span>
+                        <MaskedText
+                          value={selectedApp.applicantInfo?.email}
+                          type="email"
+                          showButtonLabel
+                          auditSubject={selectedApp.applicantInfo?.fullName}
+                          auditField="Email Address"
+                          auditModule="Training Program"
+                          referenceNo={selectedApp.referenceNumber}
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[10px]">Barangay &amp; City:</span>
