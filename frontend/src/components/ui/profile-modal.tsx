@@ -18,6 +18,12 @@ import {
   LogOut,
   Clock,
   CheckCircle2,
+  Shield,
+  Building,
+  ShieldCheck,
+  Activity,
+  Layers,
+  Sparkles,
 } from "lucide-react"
 
 import { useLanguage, type Language } from "./language-context"
@@ -640,6 +646,9 @@ export function ProfileModal({
       .filter((part) => part && part.trim().length > 0)
       .join(" ") || name;
 
+  const rawRole = (role || currentUser?.role || localStorage.getItem("userRole") || sessionStorage.getItem("userRole") || "user").toLowerCase();
+  const isAdmin = rawRole === "admin" || rawRole === "super_admin" || rawRole === "staff";
+
   const handleModalClose = () => {
     localStorage.removeItem("is_profile_modal_open");
     sessionStorage.removeItem("is_profile_modal_open");
@@ -664,28 +673,49 @@ export function ProfileModal({
           <X className="h-6 w-6" />
         </button>
 
-        {/* Greeting + QCID Section */}
+        {/* Greeting + Identification Section */}
         <div className="px-8 pt-6 pb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("hiUser", { name: displayName })}</h2>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <IdCard className="h-4 w-4 text-gray-500 dark:text-slate-400 shrink-0" />
-            <span className="text-sm text-gray-600 dark:text-slate-400">
-              QCID No:{" "}
-              <span className="font-semibold text-gray-800 dark:text-slate-200 tracking-wide">
-                {showQcid ? resolvedQcid : maskQcid(resolvedQcid)}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {isAdmin ? "HI, SYSTEM ADMINISTRATOR!" : t("hiUser", { name: displayName })}
+            </h2>
+            {isAdmin && (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-700 uppercase flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                Super Admin Access
               </span>
-            </span>
-            <button
-              onClick={() => setShowQcid((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
-            >
-              {showQcid ? (
-                <EyeOff className="h-3.5 w-3.5" />
-              ) : (
-                <Eye className="h-3.5 w-3.5" />
-              )}
-              {showQcid ? t("hideQcid") : t("viewQcid")}
-            </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {isAdmin ? (
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                <Building className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Quezon City Social Services &amp; Development Department (SSDD)</span>
+                <span className="text-slate-400">•</span>
+                <span className="font-mono text-slate-500 dark:text-slate-400">ADMIN ID: QC-SSDD-001</span>
+              </div>
+            ) : (
+              <>
+                <IdCard className="h-4 w-4 text-gray-500 dark:text-slate-400 shrink-0" />
+                <span className="text-sm text-gray-600 dark:text-slate-400">
+                  QCID No:{" "}
+                  <span className="font-semibold text-gray-800 dark:text-slate-200 tracking-wide">
+                    {showQcid ? resolvedQcid : maskQcid(resolvedQcid)}
+                  </span>
+                </span>
+                <button
+                  onClick={() => setShowQcid((prev) => !prev)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+                >
+                  {showQcid ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                  {showQcid ? t("hideQcid") : t("viewQcid")}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -969,381 +999,454 @@ export function ProfileModal({
           )}
 
           {tab === "personal" && (
-            <div className="space-y-6">
-              {/* Full Name */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("fullNameHeading")}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("firstName")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        maxLength={50}
-                        value={formData.firstName}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("firstName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 50))
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
+            isAdmin ? (
+              <div className="space-y-6">
+                {/* Admin Official Information Card */}
+                <div className="rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-5 space-y-4 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-3">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Administrator Official Identification &amp; Office Details
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Verified Staff
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("middleNameOptional")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        maxLength={30}
-                        value={formData.middleName}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("middleName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 30))
-                        }
-                        className={fieldClass()}
-                      />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Designation / Role</span>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">System Administrator</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Department / Bureau</span>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">Social Services Development Dept (SSDD)</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Local Government Unit</span>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">Quezon City Hall Complex</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Official Email Address</span>
+                      <p className="font-semibold text-gray-900 dark:text-white mt-0.5 font-mono">{resolvedEmail || "admin@quezoncity.gov.ph"}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Security Access Level</span>
+                      <p className="font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5" /> Full System Super Admin
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-slate-400 font-medium">Assigned Scope / Sector</span>
+                      <p className="font-semibold text-gray-900 dark:text-white mt-0.5">City-Wide (Districts 1 – 6)</p>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("lastName")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        maxLength={50}
-                        value={formData.lastName}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("lastName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 50))
-                        }
-                        className={fieldClass()}
-                      />
+                {/* System Operational Permissions Matrix */}
+                <div className="rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3 shadow-2xs">
+                  <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    Authorized Operational Capabilities
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-gray-800 dark:text-slate-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Social Assistance Review &amp; Aid Disbursement</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("suffix")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.suffix}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("suffix", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-gray-800 dark:text-slate-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Case Management &amp; Welfare Resolution</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-gray-800 dark:text-slate-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>QCID &amp; Sectoral ID Verification &amp; Printing</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-gray-800 dark:text-slate-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Realtime Telemetry, Reports &amp; Audit Logs</span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Birth Date & Blood Type */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("birthDateHeading")}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("month")}
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={formData.birthMonth}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("birthMonth", e.target.value)
-                        }
-                        className={fieldClass()}
-                      >
-                        {months.map((month) => (
-                          <option key={month} value={month}>
-                            {month}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("day")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        autoComplete="off"
-                        min="1"
-                        max="31"
-                        value={formData.birthDay}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("birthDay", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("year")}
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={formData.birthYear}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("birthYear", e.target.value)
-                        }
-                        className={fieldClass()}
-                      >
-                        {years.map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      Blood Type
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.bloodType || "O+"}
-                        disabled={true}
-                        className="w-full h-10 px-3 text-sm bg-gray-100 dark:bg-slate-800/80 text-gray-800 dark:text-slate-200 font-bold border border-gray-200 dark:border-slate-700 rounded-lg cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("addressHeading")}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("city")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.city}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("city", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("houseNoOptional")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.houseNo}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("houseNo", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("street")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.street}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("street", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("barangay")}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        value={formData.barangay}
-                        disabled={!isEditing}
-                        onChange={(e) =>
-                          handleInputChange("barangay", e.target.value)
-                        }
-                        className={fieldClass()}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Employment Details */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">
-                  {t("employmentDetails")}
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-3 block">
-                      {t("workingInQcQuestion")}
-                    </label>
-                    <div className="flex gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          autoComplete="off"
-                          name="working"
-                          checked={formData.workingInCity === true}
-                          disabled={!isEditing}
-                          onChange={() =>
-                            handleInputChange("workingInCity", true)
-                          }
-                          className="w-4 h-4 disabled:cursor-not-allowed cursor-pointer"
-                        />
-                        <span className="text-sm text-gray-700 dark:text-slate-300">{t("yes")}</span>
+            ) : (
+              <div className="space-y-6">
+                {/* Full Name */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("fullNameHeading")}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("firstName")}
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="relative">
                         <input
-                          type="radio"
+                          type="text"
                           autoComplete="off"
-                          name="working"
-                          checked={formData.workingInCity === false}
+                          maxLength={50}
+                          value={formData.firstName}
                           disabled={!isEditing}
-                          onChange={() =>
-                            handleInputChange("workingInCity", false)
+                          onChange={(e) =>
+                            handleInputChange("firstName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 50))
                           }
-                          className="w-4 h-4 disabled:cursor-not-allowed cursor-pointer"
+                          className={fieldClass()}
                         />
-                        <span className="text-sm text-gray-700 dark:text-slate-300">{t("no")}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("middleNameOptional")}
                       </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          maxLength={30}
+                          value={formData.middleName}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("middleName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 30))
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("lastName")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          maxLength={50}
+                          value={formData.lastName}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("lastName", e.target.value.replace(/[^a-zA-ZñÑ\s'-]/g, "").slice(0, 50))
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("suffix")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.suffix}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("suffix", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                      {t("occupation")}
-                    </label>
+                {/* Birth Date & Blood Type */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("birthDateHeading")}</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("month")}
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={formData.birthMonth}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("birthMonth", e.target.value)
+                          }
+                          className={fieldClass()}
+                        >
+                          {months.map((month) => (
+                            <option key={month} value={month}>
+                              {month}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("day")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          autoComplete="off"
+                          min="1"
+                          max="31"
+                          value={formData.birthDay}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("birthDay", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("year")}
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={formData.birthYear}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("birthYear", e.target.value)
+                          }
+                          className={fieldClass()}
+                        >
+                          {years.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        Blood Type
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.bloodType || "O+"}
+                          disabled={true}
+                          className="w-full h-10 px-3 text-sm bg-gray-100 dark:bg-slate-800/80 text-gray-800 dark:text-slate-200 font-bold border border-gray-200 dark:border-slate-700 rounded-lg cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">{t("addressHeading")}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("city")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.city}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("city", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("houseNoOptional")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.houseNo}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("houseNo", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("street")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.street}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("street", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("barangay")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={formData.barangay}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            handleInputChange("barangay", e.target.value)
+                          }
+                          className={fieldClass()}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Employment Details */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">
+                    {t("employmentDetails")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-3 block">
+                        {t("workingInQcQuestion")}
+                      </label>
+                      <div className="flex gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            autoComplete="off"
+                            name="working"
+                            checked={formData.workingInCity === true}
+                            disabled={!isEditing}
+                            onChange={() =>
+                              handleInputChange("workingInCity", true)
+                            }
+                            className="w-4 h-4 disabled:cursor-not-allowed cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-slate-300">{t("yes")}</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            autoComplete="off"
+                            name="working"
+                            checked={formData.workingInCity === false}
+                            disabled={!isEditing}
+                            onChange={() =>
+                              handleInputChange("workingInCity", false)
+                            }
+                            className="w-4 h-4 disabled:cursor-not-allowed cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-slate-300">{t("no")}</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                        {t("occupation")}
+                      </label>
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        value={formData.occupation}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          handleInputChange("occupation", e.target.value)
+                        }
+                        placeholder={t("enterOccupation")}
+                        className={fieldClass()}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sex */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                    {t("sex")}
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.sex}
+                      disabled={!isEditing}
+                      onChange={(e) => handleInputChange("sex", e.target.value)}
+                      className={fieldClass()}
+                    >
+                      <option value="MALE">{t("genderMale")}</option>
+                      <option value="FEMALE">{t("genderFemale")}</option>
+                      <option value="OTHER">{t("otherOption")}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Mobile Number */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
+                    {t("mobileNumber")}
+                  </label>
+                  <div className="relative">
                     <input
-                      type="text"
+                      type="tel"
                       autoComplete="off"
-                      value={formData.occupation}
+                      value={formData.mobileNumber}
                       disabled={!isEditing}
                       onChange={(e) =>
-                        handleInputChange("occupation", e.target.value)
+                        handleInputChange("mobileNumber", e.target.value)
                       }
-                      placeholder={t("enterOccupation")}
                       className={fieldClass()}
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Sex */}
-              <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                  {t("sex")}
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.sex}
-                    disabled={!isEditing}
-                    onChange={(e) => handleInputChange("sex", e.target.value)}
-                    className={fieldClass()}
-                  >
-                    <option value="MALE">{t("genderMale")}</option>
-                    <option value="FEMALE">{t("genderFemale")}</option>
-                    <option value="OTHER">{t("otherOption")}</option>
-                  </select>
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-slate-800">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={isUpdating}
+                        className="flex-1 h-11 rounded-lg border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {t("cancelBtn")}
+                      </button>
+                      <button
+                        onClick={handleUpdateProfile}
+                        disabled={isUpdating}
+                        className="flex-1 h-11 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                      >
+                        {isUpdating ? "Saving..." : t("updateProfile")}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-full flex justify-center">
+                      <button
+                        onClick={handleStartEdit}
+                        className="rounded-xl bg-blue-600 text-white text-sm font-semibold px-8 py-3 hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+                      >
+                        {t("editProfile")}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Mobile Number */}
-              <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-2 block">
-                  {t("mobileNumber")}
-                </label>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    autoComplete="off"
-                    value={formData.mobileNumber}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      handleInputChange("mobileNumber", e.target.value)
-                    }
-                    className={fieldClass()}
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-slate-800">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={isUpdating}
-                      className="flex-1 h-11 rounded-lg border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {t("cancelBtn")}
-                    </button>
-                    <button
-                      onClick={handleUpdateProfile}
-                      disabled={isUpdating}
-                      className="flex-1 h-11 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
-                    >
-                      {isUpdating ? "Saving..." : t("updateProfile")}
-                    </button>
-                  </>
-                ) : (
-                  <div className="w-full flex justify-center">
-                    <button
-                      onClick={handleStartEdit}
-                      className="rounded-xl bg-blue-600 text-white text-sm font-semibold px-8 py-3 hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
-                    >
-                      {t("editProfile")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            )
           )}
 
           {tab === "devices" && (

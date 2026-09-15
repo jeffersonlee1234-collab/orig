@@ -158,9 +158,9 @@ export function AppHeader({
     <ProfileModal
       open={profileOpen}
       onClose={() => setProfileOpen(false)}
-      name="Social Worker"
-      email="socialworker@gov.ph"
-      role="Staff"
+      name="System Administrator"
+      email="admin@quezoncity.gov.ph"
+      role="Admin"
     />
     </>
   )
