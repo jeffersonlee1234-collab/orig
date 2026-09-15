@@ -3,8 +3,6 @@ import {
   Award,
   Search,
   CheckCircle2,
-  Trash2,
-  RefreshCw,
   Check,
 } from "lucide-react"
 import { API_BASE } from "../../config/api"
@@ -154,26 +152,6 @@ export default function TrainingProgramAdmin() {
     setRejectReason("")
   }
 
-
-  // Reset all training applications (Testing)
-  const handleResetTraining = async () => {
-    const confirmText = isEn
-      ? "Are you sure you want to reset all Training Program applications in Admin?"
-      : isBis
-      ? "Sigurado ba ka nga gusto nimong i-reset ang tanang Training Program applications sa Admin?"
-      : "Sigurado ka bang nais mong i-reset ang lahat ng Training Program applications sa Admin?"
-
-    if (!window.confirm(confirmText)) {
-      return
-    }
-    setApplications([])
-    setSelectedApp(null)
-    try {
-      localStorage.removeItem("training_applications")
-      await fetch(`${API_BASE}/api/training/reset`, { method: "POST" })
-    } catch (_) {}
-  }
-
   // Counters
   const pendingCount = applications.filter((a) => a.status === "pending" || a.status === "under_review").length
   const approvedCount = applications.filter((a) => a.status === "approved").length
@@ -220,26 +198,6 @@ export default function TrainingProgramAdmin() {
               ? "Susiha ang mga aplikasyon sa residente, kumpirmaha ang iskedyul, subaya ang attendance, ug bantayi ang Certificate of Completion."
               : "Suriin ang mga aplikasyon ng residente, kumpirmahin ang mga iskedyul, subaybayan ang attendance, at subaybayan ang Certificate of Completion."}
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <button
-            type="button"
-            onClick={fetchTrainingApplications}
-            disabled={isLoading}
-            className="p-2 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-50"
-            title={isEn ? "Refresh list" : isBis ? "I-refresh ang lista" : "I-refresh ang listahan"}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            type="button"
-            onClick={handleResetTraining}
-            className="px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span>{isEn ? "Reset Training Data" : isBis ? "I-reset ang Datos sa Training" : "I-reset ang Datos ng Training"}</span>
-          </button>
         </div>
       </div>
 
