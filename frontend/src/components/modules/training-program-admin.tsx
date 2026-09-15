@@ -297,7 +297,14 @@ export default function TrainingProgramAdmin() {
       </div>
 
       {/* Applications List */}
-      {filteredApps.length === 0 ? (
+      {isLoading && applications.length === 0 ? (
+        <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-2">
+          <RefreshCw className="h-6 w-6 text-purple-600 animate-spin mx-auto" />
+          <p className="text-xs text-muted-foreground">
+            {isEn ? "Loading training applications..." : "Ikinakarga ang mga aplikasyon sa training..."}
+          </p>
+        </div>
+      ) : filteredApps.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-2">
           <Award className="h-8 w-8 text-muted-foreground mx-auto" />
           <p className="text-sm font-bold text-foreground">
