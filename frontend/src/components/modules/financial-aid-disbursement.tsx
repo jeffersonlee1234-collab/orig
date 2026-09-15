@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Search,
   Eye,
+  EyeOff,
   Banknote,
   Users,
   X,
@@ -32,6 +33,21 @@ export default function FinancialAidDisbursement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>("ALL")
   const [selectedDetailsRecord, setSelectedDetailsRecord] = useState<SyncedDisbursementRecord | null>(null)
+  const [hideAmounts, setHideAmounts] = useState<boolean>(() => localStorage.getItem("financial_privacy_mode") === "true")
+  const [revealedRows, setRevealedRows] = useState<Record<string, boolean>>({})
+
+  const toggleHideAmounts = () => {
+    const next = !hideAmounts
+    setHideAmounts(next)
+    localStorage.setItem("financial_privacy_mode", String(next))
+    if (next) {
+      setRevealedRows({})
+    }
+  }
+
+  const toggleRowReveal = (id: string) => {
+    setRevealedRows((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
 
   // Auto-sync submitted applications from Backend, LocalStorage, and Appointments Bridge
   useEffect(() => {
@@ -499,8 +515,8 @@ export default function FinancialAidDisbursement() {
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900 mt-2">
-            ₱{totalDisbursed.toLocaleString()}
+          <p className="text-2xl font-extrabold text-gray-900 mt-2 font-mono">
+            {hideAmounts ? "₱••••••" : `₱${totalDisbursed.toLocaleString()}`}
           </p>
           <p className="text-[11px] text-emerald-600 font-semibold mt-1">
             ✓ {releasedCount} beneficiaries paid
@@ -514,8 +530,8 @@ export default function FinancialAidDisbursement() {
               <Clock className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900 mt-2">
-            ₱{pendingAmount.toLocaleString()}
+          <p className="text-2xl font-extrabold text-gray-900 mt-2 font-mono">
+            {hideAmounts ? "₱••••••" : `₱${pendingAmount.toLocaleString()}`}
           </p>
           <p className="text-[11px] text-amber-600 font-semibold mt-1">
             {pendingCount} pending payouts
@@ -539,16 +555,16 @@ export default function FinancialAidDisbursement() {
 
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500 uppercase">Status Flow</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5" />
+            <span className="text-xs font-bold text-gray-500 uppercase">Privacy & Safety</span>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${hideAmounts ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"}`}>
+              {hideAmounts ? <EyeOff className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
             </div>
           </div>
           <p className="text-sm font-extrabold text-gray-900 mt-2">
-            PENDING → RELEASED
+            {hideAmounts ? "DISCREET MODE ON" : "STANDARD VIEW"}
           </p>
-          <p className="text-[11px] text-indigo-600 font-semibold mt-1">
-            Auto-synced with Appointment Schedule
+          <p className={`text-[11px] font-semibold mt-1 ${hideAmounts ? "text-amber-600" : "text-indigo-600"}`}>
+            {hideAmounts ? "Amounts masked for security" : "Auto-synced with Appointment Schedule"}
           </p>
         </div>
       </div>
@@ -601,16 +617,42 @@ export default function FinancialAidDisbursement() {
               </p>
             </div>
 
-            {/* Search */}
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search ID / Beneficiary name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 h-9 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Privacy Mode Toggle */}
+              <button
+                type="button"
+                onClick={toggleHideAmounts}
+                className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  hideAmounts
+                    ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-2xs"
+                    : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                }`}
+                title="Toggle Discreet Privacy Mode to hide payout cash figures on screen (Anti-Shoulder Surfing)"
+              >
+                {hideAmounts ? (
+                  <>
+                    <EyeOff className="w-4 h-4 text-amber-600" />
+                    <span>Privacy Mode: Active (Amounts Hidden)</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 text-gray-500" />
+                    <span>Hide Amounts (Privacy Mode)</span>
+                  </>
+                )}
+              </button>
+
+              {/* Search */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search ID / Beneficiary name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 h-9 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50"
+                />
+              </div>
             </div>
           </div>
 
@@ -659,6 +701,7 @@ export default function FinancialAidDisbursement() {
               ) : (
                 filteredDisbursements.map((d) => {
                   const isPending = d.status === "PENDING"
+                  const isRowAmountRevealed = Boolean(revealedRows[d.id])
 
                   return (
                     <tr key={d.id} className="hover:bg-gray-50/60 transition-colors">
@@ -672,7 +715,33 @@ export default function FinancialAidDisbursement() {
                         {d.assistanceType}
                       </td>
                       <td className="px-4 py-3.5 font-black text-emerald-700 text-sm">
-                        ₱{d.fixedAmount.toLocaleString()}
+                        {hideAmounts && !isRowAmountRevealed ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className="font-mono tracking-wider text-gray-400 select-none">₱••••••</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleRowReveal(d.id)}
+                              className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                              title="Reveal amount for this row"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5">
+                            <span>₱{d.fixedAmount.toLocaleString()}</span>
+                            {hideAmounts && isRowAmountRevealed && (
+                              <button
+                                type="button"
+                                onClick={() => toggleRowReveal(d.id)}
+                                className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors cursor-pointer"
+                                title="Hide amount"
+                              >
+                                <EyeOff className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-gray-800 font-medium">
                         {d.appointmentDate ? (
@@ -768,7 +837,31 @@ export default function FinancialAidDisbursement() {
               <div className="flex justify-between items-center py-1 border-b border-gray-50">
                 <span className="text-gray-500">Fixed Amount:</span>
                 <span className="font-black text-emerald-700 text-sm">
-                  ₱{selectedDetailsRecord.fixedAmount.toLocaleString()}
+                  {hideAmounts && !revealedRows[`modal-${selectedDetailsRecord.id}`] ? (
+                    <span className="inline-flex items-center gap-1.5 font-mono">
+                      <span className="tracking-wider text-gray-400 select-none">₱••••••</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleRowReveal(`modal-${selectedDetailsRecord.id}`)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline ml-1 cursor-pointer"
+                      >
+                        Show
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>₱{selectedDetailsRecord.fixedAmount.toLocaleString()}</span>
+                      {hideAmounts && revealedRows[`modal-${selectedDetailsRecord.id}`] && (
+                        <button
+                          type="button"
+                          onClick={() => toggleRowReveal(`modal-${selectedDetailsRecord.id}`)}
+                          className="text-xs text-gray-500 hover:text-gray-700 font-semibold underline ml-1 cursor-pointer"
+                        >
+                          Hide
+                        </button>
+                      )}
+                    </span>
+                  )}
                 </span>
               </div>
 
