@@ -1712,7 +1712,7 @@ export default function MyApplications() {
 
         const isUserMatch = (app: any): boolean => {
           if (!app) return false
-          if (app.is_archived === true) return false
+          if (app.is_archived === true || app.isArchived === true) return false
 
           // 1. Exact Email Match
           const appEmail = String(
@@ -1733,7 +1733,7 @@ export default function MyApplications() {
             return true
           }
 
-          // 3. QCID / Reference Number Match
+          // 3. QCID / Reference Number / Existing ID Match
           const appQc = String(
             app.qc_id ||
             app.qcid ||
@@ -1746,14 +1746,31 @@ export default function MyApplications() {
             app.assignedIdNumber ||
             app.assigned_id_number ||
             app.solo_parent_id_number ||
+            app.existingIdNumber ||
+            app.existing_id_number ||
+            app.existingBookletNumber ||
+            app.existing_booklet_number ||
             ""
           ).trim().toLowerCase()
 
+          const cleanUserQcid = (qcId || "").replace(/\D/g, "")
+          const cleanAppQc = appQc.replace(/\D/g, "")
+
+          if (cleanUserQcid && cleanAppQc && (cleanAppQc.includes(cleanUserQcid) || cleanUserQcid.includes(cleanAppQc))) {
+            return true
+          }
           if (qcId && appQc && (appQc === qcId.toLowerCase() || appQc.includes(qcId.toLowerCase()) || qcId.toLowerCase().includes(appQc))) {
             return true
           }
 
-          // 4. Full Name Match (Matches both first and last name of the user)
+          // 4. Contact Number Match
+          const appContact = String(app.contactNo || app.contact_no || app.cellphoneNo || app.contactNumber || app.contact_number || "").replace(/\D/g, "")
+          const userContact = (userProfile.mobileNumber || userProfile.contactNo || "").replace(/\D/g, "")
+          if (userContact && userContact.length >= 7 && appContact && (appContact.includes(userContact) || userContact.includes(appContact))) {
+            return true
+          }
+
+          // 5. Full Name Match (Matches both first and last name of the user)
           const appFirst = String(
             app.firstName ||
             app.first_name ||
@@ -1786,18 +1803,14 @@ export default function MyApplications() {
             `${appFirst} ${appLast}`
           ).trim().toLowerCase()
 
-          if (userFull && appFullName) {
-            const firstWord = userFirst.split(" ")[0] || ""
-            const lastWord = userLast.split(" ").pop() || ""
+          if (userFirst || userLast) {
+            const firstWord = userFirst.split(" ")[0]?.toLowerCase() || ""
+            const lastWord = userLast.split(" ").pop()?.toLowerCase() || ""
 
             if (firstWord && lastWord) {
-              if (appFullName.includes(firstWord) && appFullName.includes(lastWord)) return true
-              if (
-                (appFirst.includes(firstWord) || firstWord.includes(appFirst)) &&
-                (appLast.includes(lastWord) || lastWord.includes(appLast))
-              ) {
-                return true
-              }
+              const matchesFirst = appFullName.includes(firstWord) || appFirst.includes(firstWord) || firstWord.includes(appFirst)
+              const matchesLast = appFullName.includes(lastWord) || appLast.includes(lastWord) || lastWord.includes(appLast)
+              if (matchesFirst && matchesLast) return true
             } else if (firstWord) {
               if (appFullName.includes(firstWord) || appFirst.includes(firstWord)) return true
             }
@@ -1921,6 +1934,8 @@ export default function MyApplications() {
             const pwdData = await cachedApiFetch<any>(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders }, 4000)
             if (Array.isArray(pwdData)) {
               apiPwdApps = pwdData
+            } else if (pwdData && Array.isArray(pwdData.applications)) {
+              apiPwdApps = pwdData.applications
             }
           } catch {}
 
@@ -1929,19 +1944,19 @@ export default function MyApplications() {
             localPwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
           } catch {}
 
-          let pwdApps: any[] = []
-          if (Array.isArray(apiPwdApps) && apiPwdApps.length > 0) {
-            pwdApps = apiPwdApps
+          let pwdApps: any[] = [...apiPwdApps]
+          if (Array.isArray(localPwdApps)) {
+            for (const la of localPwdApps) {
+              if (la && !pwdApps.some(a => (a.id && la.id && a.id === la.id) || (a.referenceNumber && la.referenceNumber && a.referenceNumber === la.referenceNumber))) {
+                pwdApps.push(la)
+              }
+            }
+          }
+
+          if (pwdApps.length > 0) {
             try {
-              localStorage.setItem("pwd_senior_applications", JSON.stringify(apiPwdApps))
+              localStorage.setItem("pwd_senior_applications", JSON.stringify(pwdApps))
             } catch {}
-          } else if (Array.isArray(apiPwdApps)) {
-            pwdApps = []
-            try {
-              localStorage.setItem("pwd_senior_applications", JSON.stringify([]))
-            } catch {}
-          } else {
-            pwdApps = Array.isArray(localPwdApps) ? localPwdApps : []
           }
 
           const mappedPwd: ApplicationRecord[] = (pwdApps || [])
@@ -1971,11 +1986,14 @@ export default function MyApplications() {
                 ? "Senior Citizen ID Replacement"
                 : "Senior Citizen ID"
 
+              const rawSt = String(p.status || "pending").toLowerCase()
               let appStatus: ApplicationStatus = "Pending"
-              if (p.status === "approved") appStatus = "Approved"
-              else if (p.status === "released") appStatus = "Released"
-              else if (p.status === "for_release") appStatus = "For Release"
-              else if (p.status === "under_review" || p.status === "review") appStatus = "Under Review"
+              if (rawSt === "approved") appStatus = "Approved"
+              else if (rawSt === "released" || rawSt === "completed") appStatus = "Released"
+              else if (rawSt === "for_release") appStatus = "For Release"
+              else if (rawSt === "under_review" || rawSt === "review" || rawSt === "for_assessment") appStatus = "Under Review"
+              else if (rawSt === "rejected" || rawSt === "disapproved") appStatus = "Rejected"
+              else appStatus = "Pending"
 
               const isBooklet =
                 String(p.type || "").toLowerCase().includes("booklet") ||
@@ -1991,7 +2009,7 @@ export default function MyApplications() {
                   day: "numeric",
                 }),
                 status: appStatus,
-                applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" "),
+                applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
                 dateOfBirth: p.dateOfBirth || userProfile.birthDateDisplay,
                 address:
                   p.address ||
@@ -1999,13 +2017,13 @@ export default function MyApplications() {
                 contactNumber: p.contactNo || p.cellphoneNo || userProfile.mobileNumber,
                 email: p.email || userProfile.email,
                 remarks:
-                  p.status === "approved"
+                  appStatus === "Approved"
                     ? isBooklet
                       ? `Approved. Official Booklet Number: ${p.assignedIdNumber || "Sent to your registered Gmail"}`
                       : `Approved. Assigned ID Number: ${p.assignedIdNumber || "Available at office"}`
-                    : p.status === "rejected"
-                    ? `Review required: ${p.rejectionReason || "Incomplete documentation."}`
-                    : "Currently being reviewed by social worker.",
+                    : appStatus === "Rejected"
+                    ? (p.rejectionReason ? `Tinanggihan: ${p.rejectionReason}` : "Tinanggihan ng Evaluator")
+                    : "Kasalukuyang sinusuri ng Social Worker (Pending Review)",
               }
             })
           allFoundApps.push(...mappedPwd)
