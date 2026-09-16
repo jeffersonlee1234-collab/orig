@@ -97,7 +97,7 @@ export default function App() {
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={!auth.isAuthenticated ? <LandingPage /> : <Navigate to={auth.homePath} replace />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={!auth.isAuthenticated ? <Login /> : <Navigate to={auth.homePath} replace />} />
               <Route path="/register" element={!auth.isAuthenticated ? <Register /> : <Navigate to={auth.homePath} replace />} />
               <Route path="/reset-password" element={<ResetPassword />} />

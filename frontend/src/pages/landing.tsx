@@ -183,7 +183,16 @@ export function LandingPage() {
 
           {/* Primary CTA — 48-56px height, rounded-2xl, blue shadow */}
           <button
-            onClick={() => window.location.href = '/login'}
+            onClick={() => {
+              const isAuth = sessionStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('isAuthenticated') === 'true';
+              const role = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || '').toLowerCase();
+              if (isAuth) {
+                const isStaff = role === 'staff' || role === 'admin' || role === 'super_admin';
+                window.location.href = isStaff ? '/aics' : '/portal/overview';
+              } else {
+                window.location.href = '/login';
+              }
+            }}
             className="mt-8 inline-flex items-center gap-2 h-13 px-7 rounded-2xl cursor-pointer bg-primary text-primary-foreground text-sm font-medium shadow-lg shadow-primary/30 hover:opacity-90 transition-opacity"
           >
             Access the Portal
