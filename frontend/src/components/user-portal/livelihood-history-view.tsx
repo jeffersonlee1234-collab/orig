@@ -34,16 +34,30 @@ export default function LivelihoodHistoryView({
   const isEn = language === "en" || !language
   const isBis = language === "bis"
 
-  const [historyApps, setHistoryApps] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [historyApps, setHistoryApps] = useState<any[]>(() => {
+    try {
+      const profile = getCurrentUserProfile()
+      const qcId = getLoggedInUserQcid() || profile.qcidNo || ""
+      const local = JSON.parse(localStorage.getItem("livelihood_applications") || "[]")
+      if (Array.isArray(local) && local.length > 0) {
+        const matches = local.filter((a: any) => !qcId || a.qcid === qcId || a.user_id === qcId || a.reference_number === qcId)
+        if (matches.length > 0) return matches
+        return local
+      }
+    } catch (_) {}
+    return currentApplication ? [currentApplication] : []
+  })
+  const [isLoading, setIsLoading] = useState(() => historyApps.length === 0)
   const [selectedAppModal, setSelectedAppModal] = useState<any | null>(null)
 
   useEffect(() => {
     let isMounted = true
 
-    const loadHistory = async () => {
+    const loadHistory = async (silent = false) => {
       try {
-        setIsLoading(true)
+        if (!silent && historyApps.length === 0) {
+          setIsLoading(true)
+        }
         const profile = getCurrentUserProfile()
         const qcId = getLoggedInUserQcid() || profile.qcidNo || "110000116932100"
         const userEmail = (profile.email || "").toLowerCase().trim()
@@ -105,12 +119,16 @@ export default function LivelihoodHistoryView({
       }
     }
 
-    loadHistory()
+    loadHistory(historyApps.length > 0)
+
+    const handleUpdate = () => loadHistory(true)
+    window.addEventListener("livelihood_status_updated", handleUpdate)
 
     return () => {
       isMounted = false
+      window.removeEventListener("livelihood_status_updated", handleUpdate)
     }
-  }, [currentApplication])
+  }, [currentApplication?.id, currentApplication?.reference_number, currentApplication?.application_status, (currentApplication?.assistance as any)?.release_status])
 
   const totalGrants = historyApps.filter((a) => a.application_status === "approved" || a.status === "approved" || a.status === "released").length
   const totalAmount = historyApps.reduce((sum, a) => {

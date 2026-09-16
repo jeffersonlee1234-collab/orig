@@ -238,7 +238,19 @@ export default function ApplyLivelihood() {
             })
 
           if (match) {
-            setActiveApplication(match)
+            setActiveApplication((prev) => {
+              if (
+                prev &&
+                prev.id === match.id &&
+                prev.application_status === match.application_status &&
+                prev.reference_number === match.reference_number &&
+                JSON.stringify(prev.assistance || {}) === JSON.stringify(match.assistance || {}) &&
+                JSON.stringify(prev.monitoring || []) === JSON.stringify(match.monitoring || [])
+              ) {
+                return prev
+              }
+              return match
+            })
             return
           }
         }
@@ -247,27 +259,25 @@ export default function ApplyLivelihood() {
         if (backendSuccess) {
           localStorage.removeItem("active_livelihood_ref")
         }
-        setActiveApplication(null)
+        setActiveApplication((prev) => (prev === null ? prev : null))
       } catch (_) {}
     }
 
     fetchApp()
 
-    // Poll every 8 seconds so status automatically syncs across all devices
-    const interval = setInterval(fetchApp, 8000)
+    // Poll every 25 seconds for background sync; real-time events handle instant updates
+    const interval = setInterval(fetchApp, 25000)
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
       fetchApp()
     })
 
     const handleSync = () => fetchApp()
-    window.addEventListener("storage", handleSync)
     window.addEventListener("livelihood_status_updated", handleSync)
 
     return () => {
       clearInterval(interval)
       unsubscribe()
-      window.removeEventListener("storage", handleSync)
       window.removeEventListener("livelihood_status_updated", handleSync)
     }
   }, [isTraining])
