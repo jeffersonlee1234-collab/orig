@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Wallet,
   CheckCircle2,
@@ -25,91 +25,113 @@ import { useLanguage } from "../ui/language-context"
 export default function ApplyFinancialAid() {
   const { t } = useLanguage()
   const [disbursements, setDisbursements] = useState<SyncedDisbursementRecord[]>([])
+  const isFetchingRef = useRef(false)
 
   // Auto-sync approved disbursements and scheduled payout appointments
   useEffect(() => {
+    let isMounted = true
+
     const loadDisbursements = async () => {
-      // Auto-release engine: check if any appointment time has arrived
-      checkAndAutoReleaseScheduledDisbursements()
-
-      const userProfile = getCurrentUserProfile()
-      const qcId = getLoggedInUserQcid() || userProfile.qcidNo
-      const userFirst = (userProfile.firstName || "").trim().toLowerCase()
-      const userLast = (userProfile.lastName || "").trim().toLowerCase()
-      const userFull = `${userFirst} ${userLast}`.trim().toLowerCase()
-
-      const userRefNumbers = new Set<string>()
-      if (qcId) userRefNumbers.add(qcId)
-
-      const isUserMatch = (applicantName?: string, appRef?: string) => {
-        if (appRef && qcId && String(appRef).trim() === String(qcId).trim()) return true
-        if (appRef && userRefNumbers.has(appRef)) return true
-        if (!applicantName) return false
-        const name = applicantName.toLowerCase().trim()
-        if (userFull && name === userFull) return true
-        if (userFirst && userLast && name.startsWith(userFirst + " ") && name.endsWith(" " + userLast)) return true
-        return false
-      }
-
-      let remoteRecords: SyncedDisbursementRecord[] = []
-      let aicsRecords: SyncedDisbursementRecord[] = []
-      let pwdSeniorRecords: SyncedDisbursementRecord[] = []
+      if (isFetchingRef.current) return
+      isFetchingRef.current = true
 
       try {
-        // 1. Fetch user's approved AICS applications
-        const resAics = await fetch(`${API_BASE}/api/aics/applications?qcId=${qcId}`)
-        if (resAics.ok) {
-          const dataAics = await resAics.json()
-          if (dataAics.applications && Array.isArray(dataAics.applications)) {
-            dataAics.applications.forEach((app: any) => {
-              if (app.reference_number) userRefNumbers.add(app.reference_number)
-              if (app.reference_no) userRefNumbers.add(app.reference_no)
-              if (app.id) {
-                userRefNumbers.add(String(app.id))
-                userRefNumbers.add(`AICS-2026-${String(app.id).padStart(4, "0")}`)
-              }
-            })
+        // Auto-release engine: check if any appointment time has arrived
+        checkAndAutoReleaseScheduledDisbursements()
 
-            const approvedOnes = dataAics.applications.filter(
-              (app: any) =>
-                app.status === "approved" ||
-                app.status === "for_release" ||
-                app.status === "released" ||
-                app.status === "completed"
-            )
+        const userProfile = getCurrentUserProfile()
+        const qcId = getLoggedInUserQcid() || userProfile.qcidNo
+        const userFirst = (userProfile.firstName || "").trim().toLowerCase()
+        const userLast = (userProfile.lastName || "").trim().toLowerCase()
+        const userFull = `${userFirst} ${userLast}`.trim().toLowerCase()
+        const userObj = JSON.parse(localStorage.getItem("user") || "{}")
+        const userId = userObj.id || qcId || "0"
+        const token = localStorage.getItem("token") || localStorage.getItem("authToken") || ""
 
-            aicsRecords = approvedOnes.map((app: any) => {
-              const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
-              const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
-              const amount = FIXED_ASSISTANCE_AMOUNTS[type] || 1000
-              const isReleased = app.status === "released" || app.status === "completed"
-              const ref = app.reference_number || app.reference_no || `AICS-2026-${String(app.id).padStart(4, "0")}`
+        const userRefNumbers = new Set<string>()
+        if (qcId) userRefNumbers.add(qcId)
 
-              return {
-                id: `user-aics-${app.id || ref}`,
-                disbursementId: `DISB-2026-${String(app.id || 1).padStart(4, "0")}`,
-                applicationRef: ref,
-                applicantName: `${app.first_name || userProfile.firstName} ${app.last_name || userProfile.lastName}`.trim().toUpperCase(),
-                assistanceType: type,
-                fixedAmount: amount,
-                dateApproved: new Date(app.updated_at || app.created_at || Date.now()).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }),
-                status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
-                venue: "Quezon City Hall",
-                remarks: "Scheduled financial aid payout.",
-              }
-            })
-          }
+        const isUserMatch = (applicantName?: string, appRef?: string) => {
+          if (appRef && qcId && String(appRef).trim() === String(qcId).trim()) return true
+          if (appRef && userRefNumbers.has(appRef)) return true
+          if (!applicantName) return false
+          const name = applicantName.toLowerCase().trim()
+          if (userFull && name === userFull) return true
+          if (userFirst && userLast && name.startsWith(userFirst + " ") && name.endsWith(" " + userLast)) return true
+          return false
         }
 
-        // 2. Fetch PWD / Senior Social Assistance for user
-        try {
-          const resPwd = await fetch(`${API_BASE}/api/pwd-senior/applications`)
-          if (resPwd.ok) {
-            const pwdApps = await resPwd.json()
+        let remoteRecords: SyncedDisbursementRecord[] = []
+        let aicsRecords: SyncedDisbursementRecord[] = []
+        let pwdSeniorRecords: SyncedDisbursementRecord[] = []
+        let appointmentsMap: Record<string, any> = {}
+
+        // Fetch all endpoints concurrently in parallel for lightning-fast loading
+        const [resAicsSettled, resPwdSettled, resCwSettled, resDbSettled, resApptsSettled] = await Promise.allSettled([
+          fetch(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId || "")}`),
+          fetch(`${API_BASE}/api/pwd-senior/applications`),
+          fetch(
+            `${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId || "")}&email=${encodeURIComponent(userProfile?.email || "")}`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+          ),
+          fetch(`${API_BASE}/api/financial-aid`),
+          fetch(`${API_BASE}/api/appointments`),
+        ])
+
+        // 1. Process AICS
+        if (resAicsSettled.status === "fulfilled" && resAicsSettled.value.ok) {
+          try {
+            const dataAics = await resAicsSettled.value.json()
+            if (dataAics.applications && Array.isArray(dataAics.applications)) {
+              dataAics.applications.forEach((app: any) => {
+                if (app.reference_number) userRefNumbers.add(app.reference_number)
+                if (app.reference_no) userRefNumbers.add(app.reference_no)
+                if (app.id) {
+                  userRefNumbers.add(String(app.id))
+                  userRefNumbers.add(`AICS-2026-${String(app.id).padStart(4, "0")}`)
+                }
+              })
+
+              const approvedOnes = dataAics.applications.filter(
+                (app: any) =>
+                  app.status === "approved" ||
+                  app.status === "for_release" ||
+                  app.status === "released" ||
+                  app.status === "completed"
+              )
+
+              aicsRecords = approvedOnes.map((app: any) => {
+                const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
+                const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
+                const amount = FIXED_ASSISTANCE_AMOUNTS[type] || 1000
+                const isReleased = app.status === "released" || app.status === "completed"
+                const ref = app.reference_number || app.reference_no || `AICS-2026-${String(app.id).padStart(4, "0")}`
+
+                return {
+                  id: `user-aics-${app.id || ref}`,
+                  disbursementId: `DISB-2026-${String(app.id || 1).padStart(4, "0")}`,
+                  applicationRef: ref,
+                  applicantName: `${app.first_name || userProfile.firstName} ${app.last_name || userProfile.lastName}`.trim().toUpperCase(),
+                  assistanceType: type,
+                  fixedAmount: amount,
+                  dateApproved: new Date(app.updated_at || app.created_at || Date.now()).toLocaleDateString("en-PH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }),
+                  status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
+                  venue: "Quezon City Hall",
+                  remarks: "Scheduled financial aid payout.",
+                }
+              })
+            }
+          } catch {}
+        }
+
+        // 2. Process PWD / Senior
+        if (resPwdSettled.status === "fulfilled" && resPwdSettled.value.ok) {
+          try {
+            const pwdApps = await resPwdSettled.value.json()
             if (Array.isArray(pwdApps)) {
               pwdApps.forEach((app: any) => {
                 const matchUser = (app.referenceNumber === qcId || app.reference_number === qcId || app.id === qcId || isUserMatch([app.firstName, app.lastName].join(" ")))
@@ -154,20 +176,13 @@ export default function ApplyFinancialAid() {
                 }
               })
             }
-          }
-        } catch {}
+          } catch {}
+        }
 
-        // 3. Fetch Child Welfare Approved Applications for user
-        try {
-          const userObj = JSON.parse(localStorage.getItem("user") || "{}")
-          const userId = userObj.id || qcId || "0"
-          const token = localStorage.getItem("token") || localStorage.getItem("authToken") || ""
-          const cwRes = await fetch(
-            `${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userProfile?.email || "")}`,
-            { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-          )
-          if (cwRes.ok) {
-            const cwData = await cwRes.json()
+        // 3. Process Child Welfare
+        if (resCwSettled.status === "fulfilled" && resCwSettled.value.ok) {
+          try {
+            const cwData = await resCwSettled.value.json()
             const cwApps = Array.isArray(cwData.applications) ? cwData.applications : []
             const approvedCw = cwApps.filter((c: any) => {
               const st = String(c.application_status || c.status).toLowerCase()
@@ -195,164 +210,168 @@ export default function ApplyFinancialAid() {
                 remarks: "Child Welfare financial support grant.",
               })
             })
-          }
+          } catch {}
+        }
+
+        // 4. Process DB Financial Aid
+        if (resDbSettled.status === "fulfilled" && resDbSettled.value.ok) {
+          try {
+            const dataDb = await resDbSettled.value.json()
+            if (dataDb.disbursements && Array.isArray(dataDb.disbursements)) {
+              const matchingDbRecords = dataDb.disbursements.filter((d: any) =>
+                !isIdOrDocumentService(d.assistance_type) && isUserMatch(d.applicant_name, d.application_ref)
+              )
+              const dbRecords: SyncedDisbursementRecord[] = matchingDbRecords.map((d: any) => ({
+                id: `db-${d.id}`,
+                disbursementId: d.disbursement_id,
+                applicationRef: d.application_ref,
+                applicantName: d.applicant_name,
+                assistanceType: d.assistance_type,
+                fixedAmount: Number(d.fixed_amount) || FIXED_ASSISTANCE_AMOUNTS[d.assistance_type] || 1500,
+                dateApproved: d.date_approved,
+                status: d.status as DisbursementStage,
+                appointmentDate: d.appointment_date,
+                appointmentTime: d.appointment_time,
+                venue: d.venue,
+                releasedDate: d.released_date,
+                releasedBy: d.released_by,
+                remarks: d.remarks,
+              }))
+              remoteRecords.push(...dbRecords)
+            }
+          } catch {}
+        }
+
+        // 5. Process Appointments
+        if (resApptsSettled.status === "fulfilled" && resApptsSettled.value.ok) {
+          try {
+            const dataAppts = await resApptsSettled.value.json()
+            if (dataAppts.appointments && Array.isArray(dataAppts.appointments)) {
+              dataAppts.appointments.forEach((a: any) => {
+                if (a.reference_no) appointmentsMap[a.reference_no] = a
+                if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
+              })
+            }
+          } catch {}
+        }
+
+        const now = new Date()
+
+        let localScheduledMap: Record<string, any> = {}
+        try {
+          const rawSched = localStorage.getItem("all_appointments_scheduled")
+          if (rawSched) localScheduledMap = JSON.parse(rawSched)
         } catch {}
 
-        // 4. Fetch from backend financial-aid endpoint (filter only records that belong to current user)
-        const resDb = await fetch(`${API_BASE}/api/financial-aid`)
-        if (resDb.ok) {
-          const dataDb = await resDb.json()
-          if (dataDb.disbursements && Array.isArray(dataDb.disbursements)) {
-            const matchingDbRecords = dataDb.disbursements.filter((d: any) =>
-              !isIdOrDocumentService(d.assistance_type) && isUserMatch(d.applicant_name, d.application_ref)
-            )
-            const dbRecords: SyncedDisbursementRecord[] = matchingDbRecords.map((d: any) => ({
-              id: `db-${d.id}`,
-              disbursementId: d.disbursement_id,
-              applicationRef: d.application_ref,
-              applicantName: d.applicant_name,
-              assistanceType: d.assistance_type,
-              fixedAmount: Number(d.fixed_amount) || FIXED_ASSISTANCE_AMOUNTS[d.assistance_type] || 1500,
-              dateApproved: d.date_approved,
-              status: d.status as DisbursementStage,
-              appointmentDate: d.appointment_date,
-              appointmentTime: d.appointment_time,
-              venue: d.venue,
-              releasedDate: d.released_date,
-              releasedBy: d.released_by,
-              remarks: d.remarks,
-            }))
-            remoteRecords.push(...dbRecords)
-          }
-        }
-      } catch (err) {
-        console.warn("Could not fetch remote approved disbursements:", err)
-      }
+        // Filter localDisbursements to only current user
+        const localDisbursements = getSavedDisbursements().filter((l) =>
+          isUserMatch(l.applicantName, l.applicationRef)
+        )
 
-      const now = new Date()
+        // ── DEDUPLICATION & LATEST APPROVED SELECTION ──
+        const recordMap = new Map<string, SyncedDisbursementRecord>()
 
-      // Fetch appointments & read local schedule cache to bridge schedule & completed status
-      let appointmentsMap: Record<string, any> = {}
-      try {
-        const resAppts = await fetch(`${API_BASE}/api/appointments`)
-        if (resAppts.ok) {
-          const dataAppts = await resAppts.json()
-          if (dataAppts.appointments && Array.isArray(dataAppts.appointments)) {
-            dataAppts.appointments.forEach((a: any) => {
-              if (a.reference_no) appointmentsMap[a.reference_no] = a
-              if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
-            })
-          }
-        }
-      } catch {}
+        const processCandidate = (r: SyncedDisbursementRecord) => {
+          if (!r || isIdOrDocumentService(r.assistanceType)) return
+          const key = (r.applicationRef || "").trim() || `${r.assistanceType.toLowerCase().trim()}_${r.applicantName.toLowerCase().trim()}`
+          if (!key) return
 
-      let localScheduledMap: Record<string, any> = {}
-      try {
-        const rawSched = localStorage.getItem("all_appointments_scheduled")
-        if (rawSched) localScheduledMap = JSON.parse(rawSched)
-      } catch {}
-
-      // Filter localDisbursements to only current user
-      const localDisbursements = getSavedDisbursements().filter((l) =>
-        isUserMatch(l.applicantName, l.applicationRef)
-      )
-
-      // ── DEDUPLICATION & LATEST APPROVED SELECTION ──
-      // Group by applicationRef or (assistanceType + applicantName)
-      const recordMap = new Map<string, SyncedDisbursementRecord>()
-
-      const processCandidate = (r: SyncedDisbursementRecord) => {
-        if (!r || isIdOrDocumentService(r.assistanceType)) return
-        const key = (r.applicationRef || "").trim() || `${r.assistanceType.toLowerCase().trim()}_${r.applicantName.toLowerCase().trim()}`
-        if (!key) return
-
-        if (!recordMap.has(key)) {
-          recordMap.set(key, r)
-        } else {
-          const existing = recordMap.get(key)!
-          // Prefer RELEASED status over PENDING
-          const isRReleased = r.status === "RELEASED"
-          const isExReleased = existing.status === "RELEASED"
-
-          if (isRReleased && !isExReleased) {
-            recordMap.set(key, { ...existing, ...r, status: "RELEASED" })
-          } else if (r.appointmentDate && !existing.appointmentDate) {
-            recordMap.set(key, { ...existing, ...r })
+          if (!recordMap.has(key)) {
+            recordMap.set(key, r)
           } else {
-            // Keep the latest date
-            const timeR = new Date(r.dateApproved || r.releasedDate || 0).getTime()
-            const timeEx = new Date(existing.dateApproved || existing.releasedDate || 0).getTime()
-            if (timeR >= timeEx) {
+            const existing = recordMap.get(key)!
+            const isRReleased = r.status === "RELEASED"
+            const isExReleased = existing.status === "RELEASED"
+
+            if (isRReleased && !isExReleased) {
+              recordMap.set(key, { ...existing, ...r, status: "RELEASED" })
+            } else if (r.appointmentDate && !existing.appointmentDate) {
               recordMap.set(key, { ...existing, ...r })
+            } else {
+              const timeR = new Date(r.dateApproved || r.releasedDate || 0).getTime()
+              const timeEx = new Date(existing.dateApproved || existing.releasedDate || 0).getTime()
+              if (timeR >= timeEx) {
+                recordMap.set(key, { ...existing, ...r })
+              }
             }
           }
         }
-      }
 
-      // Add in order of priority: DB records, AICS records, PWD/Senior records, Local records
-      remoteRecords.forEach(processCandidate)
-      aicsRecords.forEach(processCandidate)
-      pwdSeniorRecords.forEach(processCandidate)
-      localDisbursements.forEach(processCandidate)
+        remoteRecords.forEach(processCandidate)
+        aicsRecords.forEach(processCandidate)
+        pwdSeniorRecords.forEach(processCandidate)
+        localDisbursements.forEach(processCandidate)
 
-      // Enhance with appointments schedule & auto-released status
-      let combined = Array.from(recordMap.values()).map((d) => {
-        const appt = appointmentsMap[d.applicationRef] || appointmentsMap[d.applicantName?.toLowerCase()?.trim()]
-        const cachedSched = localScheduledMap[d.applicationRef] || localScheduledMap[d.applicantName?.toLowerCase()?.trim()]
+        let combined = Array.from(recordMap.values()).map((d) => {
+          const appt = appointmentsMap[d.applicationRef] || appointmentsMap[d.applicantName?.toLowerCase()?.trim()]
+          const cachedSched = localScheduledMap[d.applicationRef] || localScheduledMap[d.applicantName?.toLowerCase()?.trim()]
 
-        const finalApptDate = d.appointmentDate || appt?.scheduled_date || cachedSched?.scheduledDate || null
-        const finalApptTime = d.appointmentTime || appt?.scheduled_time || cachedSched?.scheduledTime || null
-        const finalVenue = d.venue || appt?.office_location || cachedSched?.officeLocation || "Quezon City Hall"
-        const isApptCompleted = appt?.status === "completed" || cachedSched?.status === "completed"
+          const finalApptDate = d.appointmentDate || appt?.scheduled_date || cachedSched?.scheduledDate || null
+          const finalApptTime = d.appointmentTime || appt?.scheduled_time || cachedSched?.scheduledTime || null
+          const finalVenue = d.venue || appt?.office_location || cachedSched?.officeLocation || "Quezon City Hall"
+          const isApptCompleted = appt?.status === "completed" || cachedSched?.status === "completed"
 
-        let isTimeReached = false
-        if (finalApptDate) {
-          const dt = parseAppointmentDateTime(finalApptDate, finalApptTime)
-          if (dt && now.getTime() >= dt.getTime()) {
-            isTimeReached = true
+          let isTimeReached = false
+          if (finalApptDate) {
+            const dt = parseAppointmentDateTime(finalApptDate, finalApptTime)
+            if (dt && now.getTime() >= dt.getTime()) {
+              isTimeReached = true
+            }
           }
+
+          const isReleased = d.status === "RELEASED" || isApptCompleted || (Boolean(finalApptDate) && isTimeReached)
+
+          return {
+            ...d,
+            appointmentDate: finalApptDate,
+            appointmentTime: finalApptTime,
+            venue: finalVenue,
+            status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
+            releasedDate: isReleased
+              ? d.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
+              : undefined,
+            releasedBy: isReleased
+              ? d.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
+              : undefined,
+          }
+        })
+
+        combined.sort((a, b) => {
+          const timeA = new Date(a.dateApproved || a.appointmentDate || 0).getTime()
+          const timeB = new Date(b.dateApproved || b.appointmentDate || 0).getTime()
+          return timeB - timeA
+        })
+
+        if (isMounted) {
+          setDisbursements(combined)
         }
-
-        const isReleased = d.status === "RELEASED" || isApptCompleted || (Boolean(finalApptDate) && isTimeReached)
-
-        return {
-          ...d,
-          appointmentDate: finalApptDate,
-          appointmentTime: finalApptTime,
-          venue: finalVenue,
-          status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
-          releasedDate: isReleased
-            ? d.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
-            : undefined,
-          releasedBy: isReleased
-            ? d.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
-            : undefined,
-        }
-      })
-
-      // Sort with LATEST APPROVED record at the top!
-      combined.sort((a, b) => {
-        const timeA = new Date(a.dateApproved || a.appointmentDate || 0).getTime()
-        const timeB = new Date(b.dateApproved || b.appointmentDate || 0).getTime()
-        return timeB - timeA
-      })
-
-      setDisbursements(combined)
+      } finally {
+        isFetchingRef.current = false
+      }
     }
 
     loadDisbursements()
 
-    // Real-time live check every 2 seconds
+    // Balanced background refresh interval (15s) with in-flight protection
     const liveTimer = setInterval(() => {
       loadDisbursements()
-    }, 2000)
+    }, 15000)
 
-    const handleSync = () => loadDisbursements()
+    let debounceTimeout: any = null
+    const handleSync = () => {
+      clearTimeout(debounceTimeout)
+      debounceTimeout = setTimeout(() => {
+        loadDisbursements()
+      }, 300)
+    }
+
     window.addEventListener("financial_disbursements_updated", handleSync)
     window.addEventListener("appointments_updated", handleSync)
     window.addEventListener("storage", handleSync)
 
     return () => {
+      isMounted = false
+      clearTimeout(debounceTimeout)
       clearInterval(liveTimer)
       window.removeEventListener("financial_disbursements_updated", handleSync)
       window.removeEventListener("appointments_updated", handleSync)

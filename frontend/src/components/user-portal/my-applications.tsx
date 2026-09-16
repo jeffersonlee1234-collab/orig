@@ -1975,11 +1975,6 @@ export default function MyApplications() {
           console.warn("Could not fetch remote deleted apps:", err)
         }
 
-        if (isMounted) {
-          setDeletedApplications(initialDeleted)
-        }
-        const deletedKeySet = new Set(initialDeleted.map((d) => (d.applicationNo + "::" + d.assistance).toLowerCase()))
-
         const token = sessionStorage.getItem("token") || localStorage.getItem("token") || ""
         const sessionToken = sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken") || ""
         const authHeaders: Record<string, string> = {
@@ -1990,554 +1985,547 @@ export default function MyApplications() {
 
         let allFoundApps: ApplicationRecord[] = []
 
-        // 1. AICS Applications
-        try {
-          const data = await cachedApiFetch<any>(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId)}`, { headers: authHeaders }, 4000)
-          if (data?.applications && Array.isArray(data.applications)) {
-            const mappedAics: ApplicationRecord[] = data.applications
-              .filter(isUserMatch)
-              .map((app: any) => {
-                const rawType = (app.assistance_type || "Transportation").replace(/\s*assistance/gi, "").trim()
-                const cleanAssistance = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
-                const rawDate =
-                  app.created_at ||
-                  app.date_applied ||
-                  app.submitted_at ||
-                  app.submittedAt ||
-                  app.date_submitted ||
-                  app.date ||
-                  app.updated_at
-                const appDate = extractAnyDateFromApp(app)
+        // Fetch all application categories concurrently in parallel
+        const [
+          delSettled,
+          aicsSettled,
+          pwdSettled,
+          spSettled,
+          cwSettled,
+          livSettled,
+          trnSettled,
+        ] = await Promise.allSettled([
+          cachedApiFetch<any>(
+            `${API_BASE}/api/user-applications/deleted?email=${encodeURIComponent(userEmail)}&qcid=${encodeURIComponent(
+              qcId
+            )}&name=${encodeURIComponent(userFirst + " " + userLast)}`,
+            undefined,
+            4000
+          ),
+          cachedApiFetch<any>(`${API_BASE}/api/aics/applications?qcId=${encodeURIComponent(qcId)}`, { headers: authHeaders }, 4000),
+          cachedApiFetch<any>(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders }, 4000),
+          cachedApiFetch<any>(
+            `${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
+            { headers: authHeaders },
+            4000
+          ),
+          cachedApiFetch<any>(
+            `${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
+            { headers: authHeaders },
+            4000
+          ),
+          cachedApiFetch<any>(`${API_BASE}/api/livelihood/applications`, { headers: authHeaders }, 4000),
+          cachedApiFetch<any>(`${API_BASE}/api/training/applications`, { headers: authHeaders }, 4000),
+        ])
 
-                return {
-                  applicationNo: app.qc_id || app.reference_no || app.reference_number || qcId,
-                  assistance: cleanAssistance,
-                  assistanceCategory: "AICS",
-                  rawTimestamp: appDate.getTime(),
-                  dateApplied: formatAppDate(rawDate, app),
-                  status:
-                    app.status === "approved"
-                      ? "Approved"
-                      : app.status === "released"
-                      ? "Released"
-                      : app.status === "for_release"
-                      ? "For Release"
-                      : app.status === "assessment"
-                      ? "For Assessment"
-                      : "Under Review",
-                  applicantName: app.full_name || `${userProfile.firstName} ${userProfile.lastName}`,
-                  dateOfBirth: app.birth_date || userProfile.birthDateDisplay,
-                  address:
-                    app.address ||
-                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                  contactNumber: app.contact_number || userProfile.mobileNumber,
-                  email: app.email || userProfile.email,
-                }
-              })
-            allFoundApps.push(...mappedAics)
-          }
-        } catch (err) {
-          console.warn("Could not fetch AICS applications:", err)
+        // Process deleted apps
+        if (delSettled.status === "fulfilled" && delSettled.value?.applications && Array.isArray(delSettled.value.applications)) {
+          const mappedDel: ApplicationRecord[] = delSettled.value.applications.map((d: any) => {
+            const targetObj = d.payload || d
+            const appDate = extractAnyDateFromApp(targetObj)
+            return {
+              applicationNo: d.referenceNo || d.applicationId || "N/A",
+              assistance: d.assistanceTitle || d.payload?.assistance || "Social Assistance",
+              assistanceCategory: d.category || d.payload?.assistanceCategory || "General",
+              rawTimestamp: appDate.getTime(),
+              dateApplied: formatAppDate(d.payload?.dateApplied || d.archivedAt, targetObj),
+              status: d.status || d.payload?.status || "Approved",
+              applicantName:
+                d.applicantName || d.payload?.applicantName || `${userProfile.firstName} ${userProfile.lastName}`,
+              dateOfBirth: d.payload?.dateOfBirth || userProfile.birthDateDisplay,
+              address:
+                d.payload?.address ||
+                `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+              contactNumber: d.payload?.contactNumber || userProfile.mobileNumber,
+              email: d.email || userProfile.email,
+              deletedAt: formatAppDate(d.archivedAt || Date.now()),
+            }
+          })
+
+          const mapKeys = new Set(initialDeleted.map((i) => i.applicationNo + i.assistance))
+          mappedDel.forEach((m) => {
+            if (!mapKeys.has(m.applicationNo + m.assistance)) {
+              initialDeleted.push(m)
+            }
+          })
         }
 
-        // 2. PWD & Senior Citizen Applications
-        try {
-          let apiPwdApps: any[] = []
-          try {
-            const pwdData = await cachedApiFetch<any>(`${API_BASE}/api/pwd-senior/applications`, { headers: authHeaders }, 4000)
-            if (Array.isArray(pwdData)) {
-              apiPwdApps = pwdData
-            } else if (pwdData && Array.isArray(pwdData.applications)) {
-              apiPwdApps = pwdData.applications
-            }
-          } catch {}
+        if (isMounted) {
+          setDeletedApplications(initialDeleted)
+        }
+        const deletedKeySet = new Set(initialDeleted.map((d) => (d.applicationNo + "::" + d.assistance).toLowerCase()))
 
-          let localPwdApps: any[] = []
-          try {
-            localPwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
-          } catch {}
-
-          let pwdApps: any[] = [...apiPwdApps]
-          if (Array.isArray(localPwdApps)) {
-            for (const la of localPwdApps) {
-              if (la && !pwdApps.some(a => (a.id && la.id && a.id === la.id) || (a.referenceNumber && la.referenceNumber && a.referenceNumber === la.referenceNumber))) {
-                pwdApps.push(la)
-              }
-            }
-          }
-
-          if (pwdApps.length > 0) {
-            try {
-              localStorage.setItem("pwd_senior_applications", JSON.stringify(pwdApps))
-            } catch {}
-          }
-
-          const mappedPwd: ApplicationRecord[] = (pwdApps || [])
+        // 1. Process AICS
+        if (aicsSettled.status === "fulfilled" && aicsSettled.value?.applications && Array.isArray(aicsSettled.value.applications)) {
+          const mappedAics: ApplicationRecord[] = aicsSettled.value.applications
             .filter(isUserMatch)
-            .map((p: any) => {
-              const isPwd =
-                String(p.category || "").toUpperCase() === "PWD" ||
-                String(p.category || "").toLowerCase().includes("disability")
-              const typeStr = String(p.type || "new").toLowerCase()
-              const serviceTitle = isPwd
-                ? typeStr === "assistance"
-                  ? "PWD Social Assistance"
-                  : typeStr === "renewal"
-                  ? "Persons with Disability (PWD) ID Renewal"
-                  : typeStr === "loss" || typeStr === "replacement"
-                  ? "Persons with Disability (PWD) ID Replacement"
-                  : "Persons with Disability (PWD) ID"
-                : typeStr === "medicine-booklet"
-                ? "Senior Citizen Medicine Booklet"
-                : typeStr === "movie-booklet"
-                ? "Senior Citizen Movie Booklet"
-                : typeStr === "social-assistance"
-                ? "Senior Citizen Social Assistance"
-                : typeStr === "renewal"
-                ? "Senior Citizen ID Renewal"
-                : typeStr === "loss" || typeStr === "replacement"
-                ? "Senior Citizen ID Replacement"
-                : "Senior Citizen ID"
-
-              const rawSt = String(p.status || "pending").toLowerCase()
-              let appStatus: ApplicationStatus = "Pending"
-              if (rawSt === "approved") appStatus = "Approved"
-              else if (rawSt === "released" || rawSt === "completed") appStatus = "Released"
-              else if (rawSt === "for_release") appStatus = "For Release"
-              else if (rawSt === "under_review" || rawSt === "review" || rawSt === "for_assessment") appStatus = "Under Review"
-              else if (rawSt === "rejected" || rawSt === "disapproved") appStatus = "Rejected"
-              else appStatus = "Pending"
-
-              const isBooklet =
-                String(p.type || "").toLowerCase().includes("booklet") ||
-                String(p.category || "").toLowerCase().includes("booklet")
-
+            .map((app: any) => {
+              const rawType = (app.assistance_type || "Transportation").replace(/\s*assistance/gi, "").trim()
+              const cleanAssistance = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
               const rawDate =
-                p.submittedAt ||
-                p.submitted_at ||
-                p.created_at ||
-                p.dateApplied ||
-                p.date_applied ||
-                p.date_submitted ||
-                p.dateSubmitted ||
-                p.updated_at
-              const appDate = extractAnyDateFromApp(p)
+                app.created_at ||
+                app.date_applied ||
+                app.submitted_at ||
+                app.submittedAt ||
+                app.date_submitted ||
+                app.date ||
+                app.updated_at
+              const appDate = extractAnyDateFromApp(app)
 
               return {
-                applicationNo: p.assignedIdNumber || p.referenceNumber || p.qcidNo || qcId,
-                assistance: serviceTitle,
-                assistanceCategory: isPwd ? "PWD" : "Senior Citizen",
+                applicationNo: app.qc_id || app.reference_no || app.reference_number || qcId,
+                assistance: cleanAssistance,
+                assistanceCategory: "AICS",
                 rawTimestamp: appDate.getTime(),
-                dateApplied: formatAppDate(rawDate, p),
-                status: appStatus,
-                applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
-                dateOfBirth: p.dateOfBirth || userProfile.birthDateDisplay,
+                dateApplied: formatAppDate(rawDate, app),
+                status:
+                  app.status === "approved"
+                    ? "Approved"
+                    : app.status === "released"
+                    ? "Released"
+                    : app.status === "for_release"
+                    ? "For Release"
+                    : app.status === "assessment"
+                    ? "For Assessment"
+                    : "Under Review",
+                applicantName: app.full_name || `${userProfile.firstName} ${userProfile.lastName}`,
+                dateOfBirth: app.birth_date || userProfile.birthDateDisplay,
                 address:
-                  p.address ||
+                  app.address ||
                   `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                contactNumber: p.contactNo || p.cellphoneNo || userProfile.mobileNumber,
-                email: p.email || userProfile.email,
-                remarks:
-                  appStatus === "Approved"
-                    ? isBooklet
-                      ? `Approved. Official Booklet Number: ${p.assignedIdNumber || "Sent to your registered Gmail"}`
-                      : `Approved. Assigned ID Number: ${p.assignedIdNumber || "Available at office"}`
-                    : appStatus === "Rejected"
-                    ? (p.rejectionReason ? `Tinanggihan: ${p.rejectionReason}` : "Tinanggihan ng Evaluator")
-                    : "Kasalukuyang sinusuri ng Social Worker (Pending Review)",
+                contactNumber: app.contact_number || userProfile.mobileNumber,
+                email: app.email || userProfile.email,
               }
             })
-          allFoundApps.push(...mappedPwd)
-        } catch (err) {
-          console.warn("Could not fetch PWD/Senior applications:", err)
+          allFoundApps.push(...mappedAics)
         }
 
-        // 3. Solo Parent Applications
-        try {
-          let spApps: any[] = []
-          try {
-            const spData = await cachedApiFetch<any>(
-              `${API_BASE}/api/solo-parent/user/${userId || "0"}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
-              { headers: authHeaders },
-              4000
-            )
-            spApps = spData?.applications || (Array.isArray(spData) ? spData : [])
-          } catch {}
-
-          // Fallback check all admin apps if none found
-          if (!spApps || spApps.length === 0) {
-            try {
-              const allSp = await cachedApiFetch<any>(`${API_BASE}/api/solo-parent/applications`, { headers: authHeaders }, 4000)
-              const listAll = allSp?.applications || (Array.isArray(allSp) ? allSp : [])
-              spApps = listAll.filter(isUserMatch)
-            } catch {}
+        // 2. Process PWD / Senior
+        let apiPwdApps: any[] = []
+        if (pwdSettled.status === "fulfilled") {
+          const pwdData = pwdSettled.value
+          if (Array.isArray(pwdData)) {
+            apiPwdApps = pwdData
+          } else if (pwdData && Array.isArray(pwdData.applications)) {
+            apiPwdApps = pwdData.applications
           }
-
-          if (!spApps || spApps.length === 0) {
-            try {
-              const local = localStorage.getItem("solo_parent_applications")
-              if (local) spApps = JSON.parse(local)
-            } catch {}
-          }
-
-          if (Array.isArray(spApps) && spApps.length > 0) {
-            const mappedSp: ApplicationRecord[] = spApps
-              .filter(isUserMatch)
-              .map((app: any) => {
-                const rawDate =
-                  app.created_at ||
-                  app.submitted_at ||
-                  app.submittedAt ||
-                  app.date_applied ||
-                  app.dateApplied ||
-                  app.date_submitted ||
-                  app.dateSubmitted ||
-                  app.extra_data?.submittedAt ||
-                  app.extra_data?.dateSubmitted ||
-                  app.updated_at
-                const appDate = extractAnyDateFromApp(app)
-
-                return {
-                  applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
-                  assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
-                  assistanceCategory: "Solo Parent",
-                  rawTimestamp: appDate.getTime(),
-                  dateApplied: formatAppDate(rawDate, app),
-                  status:
-                    app.application_status === "approved" || app.status === "approved"
-                      ? "Approved"
-                      : app.application_status === "released" || app.status === "released"
-                      ? "Released"
-                      : app.application_status === "for_release" || app.status === "for_release"
-                      ? "For Release"
-                      : "Under Review",
-                  applicantName:
-                    [app.first_name || app.firstName, app.last_name || app.lastName].filter(Boolean).join(" ") ||
-                    `${userProfile.firstName} ${userProfile.lastName}`,
-                  dateOfBirth: userProfile.birthDateDisplay,
-                  address:
-                    app.address ||
-                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                  contactNumber: app.contact_no || app.contact_number || app.contactNo || userProfile.mobileNumber,
-                  email: app.email || userProfile.email,
-                  remarks:
-                    app.admin_notes ||
-                    (app.application_status === "approved" || app.status === "approved"
-                      ? app.assigned_id_number || app.solo_parent_id_number
-                        ? `Approved. Official ID: ${app.assigned_id_number || app.solo_parent_id_number}`
-                        : "Application approved"
-                      : "Under review"),
-                }
-              })
-            allFoundApps.push(...mappedSp)
-          }
-        } catch (err) {
-          console.warn("Could not fetch Solo Parent applications:", err)
         }
 
-        // 4. Child Welfare Applications
+        let localPwdApps: any[] = []
         try {
-          let cwApps: any[] = []
-          try {
-            const cwData = await cachedApiFetch<any>(
-              `${API_BASE}/api/child-welfare/user/${userId}?qcid=${encodeURIComponent(qcId)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirst)}&lastName=${encodeURIComponent(userLast)}`,
-              { headers: authHeaders },
-              4000
-            )
-            cwApps = cwData?.applications || (Array.isArray(cwData) ? cwData : [])
-          } catch {}
+          localPwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+        } catch {}
 
-          // Fallback check all admin apps if none found
-          if (!cwApps || cwApps.length === 0) {
-            try {
-              const allCw = await cachedApiFetch<any>(`${API_BASE}/api/child-welfare/admin/all`, { headers: authHeaders }, 4000)
-              const listAll = allCw?.applications || (Array.isArray(allCw) ? allCw : [])
-              cwApps = listAll.filter(isUserMatch)
-            } catch {}
+        let pwdApps: any[] = [...apiPwdApps]
+        if (Array.isArray(localPwdApps)) {
+          for (const la of localPwdApps) {
+            if (la && !pwdApps.some(a => (a.id && la.id && a.id === la.id) || (a.referenceNumber && la.referenceNumber && a.referenceNumber === la.referenceNumber))) {
+              pwdApps.push(la)
+            }
           }
-
-          if (!cwApps || cwApps.length === 0) {
-            try {
-              const local = localStorage.getItem("child_welfare_applications")
-              if (local) cwApps = JSON.parse(local)
-            } catch {}
-          }
-
-          if (Array.isArray(cwApps) && cwApps.length > 0) {
-            const mappedCw: ApplicationRecord[] = cwApps
-              .filter(isUserMatch)
-              .map((app: any) => {
-                const rawDate =
-                  app.created_at ||
-                  app.submitted_at ||
-                  app.submittedAt ||
-                  app.date_applied ||
-                  app.dateApplied ||
-                  app.date_submitted ||
-                  app.dateSubmitted ||
-                  app.form_data?.submittedAt ||
-                  app.form_data?.dateSubmitted ||
-                  app.form_data?.created_at ||
-                  app.updated_at
-                const appDate = extractAnyDateFromApp(app)
-
-                return {
-                  applicationNo: app.reference_number || app.referenceNumber || qcId,
-                  assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
-                  assistanceCategory: "Child Welfare",
-                  rawTimestamp: appDate.getTime(),
-                  dateApplied: formatAppDate(rawDate, app),
-                  status:
-                    app.application_status === "approved" || app.status === "approved"
-                      ? "Approved"
-                      : app.application_status === "released" || app.status === "released" || app.application_status === "completed" || app.status === "completed"
-                      ? "Released"
-                      : app.application_status === "rejected" || app.status === "rejected"
-                      ? "Rejected"
-                      : "Under Review",
-                  applicantName: app.child_name || app.childName || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
-                  dateOfBirth: userProfile.birthDateDisplay,
-                  address:
-                    app.address ||
-                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                  contactNumber: app.guardian_contact_no || app.parentContactNo || app.contact_number || userProfile.mobileNumber,
-                  email: app.guardian_email || app.email || userProfile.email,
-                  remarks:
-                    app.application_status === "approved" || app.status === "approved"
-                      ? `Aprubado para sa Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()}) - Nakatala sa Financial Aid & Appointments`
-                      : app.application_status === "released" || app.status === "released"
-                      ? `Na-release na ang Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()})`
-                      : app.application_status === "rejected" || app.status === "rejected"
-                      ? (app.rejection_reason ? `Tinanggihan: ${app.rejection_reason}` : "Tinanggihan")
-                      : "Kasalukuyang sinusuri (Under review)",
-                }
-              })
-            allFoundApps.push(...mappedCw)
-          }
-        } catch (err) {
-          console.warn("Could not fetch Child Welfare applications:", err)
         }
 
-        // 5. Livelihood Applications
-        try {
-          let livApps: any[] = []
+        const mappedPwd: ApplicationRecord[] = (pwdApps || [])
+          .filter(isUserMatch)
+          .map((p: any) => {
+            const isPwd =
+              String(p.category || "").toUpperCase() === "PWD" ||
+              String(p.category || "").toLowerCase().includes("disability")
+            const typeStr = String(p.type || "new").toLowerCase()
+            const serviceTitle = isPwd
+              ? typeStr === "assistance"
+                ? "PWD Social Assistance"
+                : typeStr === "renewal"
+                ? "Persons with Disability (PWD) ID Renewal"
+                : typeStr === "loss" || typeStr === "replacement"
+                ? "Persons with Disability (PWD) ID Replacement"
+                : "Persons with Disability (PWD) ID"
+              : typeStr === "medicine-booklet"
+              ? "Senior Citizen Medicine Booklet"
+              : typeStr === "movie-booklet"
+              ? "Senior Citizen Movie Booklet"
+              : typeStr === "social-assistance"
+              ? "Senior Citizen Social Assistance"
+              : typeStr === "renewal"
+              ? "Senior Citizen ID Renewal"
+              : typeStr === "loss" || typeStr === "replacement"
+              ? "Senior Citizen ID Replacement"
+              : "Senior Citizen ID"
+
+            const rawSt = String(p.status || "pending").toLowerCase()
+            let appStatus: ApplicationStatus = "Pending"
+            if (rawSt === "approved") appStatus = "Approved"
+            else if (rawSt === "released" || rawSt === "completed") appStatus = "Released"
+            else if (rawSt === "for_release") appStatus = "For Release"
+            else if (rawSt === "under_review" || rawSt === "review" || rawSt === "for_assessment") appStatus = "Under Review"
+            else if (rawSt === "rejected" || rawSt === "disapproved") appStatus = "Rejected"
+            else appStatus = "Pending"
+
+            const isBooklet =
+              String(p.type || "").toLowerCase().includes("booklet") ||
+              String(p.category || "").toLowerCase().includes("booklet")
+
+            const rawDate =
+              p.submittedAt ||
+              p.submitted_at ||
+              p.created_at ||
+              p.dateApplied ||
+              p.date_applied ||
+              p.date_submitted ||
+              p.dateSubmitted ||
+              p.updated_at
+            const appDate = extractAnyDateFromApp(p)
+
+            return {
+              applicationNo: p.assignedIdNumber || p.referenceNumber || p.qcidNo || qcId,
+              assistance: serviceTitle,
+              assistanceCategory: isPwd ? "PWD" : "Senior Citizen",
+              rawTimestamp: appDate.getTime(),
+              dateApplied: formatAppDate(rawDate, p),
+              status: appStatus,
+              applicantName: [p.firstName, p.middleName, p.lastName, p.suffix].filter(Boolean).join(" ") || `${userProfile.firstName} ${userProfile.lastName}`,
+              dateOfBirth: p.dateOfBirth || userProfile.birthDateDisplay,
+              address:
+                p.address ||
+                `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+              contactNumber: p.contactNo || p.cellphoneNo || userProfile.mobileNumber,
+              email: p.email || userProfile.email,
+              remarks:
+                appStatus === "Approved"
+                  ? isBooklet
+                    ? `Approved. Official Booklet Number: ${p.assignedIdNumber || "Sent to your registered Gmail"}`
+                    : `Approved. Assigned ID Number: ${p.assignedIdNumber || "Available at office"}`
+                  : appStatus === "Rejected"
+                  ? (p.rejectionReason ? `Tinanggihan: ${p.rejectionReason}` : "Tinanggihan ng Evaluator")
+                  : "Kasalukuyang sinusuri ng Social Worker (Pending Review)",
+            }
+          })
+        allFoundApps.push(...mappedPwd)
+
+        // 3. Process Solo Parent
+        let spApps: any[] = []
+        if (spSettled.status === "fulfilled") {
+          const spData = spSettled.value
+          spApps = spData?.applications || (Array.isArray(spData) ? spData : [])
+        }
+        if (!spApps || spApps.length === 0) {
           try {
-            const lData = await cachedApiFetch<any>(`${API_BASE}/api/livelihood/applications`, { headers: authHeaders }, 4000)
-            livApps = lData?.applications || (Array.isArray(lData) ? lData : [])
+            const local = localStorage.getItem("solo_parent_applications")
+            if (local) spApps = JSON.parse(local)
           } catch {}
+        }
+        if (Array.isArray(spApps) && spApps.length > 0) {
+          const mappedSp: ApplicationRecord[] = spApps
+            .filter(isUserMatch)
+            .map((app: any) => {
+              const rawDate =
+                app.created_at ||
+                app.submitted_at ||
+                app.submittedAt ||
+                app.date_applied ||
+                app.dateApplied ||
+                app.date_submitted ||
+                app.dateSubmitted ||
+                app.extra_data?.submittedAt ||
+                app.extra_data?.dateSubmitted ||
+                app.updated_at
+              const appDate = extractAnyDateFromApp(app)
 
-          if (livApps.length === 0 && (qcId || userId)) {
-            try {
-              const lData2 = await cachedApiFetch<any>(`${API_BASE}/api/livelihood/applications?qcid=${encodeURIComponent(qcId || userId)}`, { headers: authHeaders }, 4000)
-              livApps = lData2?.applications || (Array.isArray(lData2) ? lData2 : [])
-            } catch {}
-          }
+              return {
+                applicationNo: app.reference_number || app.referenceNumber || app.assigned_id_number || app.solo_parent_id_number || qcId,
+                assistance: `Solo Parent ID (${(app.application_type || app.applicationType || "New").charAt(0).toUpperCase() + (app.application_type || app.applicationType || "New").slice(1)})`,
+                assistanceCategory: "Solo Parent",
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(rawDate, app),
+                status:
+                  app.application_status === "approved" || app.status === "approved"
+                    ? "Approved"
+                    : app.application_status === "released" || app.status === "released"
+                    ? "Released"
+                    : app.application_status === "for_release" || app.status === "for_release"
+                    ? "For Release"
+                    : "Under Review",
+                applicantName:
+                  [app.first_name || app.firstName, app.last_name || app.lastName].filter(Boolean).join(" ") ||
+                  `${userProfile.firstName} ${userProfile.lastName}`,
+                dateOfBirth: userProfile.birthDateDisplay,
+                address:
+                  app.address ||
+                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                contactNumber: app.contact_no || app.contact_number || app.contactNo || userProfile.mobileNumber,
+                email: app.email || userProfile.email,
+                remarks:
+                  app.admin_notes ||
+                  (app.application_status === "approved" || app.status === "approved"
+                    ? app.assigned_id_number || app.solo_parent_id_number
+                      ? `Approved. Official ID: ${app.assigned_id_number || app.solo_parent_id_number}`
+                      : "Application approved"
+                    : "Under review"),
+              }
+            })
+          allFoundApps.push(...mappedSp)
+        }
 
+        // 4. Process Child Welfare
+        let cwApps: any[] = []
+        if (cwSettled.status === "fulfilled") {
+          const cwData = cwSettled.value
+          cwApps = cwData?.applications || (Array.isArray(cwData) ? cwData : [])
+        }
+        if (!cwApps || cwApps.length === 0) {
           try {
-            const localLiv = JSON.parse(localStorage.getItem("livelihood_applications") || "[]")
-            if (Array.isArray(localLiv) && localLiv.length > 0) {
-              for (const la of localLiv) {
-                const exists = livApps.some(
-                  (a: any) =>
-                    (a.id && la.id && a.id === la.id) ||
-                    (a.reference_number && la.reference_number && a.reference_number === la.reference_number)
-                )
-                if (!exists) {
-                  livApps.push(la)
-                }
+            const local = localStorage.getItem("child_welfare_applications")
+            if (local) cwApps = JSON.parse(local)
+          } catch {}
+        }
+        if (Array.isArray(cwApps) && cwApps.length > 0) {
+          const mappedCw: ApplicationRecord[] = cwApps
+            .filter(isUserMatch)
+            .map((app: any) => {
+              const rawDate =
+                app.created_at ||
+                app.submitted_at ||
+                app.submittedAt ||
+                app.date_applied ||
+                app.dateApplied ||
+                app.date_submitted ||
+                app.dateSubmitted ||
+                app.form_data?.submittedAt ||
+                app.form_data?.dateSubmitted ||
+                app.form_data?.created_at ||
+                app.updated_at
+              const appDate = extractAnyDateFromApp(app)
+
+              return {
+                applicationNo: app.reference_number || app.referenceNumber || qcId,
+                assistance: app.category_title || app.classification_title || "Child Welfare Assistance",
+                assistanceCategory: "Child Welfare",
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(rawDate, app),
+                status:
+                  app.application_status === "approved" || app.status === "approved"
+                    ? "Approved"
+                    : app.application_status === "released" || app.status === "released" || app.application_status === "completed" || app.status === "completed"
+                    ? "Released"
+                    : app.application_status === "rejected" || app.status === "rejected"
+                    ? "Rejected"
+                    : "Under Review",
+                applicantName: app.child_name || app.childName || [app.guardian_first_name, app.guardian_last_name].filter(Boolean).join(" ") || "Beneficiary Child",
+                dateOfBirth: userProfile.birthDateDisplay,
+                address:
+                  app.address ||
+                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                contactNumber: app.guardian_contact_no || app.parentContactNo || app.contact_number || userProfile.mobileNumber,
+                email: app.guardian_email || app.email || userProfile.email,
+                remarks:
+                  app.application_status === "approved" || app.status === "approved"
+                    ? `Aprubado para sa Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()}) - Nakatala sa Financial Aid & Appointments`
+                    : app.application_status === "released" || app.status === "released"
+                    ? `Na-release na ang Ayuda (₱${(Number(app.approved_amount) || 5000).toLocaleString()})`
+                    : app.application_status === "rejected" || app.status === "rejected"
+                    ? (app.rejection_reason ? `Tinanggihan: ${app.rejection_reason}` : "Tinanggihan")
+                    : "Kasalukuyang sinusuri (Under review)",
+              }
+            })
+          allFoundApps.push(...mappedCw)
+        }
+
+        // 5. Process Livelihood
+        let livApps: any[] = []
+        if (livSettled.status === "fulfilled") {
+          const lData = livSettled.value
+          livApps = lData?.applications || (Array.isArray(lData) ? lData : [])
+        }
+        try {
+          const localLiv = JSON.parse(localStorage.getItem("livelihood_applications") || "[]")
+          if (Array.isArray(localLiv) && localLiv.length > 0) {
+            for (const la of localLiv) {
+              const exists = livApps.some(
+                (a: any) =>
+                  (a.id && la.id && a.id === la.id) ||
+                  (a.reference_number && la.reference_number && a.reference_number === la.reference_number)
+              )
+              if (!exists) {
+                livApps.push(la)
               }
             }
-          } catch {}
-
-          if (Array.isArray(livApps) && livApps.length > 0) {
-            const mappedLiv: ApplicationRecord[] = livApps
-              .filter(isUserMatch)
-              .map((l: any) => {
-                const isRel =
-                  l.assistance?.release_status === "RELEASED" ||
-                  l.assistance?.assistance_status === "released" ||
-                  l.status === "Released" ||
-                  l.status === "released" ||
-                  l.application_status === "released" ||
-                  (Array.isArray(l.monitoring) && l.monitoring.length > 0)
-
-                const isForRel =
-                  l.assistance?.assistance_status === "FOR RELEASE" ||
-                  l.assistance?.assistance_status === "for_release" ||
-                  l.status === "For Release" ||
-                  l.status === "for_release" ||
-                  l.application_status === "for_release"
-
-                const isAppr =
-                  l.application_status === "approved" ||
-                  l.status === "Approved" ||
-                  l.status === "approved"
-
-                const isRej =
-                  l.application_status === "rejected" ||
-                  l.status === "rejected"
-
-                const isRev =
-                  l.application_status === "needs_revision" ||
-                  l.status === "needs_revision"
-
-                const statusVal: ApplicationStatus = isRel
-                  ? "Released"
-                  : isForRel
-                  ? "For Release"
-                  : isAppr
-                  ? "Approved"
-                  : "Under Review"
-
-                const rawDate =
-                  l.created_at ||
-                  l.submitted_at ||
-                  l.submittedAt ||
-                  l.date_applied ||
-                  l.dateApplied ||
-                  l.date_submitted ||
-                  l.application_date ||
-                  l.updated_at
-                const appDate = extractAnyDateFromApp(l)
-
-                return {
-                  applicationNo: l.reference_number || l.referenceNumber || l.qcid || qcId,
-                  assistance: l.proposed_business_name || l.business_name || l.businessName
-                    ? `Livelihood: ${l.proposed_business_name || l.business_name || l.businessName}`
-                    : l.livelihood_type
-                    ? `Livelihood: ${l.livelihood_type}`
-                    : "Livelihood Assistance",
-                  assistanceCategory: "Livelihood",
-                  rawTimestamp: appDate.getTime(),
-                  dateApplied: formatAppDate(rawDate, l),
-                  status: statusVal,
-                  applicantName:
-                    l.applicant_name ||
-                    [l.first_name || l.firstName, l.last_name || l.lastName].filter(Boolean).join(" ") ||
-                    `${userProfile.firstName} ${userProfile.lastName}`,
-                  dateOfBirth: userProfile.birthDateDisplay,
-                  address:
-                    l.address ||
-                    l.business_location ||
-                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                  contactNumber: l.phone_number || l.contact_number || userProfile.mobileNumber,
-                  email: l.email || userProfile.email,
-                  remarks:
-                    isRel
-                      ? "Assistance Released — Active in Livelihood Monitoring"
-                      : isForRel
-                      ? "Approved & Set for Release — Appointment Scheduled"
-                      : isAppr
-                      ? "Application Approved — Capital & Materials Allocation"
-                      : isRej
-                      ? (l.rejection_reason ? `Rejected: ${l.rejection_reason}` : "Application Rejected")
-                      : isRev
-                      ? "Needs Revision — Please update documentary requirements"
-                      : "Under Review by SSDD Livelihood Committee",
-                }
-              })
-            allFoundApps.push(...mappedLiv)
           }
-        } catch (err) {
-          console.warn("Could not fetch Livelihood applications:", err)
-        }
+        } catch {}
 
-        // 6. Training Applications
-        try {
-          let trnApps: any[] = []
-          try {
-            const tData = await cachedApiFetch<any>(`${API_BASE}/api/training/applications`, { headers: authHeaders }, 4000)
-            trnApps = Array.isArray(tData) ? tData : tData?.applications || []
-          } catch {}
+        if (Array.isArray(livApps) && livApps.length > 0) {
+          const mappedLiv: ApplicationRecord[] = livApps
+            .filter(isUserMatch)
+            .map((l: any) => {
+              const isRel =
+                l.assistance?.release_status === "RELEASED" ||
+                l.assistance?.assistance_status === "released" ||
+                l.status === "Released" ||
+                l.status === "released" ||
+                l.application_status === "released" ||
+                (Array.isArray(l.monitoring) && l.monitoring.length > 0)
 
-          if (trnApps.length === 0 && (qcId || userId)) {
-            try {
-              const tData2 = await cachedApiFetch<any>(`${API_BASE}/api/training/applications?qcid=${encodeURIComponent(qcId || userId)}`, { headers: authHeaders }, 4000)
-              trnApps = Array.isArray(tData2) ? tData2 : tData2?.applications || []
-            } catch {}
-          }
+              const isForRel =
+                l.assistance?.assistance_status === "FOR RELEASE" ||
+                l.assistance?.assistance_status === "for_release" ||
+                l.status === "For Release" ||
+                l.status === "for_release" ||
+                l.application_status === "for_release"
 
-          try {
-            const localTrn = JSON.parse(localStorage.getItem("training_applications") || "[]")
-            if (Array.isArray(localTrn) && localTrn.length > 0) {
-              for (const lt of localTrn) {
-                const exists = trnApps.some(
-                  (a: any) =>
-                    (a.id && lt.id && String(a.id) === String(lt.id)) ||
-                    (a.referenceNumber && lt.referenceNumber && a.referenceNumber === lt.referenceNumber) ||
-                    (a.reference_number && lt.reference_number && a.reference_number === lt.reference_number)
-                )
-                if (!exists) {
-                  trnApps.push(lt)
-                }
-              }
-            }
-          } catch {}
+              const isAppr =
+                l.application_status === "approved" ||
+                l.status === "Approved" ||
+                l.status === "approved"
 
-          if (Array.isArray(trnApps) && trnApps.length > 0) {
-            const mappedTrn: ApplicationRecord[] = trnApps
-              .filter(isUserMatch)
-              .map((t: any) => {
-                const isAppr = t.status === "approved" || t.status === "Approved" || t.status === "enrolled" || t.status === "Enrolled"
-                const isRel = t.status === "completed" || t.status === "Completed" || (t.attendance?.completed === true)
-                const isRej = t.status === "rejected" || t.status === "Rejected"
-                const isRev = t.status === "needs_revision" || t.status === "needs-revision"
+              const isRej =
+                l.application_status === "rejected" ||
+                l.status === "rejected"
 
-                const statusVal: ApplicationStatus = isRel
-                  ? "Released"
-                  : isAppr
-                  ? "Approved"
-                  : isRej
-                  ? "Rejected"
-                  : isRev
-                  ? "Needs Revision"
-                  : "Under Review"
+              const isRev =
+                l.application_status === "needs_revision" ||
+                l.status === "needs_revision"
 
-                const courseName = t.trainingName || t.training_name || t.program_title || t.course_title || t.training_course || "Skills Training"
-                const rawDate =
-                  t.submittedAt ||
-                  t.submitted_at ||
-                  t.created_at ||
-                  t.date_applied ||
-                  t.dateApplied ||
-                  t.date_submitted ||
-                  t.updated_at
-                const appDate = extractAnyDateFromApp(t)
+              const statusVal: ApplicationStatus = isRel
+                ? "Released"
+                : isForRel
+                ? "For Release"
+                : isAppr
+                ? "Approved"
+                : "Under Review"
 
-                return {
-                  applicationNo: t.referenceNumber || t.reference_number || t.qcid || qcId,
-                  assistance: `Gov Services Training: ${courseName}`,
-                  assistanceCategory: "Training Program",
-                  rawTimestamp: appDate.getTime(),
-                  dateApplied: formatAppDate(rawDate, t),
-                  status: statusVal,
-                  applicantName:
-                    t.applicantInfo?.fullName ||
-                    t.applicant_info?.fullName ||
-                    [t.applicantInfo?.firstName || t.applicant_info?.firstName || t.first_name, t.applicantInfo?.lastName || t.applicant_info?.lastName || t.last_name].filter(Boolean).join(" ") ||
-                    `${userProfile.firstName} ${userProfile.lastName}`,
-                  dateOfBirth: userProfile.birthDateDisplay,
-                  address:
-                    t.applicantInfo?.address ||
-                    t.applicant_info?.address ||
-                    `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
-                  contactNumber: t.applicantInfo?.contactNo || t.applicant_info?.contactNo || t.contact_number || userProfile.mobileNumber,
-                  email: t.applicantInfo?.email || t.applicant_info?.email || t.email || userProfile.email,
-                  remarks: isRel
-                    ? `Training Completed & Certificate Issued (${t.certificate?.certificateNo || "Gov Services Certificate"})`
+              const rawDate =
+                l.created_at ||
+                l.submitted_at ||
+                l.submittedAt ||
+                l.date_applied ||
+                l.dateApplied ||
+                l.date_submitted ||
+                l.application_date ||
+                l.updated_at
+              const appDate = extractAnyDateFromApp(l)
+
+              return {
+                applicationNo: l.reference_number || l.referenceNumber || l.qcid || qcId,
+                assistance: l.proposed_business_name || l.business_name || l.businessName
+                  ? `Livelihood: ${l.proposed_business_name || l.business_name || l.businessName}`
+                  : l.livelihood_type
+                  ? `Livelihood: ${l.livelihood_type}`
+                  : "Livelihood Assistance",
+                assistanceCategory: "Livelihood",
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(rawDate, l),
+                status: statusVal,
+                applicantName:
+                  l.applicant_name ||
+                  [l.first_name || l.firstName, l.last_name || l.lastName].filter(Boolean).join(" ") ||
+                  `${userProfile.firstName} ${userProfile.lastName}`,
+                dateOfBirth: userProfile.birthDateDisplay,
+                address:
+                  l.address ||
+                  l.business_location ||
+                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                contactNumber: l.phone_number || l.contact_number || userProfile.mobileNumber,
+                email: l.email || userProfile.email,
+                remarks:
+                  isRel
+                    ? "Assistance Released — Active in Livelihood Monitoring"
+                    : isForRel
+                    ? "Approved & Set for Release — Appointment Scheduled"
                     : isAppr
-                    ? `Approved — Training Scheduled at ${t.schedule?.trainingLocation || "Gov Services Skills Development Center"}`
+                    ? "Application Approved — Capital & Materials Allocation"
                     : isRej
-                    ? (t.rejectionReason || t.rejection_reason ? `Rejected: ${t.rejectionReason || t.rejection_reason}` : "Training Application Rejected")
+                    ? (l.rejection_reason ? `Rejected: ${l.rejection_reason}` : "Application Rejected")
                     : isRev
-                    ? (t.revisionNotes || t.revision_notes ? `Needs Revision: ${t.revisionNotes || t.revision_notes}` : "Needs Revision — Please review details")
-                    : "Under Review by Gov Services Skills Coordinator",
-                }
-              })
-            allFoundApps.push(...mappedTrn)
+                    ? "Needs Revision — Please update documentary requirements"
+                    : "Under Review by SSDD Livelihood Committee",
+              }
+            })
+          allFoundApps.push(...mappedLiv)
+        }
+
+        // 6. Process Training
+        let trnApps: any[] = []
+        if (trnSettled.status === "fulfilled") {
+          const tData = trnSettled.value
+          trnApps = Array.isArray(tData) ? tData : tData?.applications || []
+        }
+        try {
+          const localTrn = JSON.parse(localStorage.getItem("training_applications") || "[]")
+          if (Array.isArray(localTrn) && localTrn.length > 0) {
+            for (const lt of localTrn) {
+              const exists = trnApps.some(
+                (a: any) =>
+                  (a.id && lt.id && String(a.id) === String(lt.id)) ||
+                  (a.referenceNumber && lt.referenceNumber && a.referenceNumber === lt.referenceNumber) ||
+                  (a.reference_number && lt.reference_number && a.reference_number === lt.reference_number)
+              )
+              if (!exists) {
+                trnApps.push(lt)
+              }
+            }
           }
-        } catch (err) {
-          console.warn("Could not fetch Training applications:", err)
+        } catch {}
+
+        if (Array.isArray(trnApps) && trnApps.length > 0) {
+          const mappedTrn: ApplicationRecord[] = trnApps
+            .filter(isUserMatch)
+            .map((t: any) => {
+              const isAppr = t.status === "approved" || t.status === "Approved" || t.status === "enrolled" || t.status === "Enrolled"
+              const isRel = t.status === "completed" || t.status === "Completed" || (t.attendance?.completed === true)
+              const isRej = t.status === "rejected" || t.status === "Rejected"
+              const isRev = t.status === "needs_revision" || t.status === "needs-revision"
+
+              const statusVal: ApplicationStatus = isRel
+                ? "Released"
+                : isAppr
+                ? "Approved"
+                : isRej
+                ? "Rejected"
+                : isRev
+                ? "Needs Revision"
+                : "Under Review"
+
+              const courseName = t.trainingName || t.training_name || t.program_title || t.course_title || t.training_course || "Skills Training"
+              const rawDate =
+                t.submittedAt ||
+                t.submitted_at ||
+                t.created_at ||
+                t.date_applied ||
+                t.dateApplied ||
+                t.date_submitted ||
+                t.updated_at
+              const appDate = extractAnyDateFromApp(t)
+
+              return {
+                applicationNo: t.referenceNumber || t.reference_number || t.qcid || qcId,
+                assistance: `Gov Services Training: ${courseName}`,
+                assistanceCategory: "Training Program",
+                rawTimestamp: appDate.getTime(),
+                dateApplied: formatAppDate(rawDate, t),
+                status: statusVal,
+                applicantName:
+                  t.applicantInfo?.fullName ||
+                  t.applicant_info?.fullName ||
+                  [t.applicantInfo?.firstName || t.applicant_info?.firstName || t.first_name, t.applicantInfo?.lastName || t.applicant_info?.lastName || t.last_name].filter(Boolean).join(" ") ||
+                  `${userProfile.firstName} ${userProfile.lastName}`,
+                dateOfBirth: userProfile.birthDateDisplay,
+                address:
+                  t.applicantInfo?.address ||
+                  t.applicant_info?.address ||
+                  `${userProfile.houseNo} ${userProfile.street}, ${userProfile.barangay}, ${userProfile.city}`,
+                contactNumber: t.applicantInfo?.contactNo || t.applicant_info?.contactNo || t.contact_number || userProfile.mobileNumber,
+                email: t.applicantInfo?.email || t.applicant_info?.email || t.email || userProfile.email,
+                remarks: isRel
+                  ? `Training Completed & Certificate Issued (${t.certificate?.certificateNo || "Gov Services Certificate"})`
+                  : isAppr
+                  ? `Approved — Training Scheduled at ${t.schedule?.trainingLocation || "Gov Services Skills Development Center"}`
+                  : isRej
+                  ? (t.rejectionReason || t.rejection_reason ? `Rejected: ${t.rejectionReason || t.rejection_reason}` : "Training Application Rejected")
+                  : isRev
+                  ? (t.revisionNotes || t.revision_notes ? `Needs Revision: ${t.revisionNotes || t.revision_notes}` : "Needs Revision — Please review details")
+                  : "Under Review by Gov Services Skills Coordinator",
+              }
+            })
+          allFoundApps.push(...mappedTrn)
         }
 
         // Sort newest applications first so latest submissions appear right at the top
@@ -2561,11 +2549,20 @@ export default function MyApplications() {
     }
 
     fetchUserApps()
-    const interval = setInterval(fetchUserApps, 8000)
-    const handleUpdate = () => fetchUserApps()
+
+    // Balanced 20s interval with in-flight guard
+    const interval = setInterval(fetchUserApps, 20000)
+
+    let debounceTimer: any = null
+    const handleUpdate = () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        fetchUserApps()
+      }, 350)
+    }
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
-      fetchUserApps()
+      handleUpdate()
     })
 
     window.addEventListener("storage", handleUpdate)
@@ -2581,6 +2578,7 @@ export default function MyApplications() {
 
     return () => {
       isMounted = false
+      clearTimeout(debounceTimer)
       clearInterval(interval)
       unsubscribe()
       window.removeEventListener("storage", handleUpdate)

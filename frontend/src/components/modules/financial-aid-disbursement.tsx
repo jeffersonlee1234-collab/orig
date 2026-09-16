@@ -52,11 +52,34 @@ export default function FinancialAidDisbursement() {
         const deletedKeys = getDeletedDisbursementKeys()
         const localDisbursements = getSavedDisbursements()
         let remoteRecords: SyncedDisbursementRecord[] = []
+        let appointmentsMap: Record<string, any> = {}
 
-        try {
-          const resDb = await fetch(`${API_BASE}/api/financial-aid`)
-          if (resDb.ok) {
-            const dataDb = await resDb.json()
+        // Fetch all endpoints concurrently in parallel
+        const [
+          resDbSettled,
+          resAicsSettled,
+          resPwdSettled,
+          resLivSettled,
+          resCwSettled,
+          resApptsSettled,
+        ] = await Promise.allSettled([
+          fetch(`${API_BASE}/api/financial-aid`),
+          fetch(`${API_BASE}/api/aics/applications`),
+          fetch(`${API_BASE}/api/pwd-senior/applications`),
+          fetch(`${API_BASE}/api/livelihood/applications`),
+          fetch(`${API_BASE}/api/child-welfare/admin/all?limit=100`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+            },
+          }),
+          fetch(`${API_BASE}/api/appointments`),
+        ])
+
+        // 1. Process DB records
+        if (resDbSettled.status === "fulfilled" && resDbSettled.value.ok) {
+          try {
+            const dataDb = await resDbSettled.value.json()
             if (dataDb.disbursements && Array.isArray(dataDb.disbursements)) {
               const dbRecords: SyncedDisbursementRecord[] = dataDb.disbursements
                 .filter((d: any) => {
@@ -90,80 +113,73 @@ export default function FinancialAidDisbursement() {
                 }))
               remoteRecords.push(...dbRecords)
             }
-          }
-
-        const res = await fetch(`${API_BASE}/api/aics/applications`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.applications && Array.isArray(data.applications)) {
-            const rejectedRefs = new Set<string>()
-            const approvedApps = data.applications.filter((app: any) => {
-              const ref = app.qc_id || app.reference_no || app.reference_number || "110000116932100"
-              const idStr = `remote-${app.id || app.qc_id || app.reference_no}`
-              const disbId = `DISB-2026-${String(app.id || 101).padStart(4, "0")}`
-              if (deletedKeys.has(ref) || deletedKeys.has(idStr) || deletedKeys.has(disbId) || deletedKeys.has(String(app.id))) {
-                return false
-              }
-              if (app.status === "rejected" || app.status === "pending") {
-                rejectedRefs.add(ref)
-                return false
-              }
-              return app.status === "approved" || app.status === "completed" || app.status === "for_release"
-            })
-
-            const aicsRecords = approvedApps.map((app: any) => {
-              const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
-              const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
-              const amount = resolveFixedAmount(type)
-              const isReleased = String(app.status || "").toLowerCase() === "released"
-
-              return {
-                id: `remote-${app.id || app.qc_id || app.reference_no}`,
-                disbursementId: `DISB-2026-${String(app.id || 101).padStart(4, "0")}`,
-                applicationRef: app.qc_id || app.reference_no || app.reference_number || "110000116932100",
-                applicantName: `${app.first_name || ""} ${app.middle_name || ""} ${app.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY APPLICANT",
-                assistanceType: type,
-                fixedAmount: amount,
-                dateApproved: new Date(app.created_at || Date.now()).toLocaleDateString("en-PH", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                }),
-                status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
-                venue: "Quezon City Hall",
-                remarks: "Automatically generated from submitted application.",
-              }
-            })
-
-            // Only add aicsRecords if not already in remoteRecords (from db)
-            aicsRecords.forEach((ar) => {
-              if (!remoteRecords.some((rr) => rr.applicationRef === ar.applicationRef || rr.disbursementId === ar.disbursementId)) {
-                remoteRecords.push(ar)
-              }
-            })
-          }
+          } catch {}
         }
 
-        // 3. Fetch from /api/pwd-senior/applications (Approved Social Assistance Only)
-        let pwdSeniorApps: any[] = []
-        let pwdSeniorFetchSuccess = false
-        try {
-          const resPwd = await fetch(`${API_BASE}/api/pwd-senior/applications`)
-          if (resPwd.ok) {
-            pwdSeniorApps = await resPwd.json()
-            pwdSeniorFetchSuccess = true
-          }
-        } catch {}
+        // 2. Process AICS
+        if (resAicsSettled.status === "fulfilled" && resAicsSettled.value.ok) {
+          try {
+            const data = await resAicsSettled.value.json()
+            if (data.applications && Array.isArray(data.applications)) {
+              const rejectedRefs = new Set<string>()
+              const approvedApps = data.applications.filter((app: any) => {
+                const ref = app.qc_id || app.reference_no || app.reference_number || "110000116932100"
+                const idStr = `remote-${app.id || app.qc_id || app.reference_no}`
+                const disbId = `DISB-2026-${String(app.id || 101).padStart(4, "0")}`
+                if (deletedKeys.has(ref) || deletedKeys.has(idStr) || deletedKeys.has(disbId) || deletedKeys.has(String(app.id))) {
+                  return false
+                }
+                if (app.status === "rejected" || app.status === "pending") {
+                  rejectedRefs.add(ref)
+                  return false
+                }
+                return app.status === "approved" || app.status === "completed" || app.status === "for_release"
+              })
 
-        if (!pwdSeniorFetchSuccess) {
+              const aicsRecords = approvedApps.map((app: any) => {
+                const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
+                const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
+                const amount = resolveFixedAmount(type)
+                const isReleased = String(app.status || "").toLowerCase() === "released"
+
+                return {
+                  id: `remote-${app.id || app.qc_id || app.reference_no}`,
+                  disbursementId: `DISB-2026-${String(app.id || 101).padStart(4, "0")}`,
+                  applicationRef: app.qc_id || app.reference_no || app.reference_number || "110000116932100",
+                  applicantName: `${app.first_name || ""} ${app.middle_name || ""} ${app.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY APPLICANT",
+                  assistanceType: type,
+                  fixedAmount: amount,
+                  dateApproved: new Date(app.created_at || Date.now()).toLocaleDateString("en-PH", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+                  status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
+                  venue: "Quezon City Hall",
+                  remarks: "Automatically generated from submitted application.",
+                }
+              })
+
+              aicsRecords.forEach((ar: any) => {
+                if (!remoteRecords.some((rr) => rr.applicationRef === ar.applicationRef || rr.disbursementId === ar.disbursementId)) {
+                  remoteRecords.push(ar)
+                }
+              })
+            }
+          } catch {}
+        }
+
+        // 3. Process PWD / Senior
+        let pwdSeniorApps: any[] = []
+        if (resPwdSettled.status === "fulfilled" && resPwdSettled.value.ok) {
+          try {
+            pwdSeniorApps = await resPwdSettled.value.json()
+          } catch {}
+        }
+        if (!pwdSeniorApps || pwdSeniorApps.length === 0) {
           try {
             const local = localStorage.getItem("pwd_senior_applications")
-            if (local) {
-              const parsed = JSON.parse(local)
-              if (Array.isArray(parsed)) {
-                pwdSeniorApps = parsed
-              }
-            }
+            if (local) pwdSeniorApps = JSON.parse(local)
           } catch {}
         }
 
@@ -224,11 +240,10 @@ export default function FinancialAidDisbursement() {
           })
         }
 
-        // 4. Fetch from /api/livelihood/applications (Approved Only)
-        try {
-          const resLiv = await fetch(`${API_BASE}/api/livelihood/applications`)
-          if (resLiv.ok) {
-            const dataLiv = await resLiv.json()
+        // 4. Process Livelihood
+        if (resLivSettled.status === "fulfilled" && resLivSettled.value.ok) {
+          try {
+            const dataLiv = await resLivSettled.value.json()
             if (Array.isArray(dataLiv)) {
               const approvedLiv = dataLiv.filter((l: any) => String(l.application_status || l.status).toLowerCase() === "approved")
               approvedLiv.forEach((l: any) => {
@@ -260,19 +275,13 @@ export default function FinancialAidDisbursement() {
                 }
               })
             }
-          }
-        } catch {}
+          } catch {}
+        }
 
-        // 5. Fetch from /api/child-welfare/admin/all (Approved Child Welfare Only)
-        try {
-          const resCw = await fetch(`${API_BASE}/api/child-welfare/admin/all?limit=100`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-            },
-          })
-          if (resCw.ok) {
-            const dataCw = await resCw.json()
+        // 5. Process Child Welfare
+        if (resCwSettled.status === "fulfilled" && resCwSettled.value.ok) {
+          try {
+            const dataCw = await resCwSettled.value.json()
             const cwApps = Array.isArray(dataCw.applications) ? dataCw.applications : []
             const approvedCw = cwApps.filter((c: any) => {
               const st = String(c.application_status || c.status).toLowerCase()
@@ -312,103 +321,98 @@ export default function FinancialAidDisbursement() {
                 })
               }
             })
-          }
+          } catch {}
+        }
+
+        // 6. Process Appointments
+        if (resApptsSettled.status === "fulfilled" && resApptsSettled.value.ok) {
+          try {
+            const dataAppts = await resApptsSettled.value.json()
+            if (dataAppts.appointments && Array.isArray(dataAppts.appointments)) {
+              dataAppts.appointments.forEach((a: any) => {
+                if (a.reference_no) appointmentsMap[a.reference_no] = a
+                if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
+              })
+            }
+          } catch {}
+        }
+
+        const now = new Date()
+
+        let localScheduledMap: Record<string, any> = {}
+        try {
+          const rawSched = localStorage.getItem("all_appointments_scheduled")
+          if (rawSched) localScheduledMap = JSON.parse(rawSched)
         } catch {}
-      } catch (err) {
-        console.warn("Could not fetch remote disbursements/applications:", err)
-      }
 
-      const now = new Date()
-
-      // Fetch appointments & read local schedule cache to bridge schedule & completed status
-      let appointmentsMap: Record<string, any> = {}
-      try {
-        const resAppts = await fetch(`${API_BASE}/api/appointments`)
-        if (resAppts.ok) {
-          const dataAppts = await resAppts.json()
-          if (dataAppts.appointments && Array.isArray(dataAppts.appointments)) {
-            dataAppts.appointments.forEach((a: any) => {
-              if (a.reference_no) appointmentsMap[a.reference_no] = a
-              if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
-            })
+        // Merge: remote records from database take precedence over local cache
+        let merged = [...remoteRecords]
+        localDisbursements.forEach((l) => {
+          if (!merged.some((m) => m.applicationRef === l.applicationRef || m.disbursementId === l.disbursementId)) {
+            merged.push(l)
           }
-        }
-      } catch {}
+        })
 
-      let localScheduledMap: Record<string, any> = {}
-      try {
-        const rawSched = localStorage.getItem("all_appointments_scheduled")
-        if (rawSched) localScheduledMap = JSON.parse(rawSched)
-      } catch {}
+        // Filter against deleted keys
+        merged = merged.filter(
+          (d) =>
+            !deletedKeys.has(d.id) &&
+            !deletedKeys.has(d.disbursementId) &&
+            !deletedKeys.has(d.applicationRef)
+        )
 
-      // Merge: remote records from database take precedence over local cache
-      let merged = [...remoteRecords]
-      localDisbursements.forEach((l) => {
-        if (!merged.some((m) => m.applicationRef === l.applicationRef || m.disbursementId === l.disbursementId)) {
-          merged.push(l)
-        }
-      })
+        // Attach schedule from appointments/cache and check real-time auto-release
+        merged = merged.map((d) => {
+          const appt = appointmentsMap[d.applicationRef]
+          const cachedSched =
+            localScheduledMap[d.id] ||
+            localScheduledMap[`${d.applicationRef}_${d.assistanceType}`] ||
+            (appointmentsMap[d.applicationRef] ? localScheduledMap[d.applicationRef] : null)
 
-      // Filter against deleted keys
-      merged = merged.filter(
-        (d) =>
-          !deletedKeys.has(d.id) &&
-          !deletedKeys.has(d.disbursementId) &&
-          !deletedKeys.has(d.applicationRef)
-      )
+          const hasValidAppt = Boolean(appt?.scheduled_date && appt?.status !== "pending")
+          const hasValidCached = Boolean(cachedSched?.scheduledDate && cachedSched?.status !== "pending")
 
-      // Attach schedule from appointments/cache and check real-time auto-release
-      merged = merged.map((d) => {
-        const appt = appointmentsMap[d.applicationRef]
-        const cachedSched =
-          localScheduledMap[d.id] ||
-          localScheduledMap[`${d.applicationRef}_${d.assistanceType}`] ||
-          (appointmentsMap[d.applicationRef] ? localScheduledMap[d.applicationRef] : null)
+          const finalApptDate = hasValidAppt
+            ? appt.scheduled_date
+            : hasValidCached
+            ? cachedSched.scheduledDate
+            : d.appointmentDate || null
 
-        const hasValidAppt = Boolean(appt?.scheduled_date && appt?.status !== "pending")
-        const hasValidCached = Boolean(cachedSched?.scheduledDate && cachedSched?.status !== "pending")
+          const finalApptTime = hasValidAppt
+            ? appt.scheduled_time
+            : hasValidCached
+            ? cachedSched.scheduledTime
+            : d.appointmentTime || null
 
-        const finalApptDate = hasValidAppt
-          ? appt.scheduled_date
-          : hasValidCached
-          ? cachedSched.scheduledDate
-          : d.appointmentDate || null
+          const finalVenue = appt?.office_location || cachedSched?.officeLocation || d.venue || "Quezon City Hall"
 
-        const finalApptTime = hasValidAppt
-          ? appt.scheduled_time
-          : hasValidCached
-          ? cachedSched.scheduledTime
-          : d.appointmentTime || null
-
-        const finalVenue = appt?.office_location || cachedSched?.officeLocation || d.venue || "Quezon City Hall"
-
-        let isTimeReached = false
-        if (finalApptDate && finalApptTime) {
-          const dt = parseAppointmentDateTime(finalApptDate, finalApptTime)
-          if (dt && now.getTime() >= dt.getTime()) {
-            isTimeReached = true
+          let isTimeReached = false
+          if (finalApptDate && finalApptTime) {
+            const dt = parseAppointmentDateTime(finalApptDate, finalApptTime)
+            if (dt && now.getTime() >= dt.getTime()) {
+              isTimeReached = true
+            }
           }
-        }
 
-        const isApptDone = Boolean(finalApptDate) && (appt?.status === "completed" || cachedSched?.status === "completed")
-        const isReleased = d.status === "RELEASED" || isApptDone || (Boolean(finalApptDate) && isTimeReached)
+          const isApptDone = Boolean(finalApptDate) && (appt?.status === "completed" || cachedSched?.status === "completed")
+          const isReleased = d.status === "RELEASED" || isApptDone || (Boolean(finalApptDate) && isTimeReached)
 
-        return {
-          ...d,
-          appointmentDate: finalApptDate,
-          appointmentTime: finalApptTime,
-          venue: finalVenue,
-          status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
-          releasedDate: isReleased
-            ? d.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
-            : undefined,
-          releasedBy: isReleased
-            ? d.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
-            : undefined,
-        }
-      })
+          return {
+            ...d,
+            appointmentDate: finalApptDate,
+            appointmentTime: finalApptTime,
+            venue: finalVenue,
+            status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
+            releasedDate: isReleased
+              ? d.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
+              : undefined,
+            releasedBy: isReleased
+              ? d.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
+              : undefined,
+          }
+        })
 
-      setDisbursements(merged)
+        setDisbursements(merged)
       } finally {
         isSyncing = false
       }
@@ -416,22 +420,29 @@ export default function FinancialAidDisbursement() {
 
     syncAll()
 
-    // Interval checker every 8s to auto-release when exact appointment time is reached and sync across devices
+    // Interval checker (15s) with in-flight protection
     const autoReleaseInterval = setInterval(() => {
       syncAll()
-    }, 8000)
+    }, 15000)
+
+    let debounceTimer: any = null
+    const handleStorageChange = () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        syncAll()
+      }, 350)
+    }
 
     const unsubscribe = subscribeToRealtimeChanges(() => {
-      syncAll()
+      handleStorageChange()
     })
 
-    // Listen to real-time events when appointments or applications update
-    const handleStorageChange = () => syncAll()
     window.addEventListener("financial_disbursements_updated", handleStorageChange)
     window.addEventListener("appointments_updated", handleStorageChange)
     window.addEventListener("storage", handleStorageChange)
 
     return () => {
+      clearTimeout(debounceTimer)
       clearInterval(autoReleaseInterval)
       unsubscribe()
       window.removeEventListener("financial_disbursements_updated", handleStorageChange)

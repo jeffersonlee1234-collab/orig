@@ -652,8 +652,15 @@ function ResidentHeader({
     return () => clearInterval(interval)
   }, [])
 
+  const isFetchingNotifsRef = useRef(false)
+
   useEffect(() => {
+    let isMounted = true
+
     const fetchNotifs = async () => {
+      if (isFetchingNotifsRef.current) return
+      isFetchingNotifsRef.current = true
+
       try {
         const readIds = getReadNotifIds()
         const dismissedIds = getDismissedNotifIds()
@@ -742,20 +749,35 @@ function ResidentHeader({
         })
 
         const sortedItems = Array.from(uniqueMap.values()).sort((a, b) => Number(b.unread) - Number(a.unread))
-        setNotifications(sortedItems)
-      } catch {}
+        if (isMounted) {
+          setNotifications(sortedItems)
+        }
+      } catch {} finally {
+        isFetchingNotifsRef.current = false
+      }
     }
 
     fetchNotifs()
-    const interval = setInterval(fetchNotifs, 5000)
+    const interval = setInterval(fetchNotifs, 20000)
+
+    let debounceTimer: any = null
+    const handleNotifUpdate = () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        fetchNotifs()
+      }, 350)
+    }
+
     const unsubscribe = subscribeToRealtimeChanges(() => {
-      fetchNotifs()
+      handleNotifUpdate()
     })
-    const handleNotifUpdate = () => fetchNotifs()
+
     window.addEventListener("user_notifications_updated", handleNotifUpdate)
     window.addEventListener("storage", handleNotifUpdate)
 
     return () => {
+      isMounted = false
+      clearTimeout(debounceTimer)
       clearInterval(interval)
       unsubscribe()
       window.removeEventListener("user_notifications_updated", handleNotifUpdate)
