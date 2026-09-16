@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, X, Eye, EyeOff, ExternalLink, KeyRound, CheckCircle2, ShieldAlert, Sun, Moon } from 'lucide-react';
+import { Mail, X, Eye, EyeOff, ExternalLink, KeyRound, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { API_BASE } from '../../config/api';
-import { getInitialTheme, applyTheme, getThemePreference, getEffectiveTheme, setThemeMode } from '../../utils/theme';
+import { getInitialTheme, applyTheme, getThemePreference, getEffectiveTheme } from '../../utils/theme';
 
 import { RecaptchaModal } from '../ui/recaptcha-modal';
 
@@ -12,13 +12,10 @@ export const Login = () => {
   // Government seal mula sa public/samples folder
   const governmentSealImage = '/samples/Government Service Integrity Seal.png';
 
-  const [dark, setDark] = useState(() => getInitialTheme());
-
   useEffect(() => {
     const syncTheme = () => {
       const mode = getThemePreference();
       const effectiveDark = getEffectiveTheme(mode);
-      setDark(effectiveDark);
       applyTheme(effectiveDark, false);
     };
 
@@ -34,11 +31,6 @@ export const Login = () => {
       window.removeEventListener('storage', syncTheme);
     };
   }, []);
-
-  const handleToggleDark = () => {
-    const nextDark = !dark;
-    setThemeMode(nextDark ? 'dark' : 'light');
-  };
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -406,21 +398,13 @@ export const Login = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between z-30 w-full relative">
+        <div className="flex items-center justify-start z-30 w-full relative">
           <Link
             to="/"
             className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-medium transition-colors shrink-0 cursor-pointer select-none py-1.5 px-2.5 -ml-2 rounded-lg hover:bg-white/10"
           >
             ← Back to Home
           </Link>
-          <button
-            type="button"
-            onClick={handleToggleDark}
-            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white border border-white/15 hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            {dark ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
         </div>
 
         <div className="my-auto py-8 sm:py-12 z-10 max-w-lg text-center flex flex-col items-center">
