@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react"
-import { X, Languages, Sun, Moon, Clock } from "lucide-react"
+import { X, Languages } from "lucide-react"
 import { useLanguage, type Language } from "./language-context"
-import { getThemePreference, setThemeMode, type ThemeMode } from "../../utils/theme"
 
 export function SettingsModal({
   open,
@@ -11,13 +9,6 @@ export function SettingsModal({
   onClose: () => void
 }) {
   const { language, setLanguage, t } = useLanguage()
-  const [currentTheme, setCurrentTheme] = useState<ThemeMode>(() => getThemePreference())
-
-  useEffect(() => {
-    if (open) {
-      setCurrentTheme(getThemePreference())
-    }
-  }, [open])
 
   if (!open) return null
 
@@ -26,11 +17,6 @@ export function SettingsModal({
     { value: "tl", label: t("tagalog") || "Tagalog" },
     { value: "bis", label: t("bisaya") || "Bisaya" },
   ]
-
-  const handleSelectTheme = (mode: ThemeMode) => {
-    setCurrentTheme(mode)
-    setThemeMode(mode)
-  }
 
   return (
     <div
@@ -54,86 +40,8 @@ export function SettingsModal({
         </h3>
 
         <div className="space-y-5">
-          {/* Theme Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Clock className="h-4 w-4 text-primary" />
-                <span>{language === "bis" ? "Tema sa Kolor" : language === "tl" ? "Tema ng Kulay" : "Theme Mode"}</span>
-              </div>
-              <span className="text-[11px] font-medium text-muted-foreground">
-                {currentTheme === "auto"
-                  ? (language === "bis" ? "Awtomatik" : language === "tl" ? "Awtomatiko" : "Auto")
-                  : currentTheme === "light"
-                  ? (language === "bis" ? "Puti" : language === "tl" ? "Puti" : "Light")
-                  : (language === "bis" ? "Ngitngit" : language === "tl" ? "Madilim" : "Dark")}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("auto")}
-                className={`h-11 rounded-xl text-xs font-semibold border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  currentTheme === "auto"
-                    ? "bg-primary/15 border-primary text-primary shadow-xs"
-                    : "bg-transparent border-border text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>{language === "bis" ? "Auto (Oras)" : language === "tl" ? "Auto (Oras)" : "Auto (Time)"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("light")}
-                className={`h-11 rounded-xl text-xs font-semibold border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  currentTheme === "light"
-                    ? "bg-primary/15 border-primary text-primary shadow-xs"
-                    : "bg-transparent border-border text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <Sun className="h-3.5 w-3.5" />
-                <span>{language === "bis" ? "Puti" : language === "tl" ? "Puti" : "Light"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTheme("dark")}
-                className={`h-11 rounded-xl text-xs font-semibold border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  currentTheme === "dark"
-                    ? "bg-primary/15 border-primary text-primary shadow-xs"
-                    : "bg-transparent border-border text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <Moon className="h-3.5 w-3.5" />
-                <span>{language === "bis" ? "Ngitngit" : language === "tl" ? "Madilim" : "Dark"}</span>
-              </button>
-            </div>
-
-            <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
-              {currentTheme === "auto"
-                ? (language === "bis"
-                    ? "⏰ 6:00 AM – 6:00 PM (Puti) | 6:00 PM – 6:00 AM (Ngitngit)"
-                    : language === "tl"
-                    ? "⏰ 6:00 AM – 6:00 PM (Puti) | 6:00 PM – 6:00 AM (Madilim)"
-                    : "⏰ 6:00 AM – 6:00 PM (Light) | 6:00 PM – 6:00 AM (Dark)")
-                : currentTheme === "light"
-                ? (language === "bis"
-                    ? "Palaging nakaputing screen."
-                    : language === "tl"
-                    ? "Palaging nakaputing screen."
-                    : "Always in light mode.")
-                : (language === "bis"
-                    ? "Palaging nakangitngit nga screen."
-                    : language === "tl"
-                    ? "Palaging nakaitim/madilim na screen."
-                    : "Always in dark mode.")}
-            </p>
-          </div>
-
           {/* Language Section */}
-          <div className="space-y-2 pt-2 border-t border-border">
+          <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Languages className="h-4 w-4 text-primary" />
               {t("language")}
