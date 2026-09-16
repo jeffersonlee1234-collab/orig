@@ -111,7 +111,9 @@ export default function App() {
                   )
                 }
               >
-                <Route index element={<Navigate to={defaultModulePath} replace />} />
+                <Route path="/admin" element={<Navigate to={defaultModulePath} replace />} />
+                <Route path="/staff" element={<Navigate to={defaultModulePath} replace />} />
+                <Route path="/dashboard" element={<Navigate to={defaultModulePath} replace />} />
                 {moduleRoutes.map((mod) => (
                   <Route
                     key={mod.path}
