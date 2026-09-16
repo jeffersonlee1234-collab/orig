@@ -378,13 +378,17 @@ export const Login = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between z-10 w-full">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-medium transition-colors shrink-0"
+        <div className="flex items-center justify-between z-20 w-full relative">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = '/';
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-medium transition-colors shrink-0 cursor-pointer select-none py-1 px-2 -ml-2 rounded-lg hover:bg-white/10"
           >
             ← Back to Home
-          </Link>
+          </a>
         </div>
 
         <div className="my-auto py-8 sm:py-12 z-10 max-w-lg text-center flex flex-col items-center">
