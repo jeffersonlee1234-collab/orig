@@ -527,13 +527,22 @@ export const Register = () => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        // Clear any old auth state so user must explicitly log in
-        sessionStorage.removeItem('isAuthenticated');
-        sessionStorage.removeItem('userRole');
-        sessionStorage.removeItem('currentUser');
+        // Clear any old auth state and stale application caches
+        sessionStorage.clear();
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('user_profile');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('all_user_applications');
+        localStorage.removeItem('pwd_senior_applications');
+        localStorage.removeItem('all_financial_disbursements');
+        localStorage.removeItem('deleted_user_applications');
+        localStorage.removeItem('deleted_financial_disbursement_keys');
+        localStorage.removeItem('all_user_notifications');
+        localStorage.removeItem('citizen_applications');
+        localStorage.removeItem('user_applications');
+        localStorage.removeItem('active_applications');
         setStep(2);
       } else {
         setError(data.message || 'Registration failed. Please try again.');

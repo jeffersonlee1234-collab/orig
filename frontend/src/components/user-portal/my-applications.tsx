@@ -1839,7 +1839,7 @@ export default function MyApplications() {
           if (!app) return false
           if (app.is_archived === true || app.isArchived === true) return false
 
-          // 1. Exact Email Match
+          // 1. Strict Email Match (Primary identifier)
           const appEmail = String(
             app.email ||
             app.guardian_email ||
@@ -1850,15 +1850,12 @@ export default function MyApplications() {
             app.form_data?.email ||
             ""
           ).trim().toLowerCase()
-          if (userEmail && appEmail && userEmail === appEmail) return true
-
-          // 2. User ID Match
-          const appUserId = String(app.user_id || app.userId || "").trim().toLowerCase()
-          if (userId && appUserId && String(userId) === appUserId && String(userId) !== "0" && String(userId) !== "null" && String(userId) !== "undefined") {
-            return true
+          if (userEmail && appEmail) {
+            return userEmail === appEmail
           }
 
-          // 3. QCID / Reference Number / Existing ID Match
+          // 2. Strict QCID / Reference Number Match
+          const cleanUserQcid = (qcId || "").replace(/\D/g, "")
           const appQc = String(
             app.qc_id ||
             app.qcid ||
@@ -1870,32 +1867,20 @@ export default function MyApplications() {
             app.referenceNumber ||
             app.assignedIdNumber ||
             app.assigned_id_number ||
-            app.solo_parent_id_number ||
-            app.existingIdNumber ||
-            app.existing_id_number ||
-            app.existingBookletNumber ||
-            app.existing_booklet_number ||
             ""
-          ).trim().toLowerCase()
+          ).replace(/\D/g, "")
 
-          const cleanUserQcid = (qcId || "").replace(/\D/g, "")
-          const cleanAppQc = appQc.replace(/\D/g, "")
-
-          if (cleanUserQcid && cleanAppQc && (cleanAppQc.includes(cleanUserQcid) || cleanUserQcid.includes(cleanAppQc))) {
-            return true
-          }
-          if (qcId && appQc && (appQc === qcId.toLowerCase() || appQc.includes(qcId.toLowerCase()) || qcId.toLowerCase().includes(appQc))) {
+          if (cleanUserQcid.length >= 10 && appQc.length >= 10 && cleanUserQcid === appQc) {
             return true
           }
 
-          // 4. Contact Number Match
-          const appContact = String(app.contactNo || app.contact_no || app.cellphoneNo || app.contactNumber || app.contact_number || "").replace(/\D/g, "")
-          const userContact = (userProfile.mobileNumber || userProfile.contactNo || "").replace(/\D/g, "")
-          if (userContact && userContact.length >= 7 && appContact && (appContact.includes(userContact) || userContact.includes(appContact))) {
+          // 3. Strict User ID Match (Non-default, non-generic)
+          const appUserId = String(app.user_id || app.userId || "").trim()
+          if (userId && appUserId && !["0", "1", "null", "undefined", ""].includes(String(userId)) && String(userId) === appUserId) {
             return true
           }
 
-          // 5. Full Name Match (Matches both first and last name of the user)
+          // 4. Strict Exact First and Last Name match
           const appFirst = String(
             app.firstName ||
             app.first_name ||
@@ -1916,28 +1901,24 @@ export default function MyApplications() {
             ""
           ).trim().toLowerCase()
 
+          if (userFirst && userLast && appFirst && appLast) {
+            if (userFirst === appFirst && userLast === appLast) return true
+          }
+
           const appFullName = String(
             app.full_name ||
             app.fullName ||
             app.applicantName ||
             app.applicant_name ||
-            app.child_name ||
-            app.childName ||
             app.applicantInfo?.fullName ||
             app.applicant_info?.fullName ||
-            `${appFirst} ${appLast}`
+            ""
           ).trim().toLowerCase()
 
-          if (userFirst || userLast) {
-            const firstWord = userFirst.split(" ")[0]?.toLowerCase() || ""
-            const lastWord = userLast.split(" ").pop()?.toLowerCase() || ""
-
-            if (firstWord && lastWord) {
-              const matchesFirst = appFullName.includes(firstWord) || appFirst.includes(firstWord) || firstWord.includes(appFirst)
-              const matchesLast = appFullName.includes(lastWord) || appLast.includes(lastWord) || lastWord.includes(appLast)
-              if (matchesFirst && matchesLast) return true
-            } else if (firstWord) {
-              if (appFullName.includes(firstWord) || appFirst.includes(firstWord)) return true
+          if (userFirst && userLast && appFullName) {
+            const exactCombined = `${userFirst} ${userLast}`.trim()
+            if (appFullName === exactCombined || (appFullName.startsWith(`${userFirst} `) && appFullName.endsWith(` ${userLast}`))) {
+              return true
             }
           }
 

@@ -634,10 +634,10 @@ const canProceedPersonal = Boolean(
           const appFirst = String(a.first_name || "").trim().toLowerCase()
           const appLast = String(a.last_name || "").trim().toLowerCase()
 
-          if (userQcid && (appQc === userQcid || appQc.includes(userQcid) || userQcid.includes(appQc))) return true
-          if (userEmail && appEmail && (appEmail === userEmail || appEmail.includes(userEmail) || userEmail.includes(appEmail))) return true
-          if (userFirst && userLast && ((appFirst === userFirst && appLast === userLast) || (appName.includes(userFirst) && appName.includes(userLast)))) return true
-          if (userFirst && userFirst.length >= 3 && (appFirst === userFirst || appName.includes(userFirst))) return true
+          if (userQcid && appQc && userQcid.length >= 10 && appQc === userQcid) return true
+          if (userEmail && appEmail && appEmail === userEmail) return true
+          if (userFirst && userLast && appFirst && appLast && appFirst === userFirst && appLast === userLast) return true
+          if (userFirst && userLast && appName && (appName === `${userFirst} ${userLast}` || (appName.startsWith(userFirst + " ") && appName.endsWith(" " + userLast)))) return true
           return false
         }
 

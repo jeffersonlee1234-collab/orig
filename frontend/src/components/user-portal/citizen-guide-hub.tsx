@@ -131,16 +131,14 @@ export default function CitizenGuideHub() {
           }
 
           if (userEmail && aEmail && userEmail === aEmail) return true
-          if (currentQcid && aRef && (aRef === currentQcid || aRef.includes(currentQcid) || currentQcid.includes(aRef))) return true
+          if (currentQcid && aRef && currentQcid.length >= 10 && aRef === currentQcid) return true
 
-          const firstWord = userFirstName.split(" ")[0] || ""
-          const lastWord = userLastName.split(" ").pop() || ""
-
-          if (firstWord && lastWord) {
-            if (aName.includes(firstWord) && aName.includes(lastWord)) return true
-            if ((aFirst.includes(firstWord) || firstWord.includes(aFirst)) && (aLast.includes(lastWord) || lastWord.includes(aLast))) return true
-          } else if (firstWord) {
-            if (aName.includes(firstWord) || aFirst.includes(firstWord)) return true
+          if (userFirstName && userLastName && aFirst && aLast) {
+            if (userFirstName === aFirst && userLastName === aLast) return true
+          }
+          if (userFirstName && userLastName && aName) {
+            const combined = `${userFirstName} ${userLastName}`.trim()
+            if (aName === combined || (aName.startsWith(userFirstName + " ") && aName.endsWith(" " + userLastName))) return true
           }
 
           return false

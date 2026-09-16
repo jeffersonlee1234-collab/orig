@@ -42,12 +42,12 @@ export default function ApplyFinancialAid() {
       if (qcId) userRefNumbers.add(qcId)
 
       const isUserMatch = (applicantName?: string, appRef?: string) => {
-        if (appRef && qcId && (appRef.includes(qcId) || qcId.includes(appRef))) return true
+        if (appRef && qcId && String(appRef).trim() === String(qcId).trim()) return true
         if (appRef && userRefNumbers.has(appRef)) return true
         if (!applicantName) return false
         const name = applicantName.toLowerCase().trim()
-        if (userFull && (name.includes(userFull) || userFull.includes(name))) return true
-        if (userLast && name.includes(userLast) && userFirst && name.includes(userFirst)) return true
+        if (userFull && name === userFull) return true
+        if (userFirst && userLast && name.startsWith(userFirst + " ") && name.endsWith(" " + userLast)) return true
         return false
       }
 

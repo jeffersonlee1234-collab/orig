@@ -111,20 +111,17 @@ export default function ApplyPWDSenior() {
           // 3. Email match
           if (currentEmail && appEmail && currentEmail === appEmail) return true
 
-          // 4. Name match (Last name matches + First name matches or contains)
-          if (currentLastName && appLastName) {
-            const lastNameMatch = currentLastName === appLastName || appLastName.includes(currentLastName) || currentLastName.includes(appLastName)
-            if (lastNameMatch) {
-              if (!currentFirstName || !appFirstName) return true
-              if (currentFirstName === appFirstName) return true
-              if (appFirstName.includes(currentFirstName) || currentFirstName.includes(appFirstName)) return true
-              if (appFullName.includes(currentFirstName) || currentFullName.includes(appFirstName)) return true
-            }
+          // 4. Exact Name match
+          if (currentLastName && appLastName && currentFirstName && appFirstName) {
+            if (currentLastName === appLastName && currentFirstName === appFirstName) return true
           }
 
           // 5. Full name match
-          if (currentFullName && appFullName && (currentFullName === appFullName || appFullName.includes(currentLastName) && appFullName.includes(currentFirstName))) {
-            return true
+          if (currentFullName && appFullName) {
+            const combined = `${currentFirstName} ${currentLastName}`.trim()
+            if (appFullName === combined || (appFullName.startsWith(currentFirstName + " ") && appFullName.endsWith(" " + currentLastName))) {
+              return true
+            }
           }
 
           return false

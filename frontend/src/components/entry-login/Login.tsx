@@ -261,6 +261,20 @@ export const Login = () => {
           setLockoutRemaining(0);
           const detectedRole = (data.role || (data.user?.role) || 'user').toLowerCase();
           const cleanEmail = (data.user?.email || email).trim().toLowerCase();
+
+          const prevEmail = localStorage.getItem('user_email');
+          if (prevEmail && prevEmail.toLowerCase() !== cleanEmail) {
+            localStorage.removeItem('all_user_applications');
+            localStorage.removeItem('pwd_senior_applications');
+            localStorage.removeItem('all_financial_disbursements');
+            localStorage.removeItem('deleted_user_applications');
+            localStorage.removeItem('deleted_financial_disbursement_keys');
+            localStorage.removeItem('all_user_notifications');
+            localStorage.removeItem('citizen_applications');
+            localStorage.removeItem('user_applications');
+            localStorage.removeItem('active_applications');
+          }
+
           sessionStorage.setItem('isAuthenticated', 'true');
           sessionStorage.setItem('userRole', detectedRole);
           sessionStorage.setItem('user_email', cleanEmail);
