@@ -161,17 +161,17 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 pt-10 pb-16 text-center">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-4xl">
 
           {/* H1 — responsive 30/36/48/60px (text-3xl -> sm:4xl -> md:5xl -> lg:6xl) */}
-          <h1 className="font-heading text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl tracking-tight">
             <span className="block">Social Services</span>
-            <span
-              className="mt-1 flex flex-wrap items-center justify-center gap-x-1 bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent min-h-[1.15em] sm:min-h-0"
-            >
-              <span>{typewriterText}</span>
-              <span className="inline-block h-[0.85em] w-0.75 bg-primary/70 animate-pulse" aria-hidden="true" />
-            </span>
+            <div className="h-[1.35em] flex items-center justify-center my-1.5 overflow-hidden">
+              <span className="inline-flex items-center justify-center whitespace-nowrap bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent px-2">
+                <span>{typewriterText || '\u00A0'}</span>
+                <span className="inline-block h-[0.82em] w-0.75 sm:w-1 bg-primary/70 animate-pulse ml-1 shrink-0" aria-hidden="true" />
+              </span>
+            </div>
             <span className="block">Made Simple</span>
           </h1>
 
