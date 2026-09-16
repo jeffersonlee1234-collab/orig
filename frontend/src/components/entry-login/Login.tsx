@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, X, Eye, EyeOff, ExternalLink, KeyRound, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Mail, X, Eye, EyeOff, ExternalLink, KeyRound, CheckCircle2, ShieldAlert, Sun, Moon } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import { getInitialTheme, applyTheme, getThemePreference, getEffectiveTheme, setThemeMode } from '../../utils/theme';
 
 import { RecaptchaModal } from '../ui/recaptcha-modal';
 
@@ -10,6 +11,34 @@ export const Login = () => {
 
   // Government seal mula sa public/samples folder
   const governmentSealImage = '/samples/Government Service Integrity Seal.png';
+
+  const [dark, setDark] = useState(() => getInitialTheme());
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const mode = getThemePreference();
+      const effectiveDark = getEffectiveTheme(mode);
+      setDark(effectiveDark);
+      applyTheme(effectiveDark, false);
+    };
+
+    syncTheme();
+
+    const interval = setInterval(syncTheme, 15000);
+    window.addEventListener('theme_changed', syncTheme);
+    window.addEventListener('storage', syncTheme);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('theme_changed', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
+
+  const handleToggleDark = () => {
+    const nextDark = !dark;
+    setThemeMode(nextDark ? 'dark' : 'light');
+  };
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -354,12 +383,11 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#F8FAFC] font-sans text-sm relative" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#F8FAFC] dark:bg-[#070D1E] font-sans text-sm relative transition-colors duration-200" style={{ fontFamily: 'Inter, sans-serif' }}>
 
       {/* Left Hero Section */}
       <div
-        className="w-full md:w-1/2 text-white p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden text-center items-center"
-        style={{ backgroundColor: '#0B132B' }}
+        className="w-full md:w-1/2 text-white p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden text-center items-center bg-[#0B132B] dark:bg-[#060B18]"
       >
         {/* Centered Government Seal Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden p-6">
@@ -385,6 +413,14 @@ export const Login = () => {
           >
             ← Back to Home
           </Link>
+          <button
+            type="button"
+            onClick={handleToggleDark}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white border border-white/15 hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
         </div>
 
         <div className="my-auto py-8 sm:py-12 z-10 max-w-lg text-center flex flex-col items-center">
@@ -402,28 +438,28 @@ export const Login = () => {
       </div>
 
       {/* Right Login Form Section */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12 bg-[#F3F4F8]">
-        <div className="w-full max-w-[440px] bg-white p-7 sm:p-10 rounded-3xl shadow-2xl shadow-slate-200/80 border border-slate-100">
+      <div className="w-full md:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12 bg-[#F3F4F8] dark:bg-[#0A1024] transition-colors duration-200">
+        <div className="w-full max-w-[440px] bg-white dark:bg-[#111C44] p-7 sm:p-10 rounded-3xl shadow-2xl shadow-slate-200/80 dark:shadow-black/60 border border-slate-100 dark:border-slate-800/80 transition-colors duration-200">
 
           <div className="text-left mb-7">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Welcome Back
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-normal">
               Sign in to access your social service dashboard
             </p>
           </div>
 
           {error && (
-            <div className="p-3 mb-5 text-xs text-red-600 bg-red-50 rounded-xl border border-red-200 text-left font-medium flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-red-500" />
+            <div className="p-3 mb-5 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/60 text-left font-medium flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-red-500 dark:text-red-400" />
               <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 text-left relative">
             <div>
-              <label className="block text-[11px] font-bold tracking-wider text-slate-600 uppercase mb-2">
+              <label className="block text-[11px] font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase mb-2">
                 EMAIL ADDRESS
               </label>
               <input
@@ -431,14 +467,14 @@ export const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@email.com"
-                className="w-full px-4 py-3 text-xs sm:text-sm bg-[#EEF2F6] hover:bg-[#E8EDF3] border border-transparent focus:border-blue-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+                className="w-full px-4 py-3 text-xs sm:text-sm bg-[#EEF2F6] dark:bg-[#1B254B] hover:bg-[#E8EDF3] dark:hover:bg-[#222E5D] border border-transparent dark:border-slate-700/60 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1B254B] rounded-xl outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium"
                 required
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[11px] font-bold tracking-wider text-slate-600 uppercase">
+                <label className="text-[11px] font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase">
                   PASSWORD
                 </label>
                 <button
@@ -451,7 +487,7 @@ export const Login = () => {
                     setResetError('');
                     setIsConfirmModalOpen(false);
                   }}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline bg-transparent border-none cursor-pointer p-0"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline bg-transparent border-none cursor-pointer p-0"
                 >
                   Forgot Password?
                 </button>
@@ -462,13 +498,13 @@ export const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-4 py-3 pr-12 text-xs sm:text-sm bg-[#EEF2F6] hover:bg-[#E8EDF3] border border-transparent focus:border-blue-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+                  className="w-full px-4 py-3 pr-12 text-xs sm:text-sm bg-[#EEF2F6] dark:bg-[#1B254B] hover:bg-[#E8EDF3] dark:hover:bg-[#222E5D] border border-transparent dark:border-slate-700/60 focus:border-blue-500 focus:bg-white dark:focus:bg-[#1B254B] rounded-xl outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer select-none p-1 rounded-lg hover:bg-slate-200/50"
+                  className="absolute right-3.5 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer select-none p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -491,12 +527,12 @@ export const Login = () => {
             </div>
           </form>
 
-          <div className="mt-8 text-center text-xs sm:text-[13px] text-slate-500 font-medium">
+          <div className="mt-8 text-center text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 font-medium">
             Don't have an account?{' '}
             <a
               href="/register"
               onClick={handleRegisterClick}
-              className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-bold hover:underline cursor-pointer"
             >
               Register here
             </a>
@@ -506,25 +542,25 @@ export const Login = () => {
 
       {/* Forgot Password Modal */}
       {isForgotPasswordOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden text-left max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#111C44] border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden text-left max-h-[90vh] overflow-y-auto">
             <button
               onClick={closeForgotPasswordModal}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             {resetSuccess ? (
               <div className="text-center py-2 animate-scale-up">
-                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F3D5C] mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F3D5C] dark:text-white mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                   Check your email
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 mb-6 leading-relaxed">
-                  We've dispatched a password reset link and 6-digit verification code to <span className="font-semibold text-slate-700">{resetEmail}</span>.
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                  We've dispatched a password reset link and 6-digit verification code to <span className="font-semibold text-slate-700 dark:text-slate-200">{resetEmail}</span>.
                 </p>
 
                 <div className="space-y-2.5">
@@ -543,7 +579,7 @@ export const Login = () => {
                       closeForgotPasswordModal();
                       navigate(`/reset-password?email=${encodeURIComponent(resetEmail)}`);
                     }}
-                    className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <KeyRound className="w-4 h-4" /> Enter Code / Set New Password
                   </button>
@@ -551,7 +587,7 @@ export const Login = () => {
                   <button
                     type="button"
                     onClick={closeForgotPasswordModal}
-                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs sm:text-sm rounded-lg transition-colors cursor-pointer"
+                    className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm rounded-lg transition-colors cursor-pointer"
                   >
                     Back to Sign In
                   </button>
@@ -560,21 +596,21 @@ export const Login = () => {
             ) : (
               <>
                 <div className="text-center mb-5">
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F3D5C]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F3D5C] dark:text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                     Forgot your password?
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
                     No worries! Simply provide your registered email to reset your password.
                   </p>
                 </div>
 
-                <div className="border border-slate-200 rounded-xl p-4 sm:p-5">
-                  <p className="text-center text-xs sm:text-sm font-semibold text-[#0F3D5C] mb-3">
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-900/40">
+                  <p className="text-center text-xs sm:text-sm font-semibold text-[#0F3D5C] dark:text-slate-200 mb-3">
                     Please enter your registered Email Address
                   </p>
 
                   {resetError && (
-                    <div className="p-2.5 mb-3 text-xs text-red-600 bg-red-50 rounded-lg border border-red-200 text-center">
+                    <div className="p-2.5 mb-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 text-center">
                       {resetError}
                     </div>
                   )}
@@ -585,7 +621,7 @@ export const Login = () => {
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
                       placeholder="Input your E-Mail Address"
-                      className="w-full px-3 py-2.5 text-xs md:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-slate-700 text-left"
+                      className="w-full px-3 py-2.5 text-xs md:text-sm bg-white dark:bg-[#1B254B] border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 text-left"
                       required
                     />
 
@@ -598,12 +634,12 @@ export const Login = () => {
                         }
                         setIsRecaptchaChallengeOpen(true);
                       }}
-                      className="w-full flex items-center justify-between gap-3 border border-slate-300 rounded-lg bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors"
+                      className="w-full flex items-center justify-between gap-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-[#1B254B]/60 px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-[#1B254B] transition-colors"
                     >
                       <span className="flex items-center gap-2.5">
                         <span
                           className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                            isNotRobot ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-400'
+                            isNotRobot ? 'bg-emerald-500 border-emerald-500' : 'bg-white dark:bg-slate-800 border-slate-400 dark:border-slate-600'
                           }`}
                         >
                           {isNotRobot && (
@@ -612,11 +648,11 @@ export const Login = () => {
                             </svg>
                           )}
                         </span>
-                        <span className="text-xs sm:text-sm text-slate-700 font-medium">
+                        <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 font-medium">
                           {isNotRobot ? 'Verified: I am not a robot' : "I'm not a robot"}
                         </span>
                       </span>
-                      <span className="text-[9px] text-slate-400 font-medium leading-tight text-right">
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-tight text-right">
                         reCAPTCHA
                       </span>
                     </button>
@@ -630,12 +666,12 @@ export const Login = () => {
                     </button>
                   </form>
 
-                  <p className="text-center text-xs text-slate-500 mt-4">
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-4">
                     Go back to{' '}
                     <button
                       type="button"
                       onClick={closeForgotPasswordModal}
-                      className="text-blue-600 hover:underline font-medium bg-transparent border-none cursor-pointer p-0"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-medium bg-transparent border-none cursor-pointer p-0"
                     >
                       Login page
                     </button>
@@ -649,8 +685,8 @@ export const Login = () => {
 
       {/* Password Reset Confirmation Modal */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-110 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
+        <div className="fixed inset-0 z-110 flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#111C44] border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
             <div className="flex justify-center mb-4">
               <div className="w-14 h-14 rounded-full border-2 border-sky-400 flex items-center justify-center text-sky-400">
                 <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
@@ -660,14 +696,14 @@ export const Login = () => {
                 </svg>
               </div>
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-700 mb-6" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            <h3 className="text-lg sm:text-xl font-bold text-slate-700 dark:text-white mb-6" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Password Reset Confirmation
             </h3>
             <div className="flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 py-2.5 px-4 border border-amber-500 text-amber-600 hover:bg-amber-50 font-semibold text-xs sm:text-sm rounded-lg transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 border border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-semibold text-xs sm:text-sm rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -683,32 +719,32 @@ export const Login = () => {
         </div>
       )}
           {isLoginLoading && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 sm:p-10 text-center">
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-700 mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/50 dark:bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#111C44] border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-8 sm:p-10 text-center">
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-white mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Signing in
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 tracking-wide mb-6">
               PLEASE WAIT
             </p>
             <div className="flex justify-center">
-              <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-blue-100 dark:border-blue-900/50 border-t-blue-600 rounded-full animate-spin" />
             </div>
           </div>
         </div>
       )}
 
       {isRegisterLoading && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 sm:p-10 text-center">
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-700 mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/50 dark:bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#111C44] border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-8 sm:p-10 text-center">
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-white mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Loading
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 tracking-wide mb-6">
               PLEASE WAIT
             </p>
             <div className="flex justify-center">
-              <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-blue-100 dark:border-blue-900/50 border-t-blue-600 rounded-full animate-spin" />
             </div>
           </div>
         </div>
@@ -726,25 +762,25 @@ export const Login = () => {
 
       {/* Account Deactivated Reactivation Prompt Modal */}
       {inactiveUserPrompt && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 text-center space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111C44] rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-xs">
               <ShieldAlert className="w-7 h-7" />
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                 Account is Deactivated
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                 Your account is currently deactivated. Would you like to reactivate it?
               </p>
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-left space-y-1">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left space-y-1">
               <div className="text-[11px] font-semibold text-slate-400 uppercase">Account Details:</div>
-              <div className="font-bold text-slate-900">{inactiveUserPrompt.name}</div>
-              <div className="font-mono text-slate-600 truncate">{inactiveUserPrompt.email}</div>
+              <div className="font-bold text-slate-900 dark:text-white">{inactiveUserPrompt.name}</div>
+              <div className="font-mono text-slate-600 dark:text-slate-300 truncate">{inactiveUserPrompt.email}</div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -752,7 +788,7 @@ export const Login = () => {
                 type="button"
                 onClick={() => setInactiveUserPrompt(null)}
                 disabled={isReactivating}
-                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
