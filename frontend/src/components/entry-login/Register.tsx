@@ -906,7 +906,7 @@ export const Register = () => {
                           maxLength={4}
                           value={houseNo}
                           onChange={(e) => setHouseNo(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          placeholder="House No. (max 4 digits)"
+                          placeholder="Enter House No."
                           className={inputClass}
                           required
                         />
