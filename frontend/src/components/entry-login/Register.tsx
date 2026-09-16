@@ -243,13 +243,10 @@ export const Register = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [step]);
 
-  // Reset dependent fields when city changes.
+  // Reset dependent specifyCity field when city changes.
   useEffect(() => {
-    if (!city) {
+    if (city !== 'Others') {
       setSpecifyCity('');
-      setHouseNo('');
-      setStreet('');
-      setBarangay('');
     }
   }, [city]);
 
@@ -915,22 +912,20 @@ export const Register = () => {
                     )}
                   </div>
 
-                  <div className={`grid gap-4 ${city === 'Quezon City' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
-                    {city === 'Quezon City' && (
-                      <div>
-                        <label className={labelClass}>{requiredMark} House No.:</label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={houseNo}
-                          onChange={(e) => setHouseNo(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          placeholder="Enter House No."
-                          className={inputClass}
-                          required
-                        />
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className={labelClass}>{requiredMark} House No.:</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={houseNo}
+                        onChange={(e) => setHouseNo(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="Enter House No."
+                        className={inputClass}
+                        required
+                      />
+                    </div>
 
                     <div>
                       <label className={labelClass}>{requiredMark} Street:</label>
@@ -939,7 +934,6 @@ export const Register = () => {
                         value={street}
                         onChange={(e) => setStreet(e.target.value)}
                         placeholder="Enter Street"
-                        disabled={!city}
                         className={inputClass}
                         required
                       />
@@ -965,7 +959,6 @@ export const Register = () => {
                           value={barangay}
                           onChange={(e) => setBarangay(e.target.value)}
                           placeholder="Input barangay"
-                          disabled={!city}
                           className={inputClass}
                           required
                         />
