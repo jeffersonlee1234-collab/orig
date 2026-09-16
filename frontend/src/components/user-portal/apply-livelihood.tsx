@@ -504,7 +504,7 @@ export default function ApplyLivelihood() {
             id="tab-livelihood-history"
             className={`px-3 sm:px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === "history"
-                ? "bg-teal-600 text-white shadow-sm"
+                ? "bg-blue-600 text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             }`}
           >

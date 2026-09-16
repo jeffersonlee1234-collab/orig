@@ -191,7 +191,7 @@ export default function LivelihoodHistoryView({
   return (
     <div className="space-y-6">
       {/* ── Top Hero Banner ── */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-teal-800 rounded-2xl p-6 text-white shadow-md">
+      <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
