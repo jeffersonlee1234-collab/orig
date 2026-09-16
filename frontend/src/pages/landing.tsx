@@ -226,16 +226,10 @@ export function LandingPage() {
                 key={stat.label}
                 className="group relative flex flex-col items-center justify-center py-6 px-4 transition-all duration-300 hover:bg-primary/5 text-center"
               >
-                <div className="flex items-center gap-1.5 justify-center">
+                <div className="flex items-center justify-center">
                   <span className="whitespace-nowrap text-2xl sm:text-3xl font-extrabold tracking-tight bg-linear-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">
                     {stat.value}
                   </span>
-                  {stat.value === 'Real-Time' && (
-                    <span className="relative flex h-2 w-2 ml-0.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  )}
                 </div>
                 <p className="mt-2 text-xs sm:text-sm font-semibold text-foreground tracking-tight leading-tight">
                   {stat.label}
