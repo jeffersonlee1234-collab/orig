@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, X, Eye, EyeOff, ExternalLink, KeyRound, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -378,17 +378,13 @@ export const Login = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between z-20 w-full relative">
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/';
-            }}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-medium transition-colors shrink-0 cursor-pointer select-none py-1 px-2 -ml-2 rounded-lg hover:bg-white/10"
+        <div className="flex items-center justify-between z-30 w-full relative">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-medium transition-colors shrink-0 cursor-pointer select-none py-1.5 px-2.5 -ml-2 rounded-lg hover:bg-white/10"
           >
             ← Back to Home
-          </a>
+          </Link>
         </div>
 
         <div className="my-auto py-8 sm:py-12 z-10 max-w-lg text-center flex flex-col items-center">

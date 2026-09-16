@@ -11,8 +11,7 @@ import { SessionInactivityWatcher } from "./components/ui/session-inactivity-mod
 import { lazyWithRetry } from "./utils/lazyWithRetry"
 import { ErrorBoundary } from "./components/ui/error-boundary"
 
-// Lazy loaded Entry & Public pages with auto-recovery on deploy updates
-const LandingPage = lazyWithRetry(() => import("./pages/landing"))
+import LandingPage from "./pages/landing"
 const Login = lazyWithRetry(() => import("./components/entry-login/Login").then((m) => ({ default: m.Login })))
 const Register = lazyWithRetry(() => import("./components/entry-login/Register").then((m) => ({ default: m.Register })))
 const ResetPassword = lazyWithRetry(() => import("./components/entry-login/ResetPassword").then((m) => ({ default: m.ResetPassword })))
