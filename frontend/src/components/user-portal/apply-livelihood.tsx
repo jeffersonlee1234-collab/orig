@@ -6,6 +6,7 @@ import LivelihoodApplicationWizard from "./livelihood-wizard"
 import LivelihoodStatusCard, { type LivelihoodApplicationRecord } from "./livelihood-status-card"
 import LivelihoodAssistanceView from "./livelihood-assistance-view"
 import LivelihoodMonitoringView from "./livelihood-monitoring-view"
+import LivelihoodHistoryView from "./livelihood-history-view"
 import TrainingProgramView from "./training-program-view"
 import { API_BASE } from "../../config/api"
 import { getLoggedInUserQcid, getCurrentUserProfile } from "../../utils/userProfile"
@@ -15,9 +16,10 @@ import {
   Package,
   Activity,
   Lock,
+  History,
 } from "lucide-react"
 
-type LivelihoodProgramTab = "apply" | "assistance" | "monitoring"
+type LivelihoodProgramTab = "apply" | "assistance" | "monitoring" | "history"
 
 // Default mock approved application so the user can immediately test parts 2 and 3 if desired
 const DEFAULT_LIVELIHOOD_APP: LivelihoodApplicationRecord = {
@@ -101,6 +103,7 @@ export default function ApplyLivelihood() {
       tab1: "1. APPLY FOR LIVELIHOOD",
       tab2: "2. CAPITAL / MATERIALS",
       tab3: "3. LIVELIHOOD MONITORING",
+      tab4: "4. LIVELIHOOD HISTORY",
       locked: "(LOCKED)",
       lockStage2: "Stage 2 is Locked: This will only become active once your Livelihood Application is officially approved by SSDD Admin.",
       lockStage3: "Stage 3 is Locked: This will only become active once your Capital / Materials Assistance has been officially released.",
@@ -122,6 +125,7 @@ export default function ApplyLivelihood() {
       tab1: "1. MAG-APPLY SA LIVELIHOOD",
       tab2: "2. KAPITAL / KAGAMITAN",
       tab3: "3. PAGSUSUBAYBAY SA KABUHAYAN",
+      tab4: "4. KASAYSAYAN NG KABUHAYAN",
       locked: "(NAKA-LOCK)",
       lockStage2: "Naka-lock ang Stage 2: Magiging aktibo lamang ito kapag opisyal nang naaprubahan ng SSDD Admin ang iyong Livelihood Application.",
       lockStage3: "Naka-lock ang Stage 3: Magiging aktibo lamang ito kapag opisyal nang nai-release ang iyong Capital / Materials Assistance.",
@@ -143,6 +147,7 @@ export default function ApplyLivelihood() {
       tab1: "1. MAG-APPLY SA PANGINABUHI",
       tab2: "2. KAPITAL / KAGAMITAN",
       tab3: "3. PAGBANTAY SA PANGINABUHI",
+      tab4: "4. KASAYSAYAN SA PANGINABUHI",
       locked: "(NAKA-LOCK)",
       lockStage2: "Naka-lock ang Stage 2: Mahimong aktibo lamang kini kon opisyal nang maaprobahan sa SSDD Admin ang imong Livelihood Application.",
       lockStage3: "Naka-lock ang Stage 3: Mahimong aktibo lamang kini kon opisyal nang napagawas ang imong Capital / Materials Assistance.",
@@ -428,21 +433,22 @@ export default function ApplyLivelihood() {
         </div>
       </div>
 
-      {/* Top 3-Part Program Navigation Bar */}
+      {/* Top 4-Part Program Navigation Bar */}
       <div className="bg-card border border-border rounded-2xl p-2 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-          {/* Tab 1 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+          {/* Tab 1: Apply for Livelihood */}
           <button
+            type="button"
             onClick={() => handleSelectTab("apply")}
             id="tab-apply-livelihood"
-            className={`px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`px-3 sm:px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === "apply"
                 ? "bg-blue-600 text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             }`}
           >
-            <FileText className="h-4 w-4" />
-            <span>{texts.tab1}</span>
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="truncate">{texts.tab1}</span>
           </button>
 
           {/* Tab 2: Capital / Materials Assistance */}
@@ -451,7 +457,7 @@ export default function ApplyLivelihood() {
             onClick={() => handleSelectTab("assistance")}
             id="tab-capital-assistance"
             disabled={!isApproved}
-            className={`px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
+            className={`px-3 sm:px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
               !isApproved
                 ? "opacity-50 bg-muted/40 text-muted-foreground cursor-not-allowed border border-dashed border-border"
                 : activeTab === "assistance"
@@ -459,8 +465,8 @@ export default function ApplyLivelihood() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer"
             }`}
           >
-            {!isApproved ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Package className="h-4 w-4" />}
-            <span>{texts.tab2} {!isApproved && texts.locked}</span>
+            {!isApproved ? <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <Package className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{texts.tab2} {!isApproved && texts.locked}</span>
           </button>
 
           {/* Tab 3: Livelihood Monitoring */}
@@ -469,7 +475,7 @@ export default function ApplyLivelihood() {
             onClick={() => handleSelectTab("monitoring")}
             id="tab-livelihood-monitoring"
             disabled={!isAssistanceReleased}
-            className={`px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
+            className={`px-3 sm:px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
               !isAssistanceReleased
                 ? "opacity-50 bg-muted/40 text-muted-foreground cursor-not-allowed border border-dashed border-border pointer-events-none"
                 : activeTab === "monitoring"
@@ -477,8 +483,23 @@ export default function ApplyLivelihood() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer"
             }`}
           >
-            {!isAssistanceReleased ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Activity className="h-4 w-4" />}
-            <span>{texts.tab3} {!isAssistanceReleased && texts.locked}</span>
+            {!isAssistanceReleased ? <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{texts.tab3} {!isAssistanceReleased && texts.locked}</span>
+          </button>
+
+          {/* Tab 4: Livelihood History */}
+          <button
+            type="button"
+            onClick={() => handleSelectTab("history")}
+            id="tab-livelihood-history"
+            className={`px-3 sm:px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === "history"
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            <History className="h-4 w-4 shrink-0" />
+            <span className="truncate">{texts.tab4}</span>
           </button>
         </div>
       </div>
@@ -578,6 +599,18 @@ export default function ApplyLivelihood() {
           <LivelihoodMonitoringView
             application={activeApplication || DEFAULT_LIVELIHOOD_APP}
             onBackToAssistance={() => handleTabChange("assistance")}
+          />
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 4. LIVELIHOOD HISTORY CONTENT                                */}
+      {/* ============================================================ */}
+      {activeTab === "history" && (
+        <div>
+          <LivelihoodHistoryView
+            currentApplication={activeApplication}
+            onNavigateTab={(tab) => handleSelectTab(tab)}
           />
         </div>
       )}
