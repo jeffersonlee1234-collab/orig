@@ -37,7 +37,7 @@ const stats = [
   { value: 'Real-Time', label: 'Status Updates', desc: 'Instant Tracking' },
 ];
 
-const TYPEWRITER_WORDS = ['AICS', 'PWD & Senior Citizen', 'Solo Parent & Child Welfare', 'Livelihood', 'Financial Aid'];
+const TYPEWRITER_WORDS = ['AICS', 'PWD & Senior Citizen', 'Solo Parent & Child Welfare', 'Livelihood & Training Program', 'Financial Aid'];
 
 function useTypewriter(words: string[], typingMs = 90, pauseMs = 1400, deletingMs = 45) {
   const [wordIndex, setWordIndex] = useState(0);
