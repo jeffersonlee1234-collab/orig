@@ -243,7 +243,7 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
           landmark: "2nd Floor Computer Laboratory, Batasan Hills Center",
         }
       }
-    } else if (!isEn) {
+    } else if (language === "tl") {
       // Tagalog
       if (course.id.includes("sewing")) {
         return {
@@ -284,6 +284,48 @@ export default function TrainingProgramView({ initialTab = "available" }: Traini
           materialsProvided: "Computer workstation with internet, digital handouts, practice USB drive.",
           landmark: "2nd Floor Computer Laboratory, Batasan Hills Center",
         }
+      }
+    }
+
+    // Default / English
+    if (course.id.includes("sewing")) {
+      return {
+        ...course,
+        title: "Sewing Training",
+        description: "Learn pattern drafting, tailoring of garments and curtains, operating and maintaining sewing machines, and creating marketable products for the community.",
+        prerequisites: "Gov Services Resident (18 years old and above), interest in garment making.",
+        materialsProvided: "Sewing fabric, thread kit, pattern paper, tracing wheel, measuring tape.",
+        landmark: "Beside Batasan Hills Barangay Hall / Across Puregold",
+      }
+    }
+    if (course.id.includes("cooking")) {
+      return {
+        ...course,
+        title: "Cooking Training",
+        description: "Learn commercial cooking, food safety & sanitation, preparing popular snacks and dishes for eatery businesses, and proper food costing and pricing.",
+        prerequisites: "Gov Services Resident, willing to follow kitchen hygiene & food safety guidelines.",
+        materialsProvided: "Ingredients kit, cooking apron, hairnet, recipe guide booklet.",
+        landmark: "3rd Floor Culinary Lab, near Batasan Hills Barangay Hall",
+      }
+    }
+    if (course.id.includes("beauty")) {
+      return {
+        ...course,
+        title: "Beauty Services Training",
+        description: "Core skills in haircutting, hairstyling, manicure/pedicure with nail art, facial cleansing, and basic cosmetology for salon or home-service livelihood.",
+        prerequisites: "Gov Services Resident (18 years old and above), enthusiastic to learn beauty care.",
+        materialsProvided: "Nail grooming kit, salon cape, hair clips, sanitizer and manicure tools.",
+        landmark: "Ground Floor Wellness Studio, across Puregold Batasan",
+      }
+    }
+    if (course.id.includes("computer")) {
+      return {
+        ...course,
+        title: "Basic Computer Training",
+        description: "Practical training in computer navigation, Microsoft Word document typing, Excel spreadsheet budgeting, internet search, email communication, and online job preparation.",
+        prerequisites: "Gov Services Resident seeking to learn practical computer skills from basic navigation to office tools.",
+        materialsProvided: "Computer workstation with internet, digital handouts, practice USB drive.",
+        landmark: "2nd Floor Computer Laboratory, Batasan Hills Center",
       }
     }
     return course

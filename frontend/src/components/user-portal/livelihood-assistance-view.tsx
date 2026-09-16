@@ -13,6 +13,7 @@ import {
   Building2,
   FileCheck,
 } from "lucide-react"
+import { useLanguage } from "../ui/language-context"
 
 export interface MaterialItem {
   item: string
@@ -99,8 +100,8 @@ function parseJsonArray<T>(val: any): T[] {
   if (Array.isArray(val)) return val
   if (typeof val === "string") {
     try {
-      const parsed = JSON.parse(val)
-      return Array.isArray(parsed) ? parsed : []
+      const p = JSON.parse(val)
+      if (Array.isArray(p)) return p
     } catch {
       return []
     }
@@ -112,6 +113,10 @@ export default function LivelihoodAssistanceView({
   application,
   onProceedToMonitoring,
 }: LivelihoodAssistanceViewProps) {
+  const { language } = useLanguage()
+  const isEn = language === "en"
+  const isBis = language === "bis"
+
   // 1-second real-time tick to guarantee live transition exactly when scheduled time arrives
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -125,7 +130,7 @@ export default function LivelihoodAssistanceView({
     assistance_status: "for_processing",
     approved_financial_amount: application.estimated_amount || 15000,
     approved_materials: [
-      { item: "Starter Livelihood Supply Pack", quantity: "1 set", description: "Essential starter inventory and supplies" },
+      { item: "Starter Inventory & Supplies Kit", quantity: "1 package", description: "Assorted retail products starter package" },
     ],
     approved_equipment: [
       { equipment: "Operational Kit / Tools", quantity: "1 unit", description: "Basic tools for livelihood operation" },
@@ -164,7 +169,7 @@ export default function LivelihoodAssistanceView({
           return application.assistance_needed
         }
       })()
-    : "Capital / Materials Grant"
+    : (isEn ? "Capital / Materials Grant" : "Ayuda sa Kapital / Materyales")
 
   return (
     <div className="space-y-6">
@@ -174,22 +179,28 @@ export default function LivelihoodAssistanceView({
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold tracking-wider uppercase">
-                STAGE 2 &bull; CAPITAL / MATERIALS ASSISTANCE
+                {isEn ? "STAGE 2 • CAPITAL / MATERIALS ASSISTANCE" : isBis ? "BAHIN 2 • AYUDA SA KAPITAL / MATERYALES" : "STAGE 2 • CAPITAL / MATERIALS ASSISTANCE"}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/50 text-[11px] font-semibold flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Approved Application
+                <CheckCircle2 className="h-3 w-3" /> {isEn ? "Approved Application" : isBis ? "Aprobado nga Aplikasyon" : "Aprubadong Aplikasyon"}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold font-heading">
-              Capital &amp; Materials Assistance
+              {isEn ? "Capital & Materials Assistance" : isBis ? "Ayuda sa Kapital ug Materyales" : "Capital & Materials Assistance"}
             </h1>
             <p className="text-xs text-white/80 mt-1 max-w-xl">
-              Naka-link mula sa iyong naaprubahang livelihood application. Dito nakatala ang opisyal na aprubadong pondo, materyales, kagamitan, at schedule ng release.
+              {isEn
+                ? "Linked directly from your approved livelihood application. View your official grant funding, materials, equipment, and release appointment."
+                : isBis
+                ? "Naka-link gikan sa imong naaprobahang aplikasyon sa panginabuhi. Dinhi nakatala ang opisyal nga pundo, materyales, kagamitan, ug iskedyul sa pagpagawas."
+                : "Naka-link mula sa iyong naaprubahang livelihood application. Dito nakatala ang opisyal na aprubadong pondo, materyales, kagamitan, at schedule ng release."}
             </p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-xs border border-white/20 rounded-xl p-3 sm:text-right shrink-0">
-            <span className="text-[10px] text-white/70 uppercase font-semibold block">Application Reference</span>
+            <span className="text-[10px] text-white/70 uppercase font-semibold block">
+              {isEn ? "Application Reference" : isBis ? "Numero sa Reperensya" : "Reference Number"}
+            </span>
             <div className="mt-0.5">
               <span className="font-mono text-base font-bold text-white">{application.reference_number}</span>
             </div>
@@ -205,10 +216,14 @@ export default function LivelihoodAssistanceView({
           <FileCheck className="h-5 w-5 text-blue-600" />
           <div>
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              1. Application Information
+              {isEn ? "1. Application Information" : isBis ? "1. Impormasyon sa Aplikasyon" : "1. Impormasyon ng Aplikasyon"}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Awtomatikong kinuha mula sa iyong naaprubahang livelihood application
+              {isEn
+                ? "Automatically populated from your approved livelihood application records"
+                : isBis
+                ? "Awtomatikong nakuha gikan sa imong naaprobahang aplikasyon sa panginabuhi"
+                : "Awtomatikong kinuha mula sa iyong naaprubahang livelihood application"}
             </p>
           </div>
         </div>

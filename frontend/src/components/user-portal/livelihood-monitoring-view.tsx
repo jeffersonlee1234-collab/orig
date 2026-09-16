@@ -9,6 +9,7 @@ import {
   User,
   ArrowLeft,
 } from "lucide-react"
+import { useLanguage } from "../ui/language-context"
 
 export type MonitoringStatus = "ACTIVE" | "ONGOING" | "NEEDS FOLLOW-UP" | "COMPLETED"
 
@@ -71,6 +72,9 @@ export default function LivelihoodMonitoringView({
   application,
   onBackToAssistance,
 }: LivelihoodMonitoringViewProps) {
+  const { language } = useLanguage()
+  const isEn = language === "en" || !language
+  const isBis = language === "bis"
   const assistance = application.assistance || {}
   const monitoringList: MonitoringLogRecord[] = Array.isArray(application.monitoring) && application.monitoring.length > 0
     ? application.monitoring
@@ -127,17 +131,34 @@ export default function LivelihoodMonitoringView({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold tracking-wider uppercase">
-                STAGE 3 &bull; LIVELIHOOD MONITORING
+                {isEn
+                  ? "STAGE 3 • LIVELIHOOD MONITORING"
+                  : isBis
+                  ? "IKATULONG YUGTO • PAGSUBAYBAY SA PANGINABUHI"
+                  : "YUGTO 3 • PAGSUBAYBAY SA KABUHAYAN"}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-semibold flex items-center gap-1">
-                <Activity className="h-3 w-3" /> Post-Release Program
+                <Activity className="h-3 w-3" />{" "}
+                {isEn
+                  ? "Post-Release Program"
+                  : isBis
+                  ? "Programa Human sa Paghatag"
+                  : "Post-Release Program"}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold font-heading">
-              Livelihood Monitoring &amp; Progress Tracking
+              {isEn
+                ? "Livelihood Monitoring & Progress Tracking"
+                : isBis
+                ? "Pagsubaybay sa Panginabuhi ug Pag-uswag"
+                : "Pagsubaybay sa Kabuhayan at Pag-unlad"}
             </h1>
             <p className="text-xs text-white/80 mt-1 max-w-xl">
-              Naka-link mula sa iyong naaprubahang aplikasyon. Dito itinatala ng SSDD Social Worker ang regular na pagsubaybay at pag-unlad ng iyong negosyo.
+              {isEn
+                ? "Linked from your approved livelihood grant. The SSDD Social Worker records regular monitoring, field inspection, and business progress here."
+                : isBis
+                ? "Naka-link gikan sa imong naaprobahang livelihood grant. Dinhi girekord sa SSDD Social Worker ang regular nga pagsubaybay ug pag-uswag sa imong negosyo."
+                : "Naka-link mula sa iyong naaprubahang aplikasyon. Dito itinatala ng SSDD Social Worker ang regular na pagsubaybay at pag-unlad ng iyong negosyo."}
             </p>
           </div>
 
@@ -148,7 +169,11 @@ export default function LivelihoodMonitoringView({
               className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold tracking-wide transition-all backdrop-blur-xs cursor-pointer flex items-center gap-1.5 self-start md:self-center"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Stage 2: Capital / Materials
+              {isEn
+                ? "Back to Stage 2: Capital / Materials"
+                : isBis
+                ? "Balik sa Yugto 2: Kapital / Materyales"
+                : "Bumalik sa Stage 2: Kapital / Kagamitan"}
             </button>
           )}
         </div>
@@ -162,17 +187,27 @@ export default function LivelihoodMonitoringView({
           <Building2 className="h-5 w-5 text-emerald-600" />
           <div>
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              1. Livelihood Information
+              {isEn
+                ? "1. Livelihood Information"
+                : isBis
+                ? "1. Impormasyon sa Panginabuhi"
+                : "1. Impormasyon ng Kabuhayan"}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Awtomatikong nakatala mula sa iyong naaprubahang livelihood grant
+              {isEn
+                ? "Automatically recorded from your approved livelihood grant"
+                : isBis
+                ? "Awtomatikong narekord gikan sa imong naaprobahang livelihood grant"
+                : "Awtomatikong nakatala mula sa iyong naaprubahang livelihood grant"}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Applicant Name</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Applicant Name" : isBis ? "Ngalan sa Aplikante" : "Pangalan ng Aplikante"}
+            </span>
             <span className="font-bold text-foreground block text-sm mt-1 flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-emerald-600" />
               {fullName}
@@ -180,21 +215,27 @@ export default function LivelihoodMonitoringView({
           </div>
 
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Reference Number</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Reference Number" : isBis ? "Numero sa Reperensya" : "Reference Number"}
+            </span>
             <span className="font-mono font-bold text-foreground block text-sm mt-1">
               {application.reference_number}
             </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Livelihood Type</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Livelihood Type" : isBis ? "Matang sa Panginabuhi" : "Uri ng Kabuhayan"}
+            </span>
             <span className="font-bold text-foreground block text-sm mt-1">
               {application.livelihood_type || "Sari-Sari Store"}
             </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Business Name</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Business Name" : isBis ? "Ngalan sa Negosyo" : "Pangalan ng Negosyo"}
+            </span>
             <span className="font-bold text-foreground block text-sm mt-1 flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 text-emerald-600" />
               {application.business_name || `${application.first_name}'s Livelihood`}
@@ -202,14 +243,18 @@ export default function LivelihoodMonitoringView({
           </div>
 
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Assistance Received</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Assistance Received" : isBis ? "Tabang nga Nadawat" : "Tulong na Natanggap"}
+            </span>
             <span className="font-bold text-foreground block text-sm mt-1">
               {assistanceReceivedText}
             </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-muted/20 border border-border">
-            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">Release Date</span>
+            <span className="text-muted-foreground block text-[11px] font-semibold uppercase tracking-wider">
+              {isEn ? "Release Date" : isBis ? "Petsa sa Paghatag" : "Petsa ng Paglabas"}
+            </span>
             <span className="font-bold text-foreground block text-sm mt-1 flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-emerald-600" />
               {releaseDate}
@@ -225,10 +270,18 @@ export default function LivelihoodMonitoringView({
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div>
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              2. Current Monitoring Status
+              {isEn
+                ? "2. Current Monitoring Status"
+                : isBis
+                ? "2. Kasamtangang Kahimtang sa Pagsubaybay"
+                : "2. Kasalukuyang Estado ng Pagsubaybay"}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Opisyal na estado ng operasyon batay sa pagsusuri ng SSDD Social Worker (Display-Only)
+              {isEn
+                ? "Official operational status based on SSDD Social Worker assessment (Display-Only)"
+                : isBis
+                ? "Opisyal nga kahimtang sa operasyon base sa pagsusi sa SSDD Social Worker (Ipakita Lamang)"
+                : "Opisyal na estado ng operasyon batay sa pagsusuri ng SSDD Social Worker (Display-Only)"}
             </p>
           </div>
 
@@ -240,28 +293,44 @@ export default function LivelihoodMonitoringView({
             {
               id: "ACTIVE",
               label: "ACTIVE",
-              desc: "Bukas at aktibong nagpapatakbo ng negosyo.",
+              desc: isEn
+                ? "Open and actively operating the livelihood enterprise."
+                : isBis
+                ? "Abli ug aktibong nagpadagan sa negosyo."
+                : "Bukas at aktibong nagpapatakbo ng negosyo.",
               active: currentStatus.includes("ACTIVE"),
               color: "border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
             },
             {
               id: "ONGOING",
               label: "ONGOING",
-              desc: "Patuloy na operasyon at pagpapanatili ng kita.",
+              desc: isEn
+                ? "Continuous operations and sustaining monthly income."
+                : isBis
+                ? "Padayon nga operasyon ug pagpadayon sa kita."
+                : "Patuloy na operasyon at pagpapanatili ng kita.",
               active: currentStatus.includes("ONGOING"),
               color: "border-blue-500 bg-blue-500/10 text-blue-800 dark:text-blue-300",
             },
             {
               id: "NEEDS FOLLOW-UP",
               label: "NEEDS FOLLOW-UP",
-              desc: "Nangangailangan ng gabay o karagdagang pagsusuri.",
+              desc: isEn
+                ? "Requires further assistance, guidance, or site inspection."
+                : isBis
+                ? "Nagkinahanglan og dugang giya o pagsusi."
+                : "Nangangailangan ng gabay o karagdagang pagsusuri.",
               active: currentStatus.includes("NEEDS") || currentStatus.includes("FOLLOW"),
               color: "border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-300",
             },
             {
               id: "COMPLETED",
               label: "COMPLETED",
-              desc: "Nakatapos na sa buong monitoring evaluation cycle.",
+              desc: isEn
+                ? "Successfully completed full monitoring evaluation cycle."
+                : isBis
+                ? "Nakahuman na sa tibuok monitoring evaluation cycle."
+                : "Nakatapos na sa buong monitoring evaluation cycle.",
               active: currentStatus.includes("COMPLETED"),
               color: "border-purple-500 bg-purple-500/10 text-purple-800 dark:text-purple-300",
             },
@@ -289,14 +358,22 @@ export default function LivelihoodMonitoringView({
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div>
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              3. Progress Updates
+              {isEn
+                ? "3. Progress Updates"
+                : isBis
+                ? "3. Mga Update sa Pag-uswag"
+                : "3. Progress Updates"}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Pinakabagong monitoring update na itinalaga ng SSDD Admin / Social Worker
+              {isEn
+                ? "Latest monitoring and inspection report assigned by the SSDD Social Worker"
+                : isBis
+                ? "Pinakabag-ong monitoring update nga gitakda sa SSDD Admin / Social Worker"
+                : "Pinakabagong monitoring update na itinalaga ng SSDD Admin / Social Worker"}
             </p>
           </div>
           <span className="text-[11px] px-2.5 py-1 rounded-md bg-muted text-muted-foreground font-semibold">
-            Latest Inspection
+            {isEn ? "Latest Inspection" : isBis ? "Pinakabag-ong Inspeksyon" : "Pinakabagong Inspeksyon"}
           </span>
         </div>
 
@@ -306,7 +383,7 @@ export default function LivelihoodMonitoringView({
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-emerald-600" />
                 <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                  Monitoring Date:
+                  {isEn ? "Monitoring Date:" : isBis ? "Petsa sa Pagsubaybay:" : "Petsa ng Pagsubaybay:"}
                 </span>
                 <strong className="text-xs sm:text-sm text-foreground">
                   {latestLog.monitoring_date || latestLog.inspection_date || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
@@ -318,33 +395,40 @@ export default function LivelihoodMonitoringView({
             <div className="space-y-2 text-xs">
               <div>
                 <span className="text-muted-foreground font-bold uppercase tracking-wider text-[10px] block">
-                  Progress Update:
+                  {isEn ? "Progress Update:" : isBis ? "Update sa Pag-uswag:" : "Progress Update:"}
                 </span>
                 <p className="font-semibold text-foreground text-sm mt-0.5 leading-relaxed">
-                  {latestLog.progress_update || latestLog.title || "The livelihood business is actively operating and serving customers."}
+                  {latestLog.progress_update || latestLog.title || (isEn ? "The livelihood business is actively operating and serving customers." : "Ang negosyo ay aktibong tumatakbo at nagseserbisyo sa mga customer.")}
                 </p>
               </div>
 
               <div>
                 <span className="text-muted-foreground font-bold uppercase tracking-wider text-[10px] block">
-                  Remarks:
+                  {isEn ? "Remarks:" : isBis ? "Mga Pahayag:" : "Pahayag / Remarks:"}
                 </span>
                 <p className="text-foreground text-xs mt-0.5 leading-relaxed">
-                  {latestLog.remarks || latestLog.notes || "Initial monitoring completed."}
+                  {latestLog.remarks || latestLog.notes || (isEn ? "Initial monitoring completed." : "Naisagawa ang unang pagsubaybay.")}
                 </p>
               </div>
 
               {latestLog.next_follow_up_date && (
                 <div className="pt-2 border-t border-emerald-500/15 flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-semibold">
                   <Calendar className="h-3.5 w-3.5" />
-                  <span>Next Follow-up Date: {latestLog.next_follow_up_date}</span>
+                  <span>
+                    {isEn ? "Next Follow-up Date: " : isBis ? "Sunod nga Petsa sa Follow-up: " : "Susunod na Petsa ng Pagbisita: "}
+                    {latestLog.next_follow_up_date}
+                  </span>
                 </div>
               )}
             </div>
           </div>
         ) : (
           <div className="p-8 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-border">
-            Wala pang naitalang monitoring update mula sa Social Worker.
+            {isEn
+              ? "No monitoring updates recorded yet from the Social Worker."
+              : isBis
+              ? "Wala pay narekord nga monitoring update gikan sa Social Worker."
+              : "Wala pang naitalang monitoring update mula sa Social Worker."}
           </div>
         )}
       </div>
@@ -355,10 +439,18 @@ export default function LivelihoodMonitoringView({
       <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4">
         <div className="border-b border-border pb-3">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-            4. Monitoring History
+            {isEn
+              ? "4. Monitoring History"
+              : isBis
+              ? "4. Kasaysayan sa Pagsubaybay"
+              : "4. Kasaysayan ng Pagsubaybay"}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Kronolohikal na talaan ng lahat ng nakaraang monitoring updates at field inspection reports (Read-Only)
+            {isEn
+              ? "Chronological history of all previous monitoring updates and field inspection reports (Read-Only)"
+              : isBis
+              ? "Kronolohikal nga lista sa tanang nakalabayng monitoring updates ug field inspection reports (Basahon Lamang)"
+              : "Kronolohikal na talaan ng lahat ng nakaraang monitoring updates at field inspection reports (Read-Only)"}
           </p>
         </div>
 
@@ -382,7 +474,7 @@ export default function LivelihoodMonitoringView({
 
                 <div className="space-y-1">
                   <p className="font-bold text-foreground text-xs sm:text-sm">
-                    {log.progress_update || log.title || "Monitoring Update"}
+                    {log.progress_update || log.title || (isEn ? "Monitoring Update" : "Ulat ng Pagsubaybay")}
                   </p>
                   {(log.remarks || log.notes) && (
                     <p className="text-muted-foreground leading-relaxed">
@@ -392,9 +484,15 @@ export default function LivelihoodMonitoringView({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border">
-                  <span>Inspector: {log.officer_name || "SSDD Social Worker"}</span>
+                  <span>
+                    {isEn ? "Inspector: " : isBis ? "Tigsusi: " : "Nagsuri: "}
+                    {log.officer_name || "SSDD Social Worker"}
+                  </span>
                   {log.next_follow_up_date && (
-                    <span className="font-medium text-emerald-600">Next Follow-up: {log.next_follow_up_date}</span>
+                    <span className="font-medium text-emerald-600">
+                      {isEn ? "Next Follow-up: " : isBis ? "Sunod nga Follow-up: " : "Susunod na Bisita: "}
+                      {log.next_follow_up_date}
+                    </span>
                   )}
                 </div>
               </div>
