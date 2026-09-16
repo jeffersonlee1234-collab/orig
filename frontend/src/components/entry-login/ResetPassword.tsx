@@ -2,12 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, Mail, KeyRound, Eye, EyeOff, CheckCircle2, ArrowLeft, Check, X } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import { applyTheme, getThemePreference, getEffectiveTheme } from '../../utils/theme';
 
 export const ResetPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const governmentSealImage = '/samples/Government Service Integrity Seal.png';
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const mode = getThemePreference();
+      const effectiveDark = getEffectiveTheme(mode);
+      applyTheme(effectiveDark, false);
+    };
+
+    syncTheme();
+
+    const interval = setInterval(syncTheme, 15000);
+    window.addEventListener('theme_changed', syncTheme);
+    window.addEventListener('storage', syncTheme);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('theme_changed', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
 
   const [email, setEmail] = useState('');
   const [isEmailFromUrl, setIsEmailFromUrl] = useState(false);
@@ -105,21 +126,20 @@ export const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#F8FAFC] font-sans text-sm relative" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#F8FAFC] dark:bg-[#070D1E] font-sans text-sm relative transition-colors duration-200" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Left Hero Section */}
       <div
-        className="w-full md:w-1/2 text-white p-4 sm:p-6 md:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden text-center items-center"
-        style={{ backgroundColor: '#0F172A' }}
+        className="w-full md:w-1/2 text-white p-4 sm:p-6 md:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden text-center items-center bg-[#0B132B] dark:bg-[#060B18]"
       >
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden p-4">
-          <div className="w-full max-w-[480px] sm:max-w-[560px] lg:max-w-[640px] aspect-square flex items-center justify-center shrink-0 opacity-[0.12]">
+          <div className="w-full max-w-[480px] sm:max-w-[560px] lg:max-w-[640px] aspect-square flex items-center justify-center shrink-0 opacity-[0.15] md:opacity-[0.20]">
             <img
               src={governmentSealImage}
               alt="Government Seal"
               width={1080}
               height={1080}
               className="w-full h-full object-contain aspect-square shrink-0 select-none"
-              style={{ filter: 'brightness(2.2) contrast(1.8) saturate(0.9)', mixBlendMode: 'overlay' }}
+              style={{ filter: 'brightness(2.2) contrast(1.8) saturate(0.9)', mixBlendMode: 'screen' }}
             />
           </div>
         </div>
@@ -135,7 +155,7 @@ export const ResetPassword = () => {
 
         <div className="my-auto py-6 sm:py-8 z-10 max-w-lg text-center flex flex-col items-center">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight mb-3 leading-tight text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Account Security & Password Reset
+            Account Security &amp; Password Reset
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm md:text-base mb-6 leading-relaxed font-medium">
             Set a new secure password for your GovServe Resident or Staff account.
@@ -148,22 +168,22 @@ export const ResetPassword = () => {
       </div>
 
       {/* Right Form Section */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-10 bg-[#F8FAFC]">
-        <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-white shadow-xl border border-slate-200">
+      <div className="w-full md:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-10 bg-[#F3F4F8] dark:bg-[#0A1024] transition-colors duration-200">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111C44] shadow-2xl shadow-slate-200/80 dark:shadow-black/60 border border-slate-100 dark:border-slate-800/80 transition-colors duration-200">
           {success ? (
             <div className="text-center py-6 animate-scale-up">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                 Password Updated!
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 mb-6">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6">
                 Your password has been successfully reset. Redirecting you to the sign in page...
               </p>
               <Link
                 to="/login"
-                className="inline-block w-full py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors"
+                className="inline-block w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors"
               >
                 Go to Sign In
               </Link>
@@ -171,16 +191,16 @@ export const ResetPassword = () => {
           ) : (
             <>
               <div className="text-center mb-6">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                   Set New Password
                 </h2>
-                <p className="text-xs text-slate-500 mt-1.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-normal">
                   Enter your verification code and choose your new password
                 </p>
               </div>
 
               {error && (
-                <div className="p-3 mb-4 text-xs text-red-600 bg-red-50 rounded-lg border border-red-200 text-center animate-fade-in font-medium">
+                <div className="p-3 mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/60 text-center animate-fade-in font-medium">
                   {error}
                 </div>
               )}
@@ -188,11 +208,11 @@ export const ResetPassword = () => {
               <form onSubmit={handleSubmit} className="space-y-4 text-left">
                 {/* Email Address */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     Registered Email Address
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
@@ -203,8 +223,8 @@ export const ResetPassword = () => {
                       placeholder="name@example.com"
                       className={`w-full pl-9 pr-3 py-2.5 text-xs md:text-sm border rounded-lg focus:outline-none transition-colors ${
                         isEmailFromUrl
-                          ? 'bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed font-medium'
-                          : 'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-700'
+                          ? 'bg-slate-100 dark:bg-[#141C3A] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed font-medium'
+                          : 'bg-slate-50 dark:bg-[#1B254B] border-slate-200 dark:border-slate-700/80 focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-[#1B254B] text-slate-800 dark:text-white'
                       }`}
                       required
                     />
@@ -213,11 +233,11 @@ export const ResetPassword = () => {
 
                 {/* 6-digit OTP */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     6-Digit Verification Code (OTP from Email)
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                       <KeyRound className="w-4 h-4" />
                     </div>
                     <input
@@ -226,7 +246,7 @@ export const ResetPassword = () => {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
                       placeholder="Enter 6-digit code"
-                      className="w-full pl-9 pr-3 py-2.5 text-xs md:text-sm font-mono tracking-wider bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-700"
+                      className="w-full pl-9 pr-3 py-2.5 text-xs md:text-sm font-mono tracking-wider bg-slate-50 dark:bg-[#1B254B] border border-slate-200 dark:border-slate-700/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-[#1B254B] text-slate-800 dark:text-white"
                       required
                     />
                   </div>
@@ -234,11 +254,11 @@ export const ResetPassword = () => {
 
                 {/* New Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     New Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
@@ -246,13 +266,13 @@ export const ResetPassword = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="e.g. Password@123"
-                      className="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-700"
+                      className="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm bg-slate-50 dark:bg-[#1B254B] border border-slate-200 dark:border-slate-700/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-[#1B254B] text-slate-800 dark:text-white"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -261,21 +281,21 @@ export const ResetPassword = () => {
 
                 {/* Live Password Requirements Checklist */}
                 {newPassword.length > 0 && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] space-y-1.5 animate-fade-in">
-                    <div className="font-semibold text-slate-600 mb-1">Password Requirements:</div>
-                    <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+                  <div className="p-3 bg-slate-50 dark:bg-[#141C3A] border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] space-y-1.5 animate-fade-in">
+                    <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">Password Requirements:</div>
+                    <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
                       {hasMinLength ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
                       <span>At least 8 characters long</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
                       {hasNumber ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
                       <span>At least 1 number (0-9)</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
                       {hasSpecialChar ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
                       <span>At least 1 special character (e.g. @, #, $, !, %)</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
                       {hasUpper ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
                       <span>At least 1 uppercase letter (A-Z)</span>
                     </div>
@@ -284,11 +304,11 @@ export const ResetPassword = () => {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     Confirm New Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
@@ -296,13 +316,13 @@ export const ResetPassword = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-type new password"
-                      className="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-700"
+                      className="w-full pl-9 pr-9 py-2.5 text-xs md:text-sm bg-slate-50 dark:bg-[#1B254B] border border-slate-200 dark:border-slate-700/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-[#1B254B] text-slate-800 dark:text-white"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -310,12 +330,12 @@ export const ResetPassword = () => {
                   {confirmPassword.length > 0 && (
                     <div className="mt-1 text-[11px]">
                       {passwordsMatch ? (
-                        <span className="text-emerald-600 font-medium flex items-center gap-1">
-                          <Check className="w-3 h-3 stroke-[3]" /> Passwords match
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" /> Passwords match
                         </span>
                       ) : (
-                        <span className="text-red-500 font-medium flex items-center gap-1">
-                          <X className="w-3 h-3" /> Passwords do not match
+                        <span className="text-red-500 dark:text-red-400 font-medium flex items-center gap-1">
+                          <X className="w-3.5 h-3.5" /> Passwords do not match
                         </span>
                       )}
                     </div>
@@ -325,7 +345,7 @@ export const ResetPassword = () => {
                 <button
                   type="submit"
                   disabled={isLoading || (newPassword.length > 0 && !isAllValid)}
-                  className="w-full py-2.5 px-4 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] disabled:opacity-50 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors cursor-pointer mt-2"
+                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors cursor-pointer mt-2"
                 >
                   {isLoading ? 'Updating Password...' : 'Update Password'}
                 </button>
@@ -334,7 +354,7 @@ export const ResetPassword = () => {
               <div className="mt-5 text-center">
                 <Link
                   to="/login"
-                  className="text-xs text-blue-600 hover:underline font-medium"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
                 >
                   Remembered your password? Back to Login
                 </Link>

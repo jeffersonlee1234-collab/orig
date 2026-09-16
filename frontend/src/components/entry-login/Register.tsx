@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, User, Check, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import { applyTheme, getThemePreference, getEffectiveTheme } from '../../utils/theme';
 
 type Step = 0 | 1 | 2;
 
@@ -59,6 +60,26 @@ export const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const googleProfile = (location.state as { googleProfile?: { email: string; firstName: string; lastName: string } } | null)?.googleProfile;
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const mode = getThemePreference();
+      const effectiveDark = getEffectiveTheme(mode);
+      applyTheme(effectiveDark, false);
+    };
+
+    syncTheme();
+
+    const interval = setInterval(syncTheme, 15000);
+    window.addEventListener('theme_changed', syncTheme);
+    window.addEventListener('storage', syncTheme);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('theme_changed', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
 
   const [savedDraft] = useState(() => getSavedDraft());
 
@@ -532,12 +553,12 @@ export const Register = () => {
   };
 
   const inputClass =
-    'w-full px-3 py-2.5 text-xs md:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed';
-  const labelClass = 'block text-xs font-semibold text-slate-700 mb-1.5';
+    'w-full px-3 py-2.5 text-xs md:text-sm bg-white dark:bg-[#1B254B] border border-slate-300 dark:border-slate-700/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:bg-slate-100 dark:disabled:bg-[#141C3A] disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed';
+  const labelClass = 'block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5';
   const requiredMark = <span className="text-red-500">*</span>;
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] font-sans text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen w-full bg-[#F8FAFC] dark:bg-[#070D1E] font-sans text-sm transition-colors duration-200" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
 
         {/* Header */}
@@ -545,24 +566,24 @@ export const Register = () => {
           <div className="grid grid-cols-[auto_1fr_auto] items-start gap-4">
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-medium transition-colors shrink-0 pt-1"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white font-medium transition-colors shrink-0 pt-1"
             >
               ← Back
             </Link>
 
             <div className="text-center">
               <h1
-                className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-[#0F172A] mb-3 leading-tight"
+                className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-[#0F172A] dark:text-white mb-3 leading-tight"
                 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
               >
                 Create Your Account &amp; Start Using GovServe
               </h1>
-              <p className="text-slate-500 text-xs sm:text-sm mb-1.5">
+              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mb-1.5">
                 Sign up today and enjoy secure, hassle-free access to GovServe
               </p>
-              <p className="text-xs sm:text-sm text-slate-500">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{' '}
-                <Link to="/login" className="text-blue-600 hover:underline font-semibold">
+                <Link to="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
                   Login Here
                 </Link>
               </p>
@@ -579,17 +600,17 @@ export const Register = () => {
 
         {/* Stepper */}
         <div className="mb-6 px-1">
-          <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold text-slate-400 mb-2">
-            <span className={step >= 0 ? 'text-[#0F172A]' : ''}>Email Verification</span>
-            <span className={step >= 1 ? 'text-[#0F172A]' : ''}>Account Information</span>
-            <span className={step >= 2 ? 'text-[#0F172A]' : ''}>Successful Registration</span>
+          <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
+            <span className={step >= 0 ? 'text-[#0F172A] dark:text-blue-400' : ''}>Email Verification</span>
+            <span className={step >= 1 ? 'text-[#0F172A] dark:text-blue-400' : ''}>Account Information</span>
+            <span className={step >= 2 ? 'text-[#0F172A] dark:text-blue-400' : ''}>Successful Registration</span>
           </div>
           <div className="flex items-center">
             {[0, 1, 2].map((s, idx) => (
               <React.Fragment key={s}>
                 <div
                   className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white transition-colors ${
-                    step >= s ? 'bg-[#0F172A]' : 'bg-slate-300'
+                    step >= s ? 'bg-[#0F172A] dark:bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
                   }`}
                 >
                   <Check className="w-3.5 h-3.5" />
@@ -597,7 +618,7 @@ export const Register = () => {
                 {idx < 2 && (
                   <div
                     className={`flex-1 h-0.5 mx-1 transition-colors ${
-                      step > s ? 'bg-[#0F172A]' : 'bg-slate-200'
+                      step > s ? 'bg-[#0F172A] dark:bg-blue-600' : 'bg-slate-200 dark:bg-slate-800'
                     }`}
                   />
                 )}
@@ -607,15 +628,15 @@ export const Register = () => {
         </div>
 
         {/* Card */}
-        <div className="border border-slate-200 rounded-2xl bg-white p-6 sm:p-10 min-h-105 flex flex-col items-center justify-center relative">
+        <div className="border border-slate-200 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-[#111C44] p-6 sm:p-10 min-h-105 flex flex-col items-center justify-center relative shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-colors duration-200">
           {error && (
-            <div className="w-full max-w-sm p-3 mb-5 text-xs text-red-600 bg-red-50 rounded-xl border border-red-200 text-center space-y-1">
+            <div className="w-full max-w-sm p-3 mb-5 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/60 text-center space-y-1">
               <p>{error}</p>
               {error.toLowerCase().includes('already registered') && (
                 <div className="pt-1">
                   <Link
                     to="/login"
-                    className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700 underline"
+                    className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Go to Sign In →
                   </Link>
@@ -627,11 +648,11 @@ export const Register = () => {
           {/* STEP 0: Email Verification */}
           {step === 0 && (
             <div className="w-full max-w-sm flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full border-2 border-[#0F172A] flex items-center justify-center mb-4">
-                <Mail className="w-6 h-6 text-[#0F172A]" />
+              <div className="w-16 h-16 rounded-full border-2 border-[#0F172A] dark:border-blue-500 bg-transparent dark:bg-blue-950/40 flex items-center justify-center mb-4">
+                <Mail className="w-6 h-6 text-[#0F172A] dark:text-blue-400" />
               </div>
-              <h2 className="text-base sm:text-lg text-slate-700 mb-6">
-                Enter your <span className="font-bold text-[#0F172A]">Email Address</span>
+              <h2 className="text-base sm:text-lg text-slate-700 dark:text-slate-200 mb-6">
+                Enter your <span className="font-bold text-[#0F172A] dark:text-white">Email Address</span>
               </h2>
 
               {!otpSent ? (
@@ -648,22 +669,22 @@ export const Register = () => {
                     />
                   </div>
 
-                  <p className="text-xs text-slate-500 text-center pt-2">
-                    Click the <span className="font-semibold text-slate-700">Send OTP</span> button below to receive the verification code in your email.
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-2">
+                    Click the <span className="font-semibold text-slate-700 dark:text-slate-200">Send OTP</span> button below to receive the verification code in your email.
                   </p>
                     <button
                       type="submit"
                       disabled={isSendingOtp}
-                      className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                      className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
                     >
                       {isSendingOtp ? 'Sending…' : 'Send OTP'}
                     </button>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyOtp} className="w-full space-y-5 text-left">
-                  <p className="text-xs sm:text-sm text-slate-500 text-center">
-                    Please enter the <span className="font-bold text-slate-700">six-digit code</span> sent to{' '}
-                    <span className="font-bold text-slate-700">{maskEmail(email)}</span>.
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center">
+                    Please enter the <span className="font-bold text-slate-700 dark:text-slate-200">six-digit code</span> sent to{' '}
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{maskEmail(email)}</span>.
                   </p>
 
                   <div className="flex items-center justify-center gap-2">
@@ -679,7 +700,7 @@ export const Register = () => {
                         onChange={(e) => handleOtpDigitChange(index, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
                         onPaste={handleOtpPaste}
-                        className="w-10 h-12 sm:w-11 sm:h-12 text-center text-base font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-slate-700"
+                        className="w-10 h-12 sm:w-11 sm:h-12 text-center text-base font-semibold bg-white dark:bg-[#1B254B] border border-slate-300 dark:border-slate-700/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
                         aria-label={`Digit ${index + 1}`}
                       />
                     ))}
@@ -688,24 +709,24 @@ export const Register = () => {
                   <button
                     type="submit"
                     disabled={isVerifyingOtp}
-                    className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait">
+                    className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait">
                     {isVerifyingOtp ? 'Verifying…' : 'Verify Code'}
                   </button>
 
-                  <p className="text-center text-xs text-slate-500">
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                     Didn't receive a code?{' '}
                     <button
                       type="button"
                       disabled={isResendingOtp}
                       onClick={handleResendCode}
-                      className="text-blue-600 hover:underline font-semibold bg-transparent border-none cursor-pointer p-0 disabled:opacity-50"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold bg-transparent border-none cursor-pointer p-0 disabled:opacity-50"
                     >
                       {isResendingOtp ? 'Sending...' : 'Resend Code'}
                     </button>
                   </p>
 
                   {resendMessage && (
-                    <p className="text-center text-xs text-emerald-600 font-medium">{resendMessage}</p>
+                    <p className="text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium">{resendMessage}</p>
                   )}
 
                   <button
@@ -716,7 +737,7 @@ export const Register = () => {
                         sessionStorage.removeItem(REG_DRAFT_KEY);
                       } catch {}
                     }}
-                    className="w-full text-center text-xs text-slate-400 hover:text-slate-600 hover:underline font-medium bg-transparent border-none cursor-pointer p-0"
+                    className="w-full text-center text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:underline font-medium bg-transparent border-none cursor-pointer p-0"
                   >
                     Use a different email
                   </button>
@@ -729,11 +750,11 @@ export const Register = () => {
           {step === 1 && (
             <div className="w-full max-w-2xl">
               <div className="flex flex-col items-center text-center mb-6">
-                <div className="w-16 h-16 rounded-full border-2 border-[#0F172A] flex items-center justify-center mb-4">
-                  <User className="w-6 h-6 text-[#0F172A]" />
+                <div className="w-16 h-16 rounded-full border-2 border-[#0F172A] dark:border-blue-500 bg-transparent dark:bg-blue-950/40 flex items-center justify-center mb-4">
+                  <User className="w-6 h-6 text-[#0F172A] dark:text-blue-400" />
                 </div>
-                <h2 className="text-base sm:text-lg text-slate-700">
-                  Complete your <span className="font-bold text-[#0F172A]">Account Information</span>
+                <h2 className="text-base sm:text-lg text-slate-700 dark:text-slate-200">
+                  Complete your <span className="font-bold text-[#0F172A] dark:text-white">Account Information</span>
                 </h2>
               </div>
 
@@ -741,7 +762,7 @@ export const Register = () => {
 
                 {/* Personal Details */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-[#0F172A] border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-bold text-[#0F172A] dark:text-white border-b border-slate-200 dark:border-slate-700/80 pb-2">
                     Personal Details
                   </h3>
 
@@ -837,7 +858,7 @@ export const Register = () => {
 
                 {/* Address */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-[#0F172A] border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-bold text-[#0F172A] dark:text-white border-b border-slate-200 dark:border-slate-700/80 pb-2">
                     Address
                   </h3>
 
@@ -929,7 +950,7 @@ export const Register = () => {
 
                 {/* Employment Details */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-[#0F172A] border-b border-slate-200 pb-2">
+                  <h3 className="text-sm font-bold text-[#0F172A] dark:text-white border-b border-slate-200 dark:border-slate-700/80 pb-2">
                     Employment Details
                   </h3>
 
@@ -937,23 +958,23 @@ export const Register = () => {
                     <div>
                       <label className={labelClass}>{requiredMark} Are you working in Quezon City?</label>
                       <div className="flex items-center gap-5 mt-1">
-                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
                           <input
                             type="radio"
                             name="workingInQC"
                             checked={workingInQC === 'Yes'}
                             onChange={() => setWorkingInQC('Yes')}
-                            className="accent-[#0F172A]"
+                            className="accent-blue-600"
                           />
                           Yes
                         </label>
-                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
                           <input
                             type="radio"
                             name="workingInQC"
                             checked={workingInQC === 'No'}
                             onChange={() => setWorkingInQC('No')}
-                            className="accent-[#0F172A]"
+                            className="accent-blue-600"
                           />
                           No
                         </label>
@@ -1021,8 +1042,8 @@ export const Register = () => {
                 </div>
 
                 {/* Login Credentials */}
-                <div className="space-y-4 pt-2 border-t border-slate-200">
-                  <h3 className="text-sm font-bold text-[#0F172A] pt-4">
+                <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-700/80">
+                  <h3 className="text-sm font-bold text-[#0F172A] dark:text-white pt-4">
                     Login Credentials
                   </h3>
 
@@ -1054,7 +1075,7 @@ export const Register = () => {
                           type="button"
                           tabIndex={-1}
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                           aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1077,21 +1098,21 @@ export const Register = () => {
                           type="button"
                           tabIndex={-1}
                           onClick={() => setShowConfirmPassword((v) => !v)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                           aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                         >
                           {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                       {confirmMismatch && (
-                        <p className="text-[11px] text-red-500 mt-1">Invalid.</p>
+                        <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">Invalid.</p>
                       )}
                     </div>
                   </div>
 
                   {(passwordFocused || password.length > 0) && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
-                      <p className="text-xs font-semibold text-slate-700">Password must contain the following:</p>
+                    <div className="bg-slate-50 dark:bg-[#141C3A] border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Password must contain the following:</p>
                       <PasswordRule met={hasLower} label="A lowercase letter" />
                       <PasswordRule met={hasUpper} label="A capital (uppercase) letter" />
                       <PasswordRule met={hasNumber} label="A number" />
@@ -1104,7 +1125,7 @@ export const Register = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer mt-2 disabled:opacity-70 disabled:cursor-wait"
+                  className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer mt-2 disabled:opacity-70 disabled:cursor-wait"
                 >
                   {isSubmitting ? 'Submitting…' : 'Next'}
                 </button>
@@ -1115,25 +1136,25 @@ export const Register = () => {
           {/* STEP 2: Successful Registration */}
           {step === 2 && (
             <div className="w-full max-w-sm flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center mb-4">
-                <ShieldCheck className="w-7 h-7 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-500 flex items-center justify-center mb-4">
+                <ShieldCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-[#0F172A] mb-2">
+              <h2 className="text-lg sm:text-xl font-bold text-[#0F172A] dark:text-white mb-2">
                 Registration Successful
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mb-6 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
                 Your resident account has been created. You can now log in and access QC eServices.
               </p>
 
-              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-left mb-6">
-                <p className="text-[11px] text-slate-400 mb-1">Registered email</p>
-                <p className="text-sm font-semibold text-[#0F172A]">{email}</p>
+              <div className="w-full bg-slate-50 dark:bg-[#141C3A] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-left mb-6">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-1">Registered email</p>
+                <p className="text-sm font-semibold text-[#0F172A] dark:text-white">{email}</p>
               </div>
 
               <button
                 onClick={handleBackToLogin}
                 disabled={isNavigatingToLogin}
-                className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+                className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-[#1E293B] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold text-xs md:text-sm rounded-lg shadow-sm transition-colors duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
               >
                 {isNavigatingToLogin ? 'Redirecting…' : 'Back to Login'}
               </button>
@@ -1144,9 +1165,9 @@ export const Register = () => {
       </div>
 
       {isSubmitting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px] px-4">
-          <div className="bg-white rounded-xl shadow-lg px-10 py-8 flex flex-col items-center text-center w-full max-w-xs">
-            <h3 className="text-xl font-semibold text-slate-700 mb-1">Loading</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs px-4">
+          <div className="bg-white dark:bg-[#111C44] border border-transparent dark:border-slate-800 rounded-xl shadow-2xl px-10 py-8 flex flex-col items-center text-center w-full max-w-xs">
+            <h3 className="text-xl font-semibold text-slate-700 dark:text-white mb-1">Loading</h3>
             <p className="text-xs font-medium text-slate-400 tracking-widest mb-5">PLEASE WAIT</p>
             <div className="w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
           </div>
