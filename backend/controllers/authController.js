@@ -2106,6 +2106,9 @@ exports.deleteUser = async (req, res) => {
     const cleanId = String(id).replace(/\D/g, '');
 
     await db.query('DELETE FROM users WHERE id = $1 OR qcid_number = $2 OR LOWER(email) = $3', [cleanId || '0', id, String(id).toLowerCase()]);
+    try {
+      await db.query('DELETE FROM user_login_sessions WHERE LOWER(email) = $1', [String(id).toLowerCase()]);
+    } catch (_) {}
     memoryUsers = memoryUsers.filter(u => String(u.id) !== String(id) && u.email.toLowerCase() !== String(id).toLowerCase());
 
     return res.status(200).json({
