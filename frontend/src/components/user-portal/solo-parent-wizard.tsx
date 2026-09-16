@@ -1191,7 +1191,7 @@ export default function SoloParentApplicationWizard({
     }
   })
 
-  const [blockReason, setBlockReason] = useState<"draft" | "pending" | "approved" | null>(() => {
+  const [blockReason, setBlockReason] = useState<"draft" | "pending" | "approved" | "rejected" | null>(() => {
     try {
       const prof = getCurrentUserProfile()
       const userQcidClean = (prof.qcidNo || prof.qcidNumber || "").replace(/\D/g, "")
@@ -1214,7 +1214,7 @@ export default function SoloParentApplicationWizard({
           })
           if (match) {
             const st = String(match.application_status || match.status || "").toLowerCase()
-            return st === "approved" || st === "completed" || st === "for_release" ? "approved" : "pending"
+            return st === "approved" || st === "completed" || st === "for_release" ? "approved" : st === "rejected" ? "rejected" : "pending"
           }
         }
       }
@@ -1339,8 +1339,6 @@ export default function SoloParentApplicationWizard({
         const uid = userId || prof.id || ""
         const qcid = (prof.qcidNo || prof.qcidNumber || "").trim()
         const email = (prof.email || "").trim()
-        const fn = (prof.firstName || "").trim()
-        const ln = (prof.lastName || "").trim()
 
         let isBlockedFound = false
         let reasonFound: "draft" | "pending" | "approved" | "rejected" | null = null
