@@ -19,11 +19,9 @@ import {
   FileText,
   Wallet,
   BookOpen,
-  Settings,
 } from "lucide-react"
 import { Tooltip } from "../ui/tooltip"
 import { ProfileModal } from "../ui/profile-modal"
-import { SettingsModal } from "../ui/settings-modal"
 import { useLanguage } from "../ui/language-context"
 import { getSavedProfilePhoto } from "../../utils/profilePhoto"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
@@ -597,7 +595,6 @@ function ResidentHeader({
     }
   }
   const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [profileOpen, setProfileOpenState] = useState(() => {
     return (
       localStorage.getItem("is_profile_modal_open") === "true" ||
@@ -960,16 +957,6 @@ function ResidentHeader({
                 {t("profile")}
               </button>
               <button
-                onClick={() => {
-                  setSettingsOpen(true)
-                  setMenuOpen(false)
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
-              >
-                <Settings className="h-4 w-4 text-muted-foreground" />
-                {t("settings")}
-              </button>
-              <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
@@ -982,7 +969,6 @@ function ResidentHeader({
       </div>
     </header>
 
-    <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <ProfileModal
       open={profileOpen}
       onClose={() => setProfileOpen(false)}
