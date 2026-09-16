@@ -31,10 +31,10 @@ const TINT: Record<string, string> = {
 };
 
 const stats = [
-  { value: '100%', label: 'Digital Process' },
-  { value: '24/7', label: 'System Access' },
-  { value: '5', label: 'Programs' },
-  { value: 'Real-time', label: 'Updates' },
+  { value: '100%', label: 'Digital Process', desc: 'Paperless & Seamless' },
+  { value: '24/7', label: 'System Access', desc: 'Available Anytime' },
+  { value: '5 Core', label: 'Welfare Programs', desc: 'Integrated Services' },
+  { value: 'Real-Time', label: 'Status Updates', desc: 'Instant Tracking' },
 ];
 
 const TYPEWRITER_WORDS = ['AICS', 'PWD & Senior Citizen', 'Solo Parent & Child Welfare', 'Livelihood', 'Financial Aid'];
@@ -218,15 +218,31 @@ export function LandingPage() {
           ))}
         </div>
 
-        {/* Stats — bordered panel, 2 columns mobile, 4 desktop; large gradient values */}
-        <div className="mt-14 max-w-3xl mx-auto rounded-2xl border border-border/60 bg-card/60 shadow-soft">
-          <div className="grid grid-cols-2 gap-x-2 gap-y-6 p-6 md:grid-cols-4 md:gap-x-6 md:py-8">
+        {/* Stats — Premium Glassmorphic Metric Strip */}
+        <div className="mt-16 max-w-4xl mx-auto rounded-3xl border border-border/70 bg-card/75 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-black/5 overflow-hidden">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
             {stats.map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center justify-center gap-1">
-                <p className="whitespace-nowrap text-2xl font-bold leading-none bg-linear-to-br from-primary to-primary/60 bg-clip-text text-transparent sm:text-3xl md:text-4xl">
-                  {stat.value}
+              <div
+                key={stat.label}
+                className="group relative flex flex-col items-center justify-center py-6 px-4 transition-all duration-300 hover:bg-primary/5 text-center"
+              >
+                <div className="flex items-center gap-1.5 justify-center">
+                  <span className="whitespace-nowrap text-2xl sm:text-3xl font-extrabold tracking-tight bg-linear-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">
+                    {stat.value}
+                  </span>
+                  {stat.value === 'Real-Time' && (
+                    <span className="relative flex h-2 w-2 ml-0.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  )}
+                </div>
+                <p className="mt-2 text-xs sm:text-sm font-semibold text-foreground tracking-tight leading-tight">
+                  {stat.label}
                 </p>
-                <p className="text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
+                <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground font-normal">
+                  {stat.desc}
+                </p>
               </div>
             ))}
           </div>
