@@ -441,11 +441,11 @@ export const Login = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12 bg-[#F3F4F8] dark:bg-[#0A1024] transition-colors duration-200">
         <div className="w-full max-w-[440px] bg-white dark:bg-[#111C44] p-7 sm:p-10 rounded-3xl shadow-2xl shadow-slate-200/80 dark:shadow-black/60 border border-slate-100 dark:border-slate-800/80 transition-colors duration-200">
 
-          <div className="text-left mb-7">
+          <div className="text-center mb-7">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Welcome Back
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-normal">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-normal">
               Sign in to access your social service dashboard
             </p>
           </div>
