@@ -10,6 +10,7 @@ import { useLanguage } from "../ui/language-context"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
+import { formatAppDate } from "./my-applications"
 
 export default function ApplyPWDSenior() {
   const { t, language } = useLanguage()
