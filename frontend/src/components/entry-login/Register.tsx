@@ -461,6 +461,10 @@ export const Register = () => {
       setError('Please specify your city.');
       return;
     }
+    if (city === 'Quezon City' && !houseNo) {
+      setError('Please enter your house number.');
+      return;
+    }
     if (!street || !barangay) {
       setError('Please complete your address.');
       return;
@@ -895,13 +899,16 @@ export const Register = () => {
                   <div className={`grid gap-4 ${city === 'Quezon City' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
                     {city === 'Quezon City' && (
                       <div>
-                        <label className={labelClass}>House No. (Optional)</label>
+                        <label className={labelClass}>{requiredMark} House No.:</label>
                         <input
                           type="text"
+                          inputMode="numeric"
+                          maxLength={4}
                           value={houseNo}
-                          onChange={(e) => setHouseNo(e.target.value)}
-                          placeholder="Enter House No."
+                          onChange={(e) => setHouseNo(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder="House No. (max 4 digits)"
                           className={inputClass}
+                          required
                         />
                       </div>
                     )}
