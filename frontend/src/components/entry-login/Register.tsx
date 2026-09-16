@@ -536,6 +536,11 @@ export const Register = () => {
         localStorage.removeItem('user_email');
         localStorage.removeItem('all_user_applications');
         localStorage.removeItem('pwd_senior_applications');
+        localStorage.removeItem('solo_parent_applications');
+        localStorage.removeItem('child_welfare_applications');
+        localStorage.removeItem('aics_applications');
+        localStorage.removeItem('livelihood_applications');
+        localStorage.removeItem('training_applications');
         localStorage.removeItem('all_financial_disbursements');
         localStorage.removeItem('deleted_user_applications');
         localStorage.removeItem('deleted_financial_disbursement_keys');
@@ -543,6 +548,11 @@ export const Register = () => {
         localStorage.removeItem('citizen_applications');
         localStorage.removeItem('user_applications');
         localStorage.removeItem('active_applications');
+        localStorage.removeItem('last_medicine_booklet_ref');
+        localStorage.removeItem('last_medicine_booklet_app_id');
+        localStorage.removeItem('last_movie_booklet_ref');
+        localStorage.removeItem('last_movie_booklet_app_id');
+        localStorage.removeItem('active_livelihood_ref');
         setStep(2);
       } else {
         setError(data.message || 'Registration failed. Please try again.');

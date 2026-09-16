@@ -619,16 +619,12 @@ exports.getUserApplications = async (req, res) => {
       params.push(cleanLastName);
       const lnIdx = params.length;
       orClauses.push(`(
-        (LOWER(COALESCE(guardian_first_name, '')) = $${fnIdx} OR guardian_first_name ILIKE '%' || $${fnIdx} || '%' OR child_name ILIKE '%' || $${fnIdx} || '%')
-        AND
-        (LOWER(COALESCE(guardian_last_name, '')) = $${lnIdx} OR guardian_last_name ILIKE '%' || $${lnIdx} || '%' OR child_name ILIKE '%' || $${lnIdx} || '%')
+        ((LOWER(COALESCE(guardian_first_name, '')) = $${fnIdx} OR LOWER(COALESCE(form_data->>'firstName', '')) = $${fnIdx})
+         AND
+         (LOWER(COALESCE(guardian_last_name, '')) = $${lnIdx} OR LOWER(COALESCE(form_data->>'lastName', '')) = $${lnIdx}))
+        OR
+        (LOWER(COALESCE(child_name, '')) = ($${fnIdx} || ' ' || $${lnIdx}))
       )`);
-    } else if (cleanLastName) {
-      params.push(cleanLastName);
-      orClauses.push(`(LOWER(COALESCE(guardian_last_name, '')) = $${params.length} OR guardian_last_name ILIKE '%' || $${params.length} || '%' OR child_name ILIKE '%' || $${params.length} || '%')`);
-    } else if (cleanFirstName) {
-      params.push(cleanFirstName);
-      orClauses.push(`(LOWER(COALESCE(guardian_first_name, '')) = $${params.length} OR guardian_first_name ILIKE '%' || $${params.length} || '%' OR child_name ILIKE '%' || $${params.length} || '%')`);
     }
 
     if (orClauses.length === 0) {

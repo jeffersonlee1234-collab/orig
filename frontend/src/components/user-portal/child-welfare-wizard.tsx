@@ -1076,15 +1076,42 @@ export default function ChildWelfareApplicationWizard({
       try {
         const prof = getCurrentUserProfile()
         const uid = prof.id || (userProfile as any)?.id || (userProfile as any)?.userId || ""
+        const cleanUserQcid = String(prof.qcidNo || prof.qcidNumber || (userProfile as any)?.qcidNo || (userProfile as any)?.qcidNumber || "").replace(/\D/g, "")
+        const userEmail = String(prof.email || (userProfile as any)?.email || "").toLowerCase().trim()
+        const userFirstName = String(prof.firstName || (userProfile as any)?.firstName || "").toLowerCase().trim()
+        const userLastName = String(prof.lastName || (userProfile as any)?.lastName || "").toLowerCase().trim()
+
         const token = localStorage.getItem("token")
         const headers: Record<string, string> = {}
         if (token) headers["Authorization"] = `Bearer ${token}`
+
+        const isUserApplication = (a: any) => {
+          if (!a) return false
+          const appUid = String(a.user_id || a.userId || "").trim()
+          if (uid && uid !== "0" && uid !== "1" && appUid && appUid === String(uid)) return true
+
+          const appEmail = String(a.email || a.guardian_email || a.form_data?.email || a.form_data?.guardianEmail || "").toLowerCase().trim()
+          if (userEmail && appEmail && userEmail === appEmail) return true
+
+          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.form_data?.qcidNumber || "").replace(/\D/g, "")
+          if (cleanUserQcid && cleanUserQcid.length >= 10 && appRef && (cleanUserQcid === appRef || appRef.startsWith(cleanUserQcid))) return true
+
+          const appFn = String(a.guardian_first_name || a.firstName || a.first_name || a.form_data?.firstName || a.form_data?.guardianFirstName || "").toLowerCase().trim()
+          const appLn = String(a.guardian_last_name || a.lastName || a.last_name || a.form_data?.lastName || a.form_data?.guardianLastName || "").toLowerCase().trim()
+          const appChildName = String(a.child_name || a.childName || a.form_data?.childName || "").toLowerCase().trim()
+
+          if (userFirstName && userLastName) {
+            if (appFn === userFirstName && appLn === userLastName) return true
+            if (appChildName === `${userFirstName} ${userLastName}`) return true
+          }
+          return false
+        }
 
         // 1. Instant check from localStorage
         try {
           const stored = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
           const localMatch = stored.find((a: any) => {
-            if (!a) return false
+            if (!a || !isUserApplication(a)) return false
             const aCatId = String(a.category_id || a.selectedCategoryId || "")
             const aTitle = String(a.category_title || a.classification_title || "").toLowerCase().trim()
             const progId = String(selectedProgram.id)
@@ -1102,14 +1129,14 @@ export default function ChildWelfareApplicationWizard({
         } catch {}
 
         // 2. Fetch fresh status from backend
-        if (uid && uid !== "0") {
-          const res = await fetch(`${API_BASE}/api/child-welfare/user/${uid}`, { headers })
+        if (uid && uid !== "0" && uid !== "1") {
+          const res = await fetch(`${API_BASE}/api/child-welfare/user/${uid}?qcid=${encodeURIComponent(cleanUserQcid)}&email=${encodeURIComponent(userEmail)}&firstName=${encodeURIComponent(userFirstName)}&lastName=${encodeURIComponent(userLastName)}`, { headers })
           if (res.ok) {
             const data = await res.json()
             if (active && !isReapplying) {
               const applications = data.applications || []
               const matched = applications.find((a: any) => {
-                if (!a) return false
+                if (!a || !isUserApplication(a)) return false
                 const aCatId = String(a.category_id || "")
                 const aTitle = String(a.category_title || "").toLowerCase().trim()
                 const progId = String(selectedProgram.id)
@@ -1254,6 +1281,9 @@ export default function ChildWelfareApplicationWizard({
       const stored = JSON.parse(localStorage.getItem("child_welfare_applications") || "[]")
       const localRecord = {
         id: String(Date.now()),
+        user_id: String(userId || (userProfile as any)?.id || "0"),
+        qcid_number: String(formData.qcidNumber || userProfile?.qcidNo || "").trim(),
+        email: String((userProfile as any)?.email || "").trim().toLowerCase(),
         reference_number: ref,
         referenceNumber: ref,
         category: "Child Welfare",
