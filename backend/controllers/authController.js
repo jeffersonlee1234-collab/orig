@@ -49,41 +49,42 @@ function generateSessionToken() {
  */
 function parseDeviceInfo(req) {
   const ua = req ? (req.headers['user-agent'] || '') : '';
-  let deviceType = 'Desktop (PC)';
+  let deviceType = 'PC';
   let os = 'Windows';
   let browser = 'Google Chrome';
 
   const lowerUa = ua.toLowerCase();
 
-  // Device & OS detection
-  if (/ipad|tablet/i.test(lowerUa)) {
-    deviceType = 'Tablet';
-  } else if (/mobile|iphone|ipod|android/i.test(lowerUa)) {
-    deviceType = 'Mobile (Phone)';
-  } else {
-    deviceType = 'Desktop (PC)';
-  }
+  const isWindows = /windows|win32|win64/i.test(lowerUa);
+  const isMac = /macintosh|mac os/i.test(lowerUa);
+  const isIos = /iphone|ipad|ipod/i.test(lowerUa);
+  const isAndroid = /android/i.test(lowerUa);
+  const isLinux = /linux/i.test(lowerUa) && !isAndroid;
 
-  if (/android/i.test(lowerUa)) {
-    os = 'Android';
-    if (!/tablet|ipad/i.test(lowerUa)) deviceType = 'Mobile (Phone)';
-  } else if (/iphone|ipod/i.test(lowerUa)) {
-    os = 'iOS (iPhone)';
-    deviceType = 'Mobile (Phone)';
-  } else if (/ipad/i.test(lowerUa)) {
-    os = 'iPadOS';
-    deviceType = 'Tablet';
-  } else if (/windows|win32|win64/i.test(lowerUa)) {
+  if (isWindows) {
     os = 'Windows';
-    deviceType = 'Desktop (PC)';
-  } else if (/macintosh|mac os/i.test(lowerUa)) {
+    deviceType = 'PC';
+  } else if (isIos) {
+    if (/ipad/i.test(lowerUa)) {
+      os = 'iPadOS';
+      deviceType = 'Tablet';
+    } else {
+      os = 'iOS';
+      deviceType = 'CP (Cellphone)';
+    }
+  } else if (isAndroid) {
+    os = 'Android';
+    if (/tablet/i.test(lowerUa)) {
+      deviceType = 'Tablet';
+    } else {
+      deviceType = 'CP (Cellphone)';
+    }
+  } else if (isMac) {
     os = 'macOS';
-    deviceType = 'Desktop (PC)';
-  } else if (/cros/i.test(lowerUa)) {
-    os = 'ChromeOS';
-    deviceType = 'Desktop (PC)';
-  } else if (/linux/i.test(lowerUa)) {
+    deviceType = 'PC';
+  } else if (isLinux) {
     os = 'Linux';
+    deviceType = 'PC';
   }
 
   // Browser detection
@@ -99,7 +100,14 @@ function parseDeviceInfo(req) {
     browser = 'Apple Safari';
   }
 
-  const deviceName = `${os} ${deviceType === 'Mobile (Phone)' ? 'Mobile' : deviceType === 'Tablet' ? 'Tablet' : 'PC'} • ${browser}`;
+  let deviceName = '';
+  if (deviceType === 'CP (Cellphone)') {
+    deviceName = `${os === 'Android' ? 'Android CP' : os === 'iOS' ? 'iPhone (CP)' : `${os} CP`} • ${browser}`;
+  } else if (deviceType === 'Tablet') {
+    deviceName = `${os} Tablet • ${browser}`;
+  } else {
+    deviceName = `${os} PC • ${browser}`;
+  }
 
   // IP resolution
   const forwarded = req?.headers ? req.headers['x-forwarded-for'] : null;
@@ -119,11 +127,28 @@ function parseDeviceInfo(req) {
 async function recordNewSession(userId, email, sessionToken, req) {
   const parsed = parseDeviceInfo(req);
   const clientInfo = req?.body?.clientDeviceInfo || {};
+
+  let os = parsed.os;
+  let deviceType = parsed.deviceType;
+  let deviceName = parsed.deviceName;
+  let browser = clientInfo.browser || parsed.browser;
+
+  // Never accept Android if incoming User-Agent is Windows/PC
+  if (parsed.os === 'Windows') {
+    os = 'Windows';
+    deviceType = 'PC';
+    deviceName = `Windows PC • ${browser}`;
+  } else if (clientInfo.deviceName) {
+    os = clientInfo.os || parsed.os;
+    deviceType = clientInfo.deviceType || parsed.deviceType;
+    deviceName = clientInfo.deviceName;
+  }
+
   const devInfo = {
-    deviceType: clientInfo.deviceType || parsed.deviceType,
-    deviceName: clientInfo.deviceName || parsed.deviceName,
-    browser: clientInfo.browser || parsed.browser,
-    os: clientInfo.os || parsed.os,
+    deviceType,
+    deviceName,
+    browser,
+    os,
     ipAddress: parsed.ipAddress,
     location: parsed.location || 'Quezon City, PH',
   };
@@ -976,6 +1001,26 @@ exports.getUserDevices = async (req, res) => {
         logoutReason: null,
       }];
     }
+
+    // Auto-correct any active session that was incorrectly marked as Android Tablet when user is on Windows PC
+    const incomingDev = parseDeviceInfo(req);
+    sessions = sessions.map(s => {
+      if (s.isCurrentDevice && incomingDev.os === 'Windows') {
+        s.os = 'Windows';
+        s.deviceType = 'PC';
+        s.deviceName = incomingDev.deviceName;
+        s.browser = incomingDev.browser;
+        try {
+          db.query(
+            `UPDATE user_login_sessions 
+             SET os = $1, device_type = $2, device_name = $3, browser = $4 
+             WHERE session_token = $5`,
+            [s.os, s.deviceType, s.deviceName, s.browser, s.sessionToken]
+          ).catch(() => {});
+        } catch {}
+      }
+      return s;
+    });
 
     return res.status(200).json({
       success: true,

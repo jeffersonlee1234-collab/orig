@@ -179,35 +179,39 @@ export const Login = () => {
 
   const getClientDeviceInfo = () => {
     const ua = navigator.userAgent || '';
-    const hasTouch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-    const isSmallScreen = window.innerWidth <= 820;
-
-    let isMobile = /mobile|iphone|ipod|android/i.test(ua) || (hasTouch && isSmallScreen);
-    let isTablet = /tablet|ipad/i.test(ua) || (hasTouch && !isSmallScreen && /android|ipad/i.test(ua));
+    const platform = (navigator as any).userAgentData?.platform || navigator.platform || '';
+    const isWindows = /windows|win32|win64/i.test(ua) || /win/i.test(platform);
+    const isMac = /macintosh|mac os|macos/i.test(ua) || /mac/i.test(platform);
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isAndroid = /android/i.test(ua);
 
     let os = 'Windows';
-    if (/android/i.test(ua)) {
-      os = 'Android';
-      isMobile = !isTablet;
-    } else if (/iphone|ipod/i.test(ua)) {
-      os = 'iOS (iPhone)';
-      isMobile = true;
-    } else if (/ipad/i.test(ua)) {
-      os = 'iPadOS';
-      isTablet = true;
-    } else if (/windows|win32|win64/i.test(ua)) {
+    let deviceType = 'PC';
+
+    if (isWindows) {
       os = 'Windows';
-      isMobile = false;
-      isTablet = false;
-    } else if (/macintosh|mac os/i.test(ua)) {
+      deviceType = 'PC';
+    } else if (isMac) {
       os = 'macOS';
-      isMobile = false;
-    } else if (/cros/i.test(ua)) {
-      os = 'ChromeOS';
-      isMobile = false;
-    } else if (/linux/i.test(ua)) {
-      os = hasTouch ? 'Android' : 'Linux';
-      if (hasTouch) isMobile = true;
+      deviceType = 'PC';
+    } else if (isIOS) {
+      if (/ipad/i.test(ua)) {
+        os = 'iPadOS';
+        deviceType = 'Tablet';
+      } else {
+        os = 'iOS';
+        deviceType = 'CP (Cellphone)';
+      }
+    } else if (isAndroid) {
+      os = 'Android';
+      if (/tablet/i.test(ua)) {
+        deviceType = 'Tablet';
+      } else {
+        deviceType = 'CP (Cellphone)';
+      }
+    } else {
+      os = 'Linux';
+      deviceType = 'PC';
     }
 
     let browser = 'Google Chrome';
@@ -217,8 +221,14 @@ export const Login = () => {
     else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Apple Safari';
     else if (/chrome/i.test(ua)) browser = 'Google Chrome';
 
-    const deviceType = isTablet ? 'Tablet' : isMobile ? 'Mobile (Phone)' : 'Desktop (PC)';
-    const deviceName = `${os} ${deviceType === 'Mobile (Phone)' ? 'Mobile' : deviceType === 'Tablet' ? 'Tablet' : 'PC'} • ${browser}`;
+    let deviceName = '';
+    if (deviceType === 'CP (Cellphone)') {
+      deviceName = `${os === 'Android' ? 'Android CP' : os === 'iOS' ? 'iPhone (CP)' : `${os} CP`} • ${browser}`;
+    } else if (deviceType === 'Tablet') {
+      deviceName = `${os} Tablet • ${browser}`;
+    } else {
+      deviceName = `${os} PC • ${browser}`;
+    }
 
     return { os, browser, deviceType, deviceName };
   };

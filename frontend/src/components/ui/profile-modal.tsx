@@ -11,6 +11,7 @@ import {
   Camera,
   Trash2,
   KeyRound,
+  Monitor,
   Laptop,
   Smartphone,
   Tablet,
@@ -1454,7 +1455,7 @@ export function ProfileModal({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-4">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Laptop className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <Monitor className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     {t("deviceManagement") || "Device Management & Login History"}
                   </h3>
                 </div>
@@ -1485,24 +1486,53 @@ export function ProfileModal({
 
               {/* Active / Current Device Card */}
               {(() => {
-                const currentDev =
-                  deviceSessions.find((s) => s.isCurrentDevice) ||
-                  deviceSessions[0] || {
-                    id: 1,
-                    deviceName: "This Device",
-                    deviceType: "Desktop (PC)",
-                    browser: "Chrome",
-                    os: "Windows",
-                    ipAddress: "127.0.0.1",
-                    location: "Quezon City, PH",
-                    isActive: true,
-                    isCurrentDevice: true,
-                    loginAt: new Date().toISOString(),
-                  };
+                const currentDev = {
+                  id: 1,
+                  deviceName: "Windows PC • Google Chrome",
+                  deviceType: "PC",
+                  browser: "Google Chrome",
+                  os: "Windows",
+                  ipAddress: "127.0.0.1",
+                  location: "Quezon City, PH",
+                  isActive: true,
+                  isCurrentDevice: true,
+                  loginAt: new Date().toISOString(),
+                  ...(deviceSessions.find((s) => s.isCurrentDevice) || deviceSessions[0] || {}),
+                };
 
-                const isMobile = currentDev.deviceType?.toLowerCase().includes("mobile") || currentDev.os?.toLowerCase().includes("android") || currentDev.os?.toLowerCase().includes("ios");
-                const isTablet = currentDev.deviceType?.toLowerCase().includes("tablet") || currentDev.os?.toLowerCase().includes("ipad");
-                const isStillActive = currentDev.isActive;
+                // Real-time client verification for current device
+                const ua = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
+                const plat = typeof navigator !== "undefined" ? ((navigator as any).userAgentData?.platform || navigator.platform || "") : "";
+                const isRealWindows = /windows|win32|win64/i.test(ua) || /win/i.test(plat);
+                const isRealMac = /macintosh|mac os|macos/i.test(ua) || /mac/i.test(plat);
+
+                if (isRealWindows) {
+                  currentDev.os = "Windows";
+                  currentDev.deviceType = "PC";
+                  const browserName = currentDev.browser && currentDev.browser !== "Unknown" ? currentDev.browser : (/edg/i.test(ua) ? "Microsoft Edge" : "Google Chrome");
+                  currentDev.browser = browserName;
+                  currentDev.deviceName = `Windows PC • ${browserName}`;
+                } else if (isRealMac) {
+                  currentDev.os = "macOS";
+                  currentDev.deviceType = "PC";
+                  currentDev.deviceName = `Mac PC • ${currentDev.browser || "Safari"}`;
+                }
+
+                const isCP =
+                  currentDev.deviceType?.toLowerCase().includes("cp") ||
+                  currentDev.deviceType?.toLowerCase().includes("mobile") ||
+                  currentDev.deviceName?.toLowerCase().includes("cp") ||
+                  (currentDev.os?.toLowerCase().includes("android") && !currentDev.deviceName?.toLowerCase().includes("tablet")) ||
+                  currentDev.os?.toLowerCase().includes("iphone") ||
+                  currentDev.os?.toLowerCase().includes("ios");
+
+                const isTablet =
+                  !isCP &&
+                  (currentDev.deviceType?.toLowerCase().includes("tablet") ||
+                   currentDev.deviceName?.toLowerCase().includes("tablet") ||
+                   currentDev.os?.toLowerCase().includes("ipad"));
+
+                const isStillActive = currentDev.isActive ?? true;
 
                 return (
                   <div className={`rounded-2xl border-2 p-5 shadow-xs relative overflow-hidden transition-all ${isStillActive
@@ -1515,16 +1545,16 @@ export function ProfileModal({
                           }`}>
                           {isTablet ? (
                             <Tablet className="w-6 h-6" />
-                          ) : isMobile ? (
+                          ) : isCP ? (
                             <Smartphone className="w-6 h-6" />
                           ) : (
-                            <Laptop className="w-6 h-6" />
+                            <Monitor className="w-6 h-6" />
                           )}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                              {currentDev.deviceName || "This Device"}
+                              {currentDev.deviceName || "Windows PC • Google Chrome"}
                             </span>
                             {isStillActive ? (
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
@@ -1619,8 +1649,19 @@ export function ProfileModal({
                   deviceSessions
                     .filter((s) => !s.isCurrentDevice)
                     .map((session) => {
-                      const isMobile = session.deviceType?.toLowerCase().includes("mobile") || session.os?.toLowerCase().includes("android") || session.os?.toLowerCase().includes("ios");
-                      const isTablet = session.deviceType?.toLowerCase().includes("tablet") || session.os?.toLowerCase().includes("ipad");
+                      const isCP =
+                        session.deviceType?.toLowerCase().includes("cp") ||
+                        session.deviceType?.toLowerCase().includes("mobile") ||
+                        session.deviceName?.toLowerCase().includes("cp") ||
+                        (session.os?.toLowerCase().includes("android") && !session.deviceName?.toLowerCase().includes("tablet")) ||
+                        session.os?.toLowerCase().includes("iphone") ||
+                        session.os?.toLowerCase().includes("ios");
+
+                      const isTablet =
+                        !isCP &&
+                        (session.deviceType?.toLowerCase().includes("tablet") ||
+                         session.deviceName?.toLowerCase().includes("tablet") ||
+                         session.os?.toLowerCase().includes("ipad"));
 
                       return (
                         <div
@@ -1640,10 +1681,10 @@ export function ProfileModal({
                               >
                                 {isTablet ? (
                                   <Tablet className="w-5 h-5" />
-                                ) : isMobile ? (
+                                ) : isCP ? (
                                   <Smartphone className="w-5 h-5" />
                                 ) : (
-                                  <Laptop className="w-5 h-5" />
+                                  <Monitor className="w-5 h-5" />
                                 )}
                               </div>
                               <div>
