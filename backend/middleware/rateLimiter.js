@@ -24,50 +24,7 @@ async function checkLoginLockout(req, email) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const now = Date.now();
 
-  // 1. Check in PostgreSQL Database by IP or Email
-  try {
-    const dbRes = await db.query(
-      `SELECT id, attempt_count, locked_until, first_attempt 
-       FROM login_attempts 
-       WHERE ip_address = $1 OR ($2 != '' AND email = $2)
-       ORDER BY attempt_count DESC 
-       LIMIT 1`,
-      [ip, cleanEmail]
-    );
-
-    if (dbRes.rows.length > 0) {
-      const row = dbRes.rows[0];
-      if (row.locked_until) {
-        const lockTime = new Date(row.locked_until).getTime();
-        if (lockTime > now) {
-          const remainingSeconds = Math.ceil((lockTime - now) / 1000);
-          const minutes = Math.ceil(remainingSeconds / 60);
-          let lockMsg = '';
-          if (row.attempt_count >= 6) {
-            lockMsg = `Too many failed login attempts. Your account is locked for ${minutes} minute${minutes > 1 ? 's' : ''} for security.`;
-          } else if (row.attempt_count >= 5) {
-            lockMsg = `Too many failed login attempts (5/5). Your login is locked for ${minutes} minute${minutes > 1 ? 's' : ''} for security.`;
-          } else {
-            lockMsg = `Too many failed login attempts (3/3). Your login is locked for ${remainingSeconds}s for security.`;
-          }
-
-          return {
-            isLocked: true,
-            remainingSeconds,
-            minutes,
-            message: lockMsg,
-          };
-        } else {
-          // Lockout duration expired -> clear locked_until so next attempt advances count
-          await db.query(`UPDATE login_attempts SET locked_until = NULL WHERE id = $1`, [row.id]).catch(() => {});
-        }
-      }
-    }
-  } catch (err) {
-    // Database check fallback silently to memory store
-  }
-
-  // 2. Check in-memory store fallback
+  // 1. Instant check in-memory store (0ms)
   const memRecord = loginAttempts.get(ip) || (cleanEmail ? loginAttempts.get(cleanEmail) : null);
   if (memRecord) {
     if (memRecord.lockedUntil && now < memRecord.lockedUntil) {
@@ -92,6 +49,51 @@ async function checkLoginLockout(req, email) {
     if (memRecord.lockedUntil && now >= memRecord.lockedUntil) {
       memRecord.lockedUntil = null;
     }
+  }
+
+  // 2. Fast DB check with 2.5s fallback
+  try {
+    const dbPromise = db.query(
+      `SELECT id, attempt_count, locked_until, first_attempt 
+       FROM login_attempts 
+       WHERE ip_address = $1 OR ($2 != '' AND email = $2)
+       ORDER BY attempt_count DESC 
+       LIMIT 1`,
+      [ip, cleanEmail]
+    );
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ rows: [] }), 2500));
+    const dbRes = await Promise.race([dbPromise, timeoutPromise]);
+
+    if (dbRes && dbRes.rows && dbRes.rows.length > 0) {
+      const row = dbRes.rows[0];
+      if (row.locked_until) {
+        const lockTime = new Date(row.locked_until).getTime();
+        if (lockTime > now) {
+          const remainingSeconds = Math.ceil((lockTime - now) / 1000);
+          const minutes = Math.ceil(remainingSeconds / 60);
+          let lockMsg = '';
+          if (row.attempt_count >= 6) {
+            lockMsg = `Too many failed login attempts. Your account is locked for ${minutes} minute${minutes > 1 ? 's' : ''} for security.`;
+          } else if (row.attempt_count >= 5) {
+            lockMsg = `Too many failed login attempts (5/5). Your login is locked for ${minutes} minute${minutes > 1 ? 's' : ''} for security.`;
+          } else {
+            lockMsg = `Too many failed login attempts (3/3). Your login is locked for ${remainingSeconds}s for security.`;
+          }
+
+          return {
+            isLocked: true,
+            remainingSeconds,
+            minutes,
+            message: lockMsg,
+          };
+        } else {
+          db.query(`UPDATE login_attempts SET locked_until = NULL WHERE id = $1`, [row.id]).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    // DB check fallback silently
   }
 
   return { isLocked: false };

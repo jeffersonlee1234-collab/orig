@@ -20,7 +20,9 @@ if (connectionString) {
     ssl: isInternalOrLocal ? false : { rejectUnauthorized: false },
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 4000,
+    statement_timeout: 6000,
+    query_timeout: 6000,
   };
 } else {
   const dbPass = process.env.PGPASSWORD || process.env.DB_PASSWORD;
@@ -33,7 +35,9 @@ if (connectionString) {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 4000,
+    statement_timeout: 6000,
+    query_timeout: 6000,
   };
 }
 

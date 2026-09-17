@@ -589,23 +589,20 @@ exports.login = async (req, res) => {
           });
         }
 
-        // Auto-upgrade legacy plain-text password to bcrypt hash in DB
-        if (dbUser.password && !dbUser.password.startsWith('$2')) {
-          const upgradedHash = await hashPassword(cleanPassword);
-          await db.query('UPDATE users SET password = $1 WHERE id = $2', [upgradedHash, dbUser.id]).catch(() => {});
-        }
-
-        // Login succeeded -> clear failed attempts from DB & memory
-        await clearFailedLogins(req, cleanEmail);
-
         // Generate unique single active session token
         const sessionToken = generateSessionToken();
 
-        // Record last login time & active session token in DB
-        await db.query('UPDATE users SET last_login = NOW(), active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
+        // Non-blocking background operations so login HTTP response is instant (< 100ms)
+        clearFailedLogins(req, cleanEmail).catch(() => {});
+        db.query('UPDATE users SET last_login = NOW(), active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
+        recordNewSession(dbUser.id, dbUser.email, sessionToken, req).catch(() => {});
 
-        // Record device login session in audit logs
-        await recordNewSession(dbUser.id, dbUser.email, sessionToken, req);
+        // Auto-upgrade legacy plain-text password to bcrypt hash in DB in background
+        if (dbUser.password && !dbUser.password.startsWith('$2')) {
+          hashPassword(cleanPassword).then((upgradedHash) => {
+            db.query('UPDATE users SET password = $1 WHERE id = $2', [upgradedHash, dbUser.id]).catch(() => {});
+          }).catch(() => {});
+        }
 
         const userPayload = {
           id: dbUser.id,

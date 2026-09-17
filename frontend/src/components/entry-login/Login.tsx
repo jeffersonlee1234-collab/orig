@@ -73,9 +73,13 @@ export const Login = () => {
 
   // Check lockout status from server on mount
   useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+
     const checkServerLockout = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/auth/lockout-status`);
+        const res = await fetch(`${API_BASE}/api/auth/lockout-status`, { signal: controller.signal });
+        clearTimeout(timer);
         const data = await res.json();
         if (data && data.isLocked && data.remainingSeconds > 0) {
           const lockExpiry = Date.now() + data.remainingSeconds * 1000;
@@ -85,9 +89,16 @@ export const Login = () => {
           setLockoutRemaining(data.remainingSeconds);
           setError(lockMsg);
         }
-      } catch {}
+      } catch {
+        clearTimeout(timer);
+      }
     };
     checkServerLockout();
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, []);
 
   // Real-time countdown timer that survives page reloads
@@ -235,6 +246,7 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoginLoading) return;
 
     if (email && password) {
       setIsLoginLoading(true);
