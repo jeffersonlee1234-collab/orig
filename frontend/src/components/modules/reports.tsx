@@ -22,7 +22,6 @@ import {
   Line,
 } from "recharts"
 import { API_BASE } from "../../config/api"
-import { maskId, maskPhone, maskEmail } from "../../utils/dataMasking"
 
 type ModuleKey =
   | "AICS"
@@ -126,7 +125,6 @@ function ChartTooltip({ active, payload, label, formatter }: any) {
 export default function Reports() {
   const [range, setRange] = useState<RangeOption>("Last 6 Months")
   const [barsAnimated, setBarsAnimated] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleRangeChange = (newRange: RangeOption) => {
     setRange(newRange)
@@ -148,8 +146,7 @@ export default function Reports() {
   }
 
   // Calculate live analytics from database endpoints and local live state
-  const fetchLiveAnalytics = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsRefreshing(true)
+  const fetchLiveAnalytics = useCallback(async () => {
     try {
       // 1. Try fetching directly from the backend analytics endpoint
       let backendSuccess = false
@@ -301,8 +298,6 @@ export default function Reports() {
       }
     } catch (err) {
       console.warn("Analytics fetch error:", err)
-    } finally {
-      setIsRefreshing(false)
     }
   }, [range])
 
@@ -343,10 +338,10 @@ export default function Reports() {
 
   // Live polling and event listeners
   useEffect(() => {
-    fetchLiveAnalytics(false)
-    const interval = setInterval(() => fetchLiveAnalytics(true), 8000)
+    fetchLiveAnalytics()
+    const interval = setInterval(() => fetchLiveAnalytics(), 8000)
 
-    const handleUpdate = () => fetchLiveAnalytics(true)
+    const handleUpdate = () => fetchLiveAnalytics()
     window.addEventListener("storage", handleUpdate)
     window.addEventListener("financial_disbursements_updated", handleUpdate)
     window.addEventListener("pwd_senior_applications_updated", handleUpdate)
@@ -368,7 +363,7 @@ export default function Reports() {
     return () => clearTimeout(t)
   }, [])
 
-  const [maskPiiExport, setMaskPiiExport] = useState(true)
+  const maskPiiExport = true
 
   // Export Analytics to CSV
   const handleExport = () => {
