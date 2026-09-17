@@ -270,19 +270,14 @@ exports.getApplications = async (req, res) => {
     query += ' ORDER BY created_at DESC';
 
     const result = await db.query(query, params);
-    const rows = await Promise.all(
-      result.rows.map(async (row) => {
-        const enriched = await enrichApplicationWithSuffix(row);
-        return {
-          ...enriched,
-          reference_no: enriched.reference_no || enriched.qc_id || '110000116932100',
-        };
-      })
-    );
+    const rows = result.rows.map((row) => ({
+      ...row,
+      reference_no: row.reference_no || row.qc_id || '110000116932100',
+    }));
     res.json({ applications: rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Hindi makuha ang listahan ng applications.' });
+    console.error('Error in getApplications:', err);
+    res.status(500).json({ error: 'Hindi makuha ang listahan ng applications.', details: err.message });
   }
 };
 
