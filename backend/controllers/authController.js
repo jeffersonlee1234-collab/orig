@@ -843,88 +843,37 @@ exports.verifySession = async (req, res) => {
     const email = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
     const sessionToken = (req.query.token || req.headers['x-session-token'] || '').trim();
 
-    if (!email || !sessionToken) {
+    if (!email) {
       return res.status(200).json({ success: true, active: true });
     }
 
-    // 1. Query user_login_sessions for currently active session of this email
+    // Check account status in DB
     try {
-      const activeRes = await db.query(
-        `SELECT id, session_token, device_name, device_type, browser, os, ip_address, login_at 
-         FROM user_login_sessions 
-         WHERE LOWER(email) = $1 AND is_active = true 
-         ORDER BY id DESC LIMIT 1`,
-        [email]
-      );
-
-      if (activeRes.rows.length > 0) {
-        const activeDev = activeRes.rows[0];
-        // If there is an active session in DB and its token does NOT match client's token -> TERMINATE
-        if (activeDev.session_token !== sessionToken) {
-          return res.status(200).json({
-            success: false,
-            isSessionTerminated: true,
-            newDevice: activeDev,
-            message: `Your account was accessed from ${activeDev.device_name || activeDev.device_type || 'another device'}. You have been logged out for security.`,
-          });
-        }
-      } else {
-        // If no active session found in user_login_sessions, check if this specific token was explicitly deactivated
-        const mySessRes = await db.query(
-          `SELECT id, is_active FROM user_login_sessions 
-           WHERE LOWER(email) = $1 AND session_token = $2 
-           ORDER BY id DESC LIMIT 1`,
-          [email, sessionToken]
-        );
-        if (mySessRes.rows.length > 0 && mySessRes.rows[0].is_active === false) {
-          return res.status(200).json({
-            success: false,
-            isSessionTerminated: true,
-            message: 'Your session has expired or was logged out from another device.',
-          });
-        }
-      }
-
-      // Also check users table active_session_token as additional check
-      const userRes = await db.query('SELECT active_session_token, status FROM users WHERE LOWER(email) = $1', [email]);
+      const userRes = await db.query('SELECT id, status, active_session_token FROM users WHERE LOWER(email) = $1', [email]);
       if (userRes.rows.length > 0) {
         const dbUser = userRes.rows[0];
-        if (dbUser.active_session_token && dbUser.active_session_token !== sessionToken) {
+        const status = String(dbUser.status || 'active').toLowerCase();
+        if (status === 'inactive' || status === 'deactivated') {
           return res.status(200).json({
             success: false,
             isSessionTerminated: true,
-            message: 'Your account was accessed from another device. You have been logged out for security.',
+            message: 'Your account has been deactivated.',
           });
+        }
+
+        // Sync session token if empty in database
+        if (!dbUser.active_session_token && sessionToken) {
+          db.query('UPDATE users SET active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
         }
       }
     } catch (dbErr) {
-      console.warn('[DB Error] verifySession failed:', dbErr.message);
-    }
-
-    // 2. Memory fallback
-    const activeMem = memorySessions.find(s => s.email.toLowerCase() === email && s.isActive);
-    if (activeMem && activeMem.sessionToken !== sessionToken) {
-      return res.status(200).json({
-        success: false,
-        isSessionTerminated: true,
-        newDevice: activeMem,
-        message: `Your account was accessed from ${activeMem.deviceName || 'another device'}. You have been logged out for security.`,
-      });
-    }
-
-    const memMySession = memorySessions.find(s => s.email.toLowerCase() === email && s.sessionToken === sessionToken);
-    if (memMySession && memMySession.isActive === false) {
-      return res.status(200).json({
-        success: false,
-        isSessionTerminated: true,
-        message: 'Your session has been logged out.',
-      });
+      console.warn('[DB Warning] verifySession check fallback:', dbErr.message);
     }
 
     return res.status(200).json({ success: true, active: true });
   } catch (err) {
     console.error('Error in verifySession controller:', err);
-    return res.status(500).json({ success: false, message: 'Server error during session verification' });
+    return res.status(200).json({ success: true, active: true });
   }
 };
 
