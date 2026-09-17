@@ -2987,18 +2987,18 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                       />
 
                       <div
-                        className={`border rounded-xl p-5 ${
+                        className={`border rounded-xl p-5 transition-colors ${
                           entry
-                            ? "border-green-300 bg-green-50"
+                            ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30 dark:border-emerald-500/30"
                             : missing
-                            ? "border-red-400 bg-red-50"
-                            : "border-border bg-card"
+                            ? "border-red-500/40 bg-red-500/10 dark:bg-red-950/30 dark:border-red-500/30"
+                            : "border-border bg-card/60 dark:bg-slate-900/40"
                         }`}
                       >
                         <p className="flex items-center gap-1.5 text-sm font-bold text-foreground uppercase tracking-wide">
                           {doc.title} <span className="text-red-500">*</span>
                           {entry && (
-                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-500 shrink-0">
+                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 shrink-0">
                               <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
                             </span>
                           )}
@@ -3028,11 +3028,11 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                         </div>
 
                         {entry && (
-                          <div className="relative mt-3 w-40 border border-border rounded-lg bg-white p-3 flex flex-col items-center text-center">
+                          <div className="relative mt-3 w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-3 flex flex-col items-center text-center">
                             <button
                               type="button"
                               onClick={() => removeUploadedFile(doc.title)}
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 text-white flex items-center justify-center hover:bg-gray-600"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 text-white flex items-center justify-center transition-colors cursor-pointer z-10"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -3040,7 +3040,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                               <img
                                 src={entry.previewUrl}
                                 alt={doc.title}
-                                className="h-12 w-12 object-cover rounded-md border border-border mb-2"
+                                className="h-12 w-12 object-cover rounded-md border border-border mb-2 bg-slate-800/40"
                               />
                             ) : (
                               <FileText className="h-9 w-9 text-muted-foreground mb-2" />

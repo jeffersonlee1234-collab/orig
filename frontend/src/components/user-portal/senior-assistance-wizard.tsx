@@ -1572,16 +1572,16 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
                       <div
                         className={`border rounded-xl p-5 transition-colors ${
                           file
-                            ? "border-green-300 bg-green-50"
+                            ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30 dark:border-emerald-500/30"
                             : missing
-                            ? "border-red-400 bg-red-50"
-                            : "border-border bg-card"
+                            ? "border-red-500/40 bg-red-500/10 dark:bg-red-950/30 dark:border-red-500/30"
+                            : "border-border bg-card/60 dark:bg-slate-900/40"
                         }`}
                       >
                         <p className="flex items-center gap-1.5 text-sm font-bold text-foreground uppercase tracking-wide">
                           {doc.label} {doc.required ? <span className="text-red-500">*</span> : <span className="text-muted-foreground font-normal text-[10px] lowercase">(opsyonal)</span>}
                           {file && (
-                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-500 text-white shrink-0">
+                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 text-white shrink-0">
                               <Check className="h-2.5 w-2.5 stroke-[3]" />
                             </span>
                           )}
@@ -1625,16 +1625,16 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
 
                         {file && (
                           <div className="flex flex-wrap gap-3 pt-4">
-                            <div className="relative w-40 border border-border rounded-lg bg-white p-3 flex flex-col items-center text-center shadow-xs">
+                            <div className="relative w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-3 flex flex-col items-center text-center shadow-xs">
                               <button
                                 type="button"
                                 onClick={() => removeFile(doc.id)}
-                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
+                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
                                 aria-label={`Alisin ang ${file.name}`}
                               >
                                 <X className="h-3 w-3" />
                               </button>
-                              <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-gray-50">
+                              <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-muted/40 dark:bg-slate-800">
                                 <FileThumbnail file={file} className="h-full w-full object-cover" />
                               </div>
                               <p className="text-xs font-medium text-foreground truncate w-full">{file.name}</p>

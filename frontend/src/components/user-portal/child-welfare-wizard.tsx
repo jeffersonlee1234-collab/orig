@@ -2313,23 +2313,23 @@ export default function ChildWelfareApplicationWizard({
                       <div
                         className={`border rounded-xl p-4 sm:p-5 transition-colors ${
                           uploaded
-                            ? "border-green-300 bg-green-50/60"
+                            ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30 dark:border-emerald-500/30"
                             : isInvalid
-                            ? "border-red-400 bg-red-50"
-                            : "border-gray-200 bg-white"
+                            ? "border-red-500/40 bg-red-500/10 dark:bg-red-950/30 dark:border-red-500/30"
+                            : "border-border bg-card/60 dark:bg-slate-900/40"
                         }`}
                       >
-                        <p className="flex items-center gap-1.5 text-xs font-bold text-gray-900 uppercase tracking-wide">
-                          {doc.label} {doc.required ? <span className="text-red-500">*</span> : <span className="text-gray-400 text-xs font-normal">({language === "tl" ? "Opsyonal" : language === "bis" ? "Opsyonal" : "Optional"})</span>}
+                        <p className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wide">
+                          {doc.label} {doc.required ? <span className="text-red-500">*</span> : <span className="text-muted-foreground text-xs font-normal">({language === "tl" ? "Opsyonal" : language === "bis" ? "Opsyonal" : "Optional"})</span>}
                           {uploaded && (
-                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-500 text-white shrink-0 ml-1">
+                            <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 text-white shrink-0 ml-1">
                               <Check className="h-2.5 w-2.5 stroke-[3]" />
                             </span>
                           )}
                         </p>
 
-                        {doc.description && <p className="text-xs text-gray-500 mt-1">{doc.description}</p>}
-                        <p className="text-[11px] text-gray-400 mt-1">
+                        {doc.description && <p className="text-xs text-muted-foreground mt-1">{doc.description}</p>}
+                        <p className="text-[11px] text-muted-foreground mt-1">
                           {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP (o kumuha gamit ang Camera)"}
                         </p>
 
@@ -2371,12 +2371,12 @@ export default function ChildWelfareApplicationWizard({
                             {files.map((file, i) => (
                               <div
                                 key={`${file.name}-${i}`}
-                                className="relative w-36 sm:w-40 border border-gray-200 rounded-lg bg-white p-2.5 flex flex-col items-center text-center shadow-xs"
+                                className="relative w-36 sm:w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-2.5 flex flex-col items-center text-center shadow-xs"
                               >
                                 <button
                                   type="button"
                                   onClick={() => removeFile(doc.id, i)}
-                                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer shadow-xs"
+                                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer shadow-xs"
                                   aria-label={t("removeFile", { filename: file.name }) || "Remove file"}
                                 >
                                   <X className="h-3 w-3" />
@@ -2384,12 +2384,12 @@ export default function ChildWelfareApplicationWizard({
                                 <button
                                   type="button"
                                   onClick={() => setPreviewDocModal({ title: doc.label, file })}
-                                  className="h-16 w-full rounded-md overflow-hidden border border-gray-100 mb-2 flex items-center justify-center bg-gray-50 cursor-pointer hover:opacity-90"
+                                  className="h-16 w-full rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-muted/40 dark:bg-slate-800 cursor-pointer hover:opacity-90"
                                 >
                                   <FileThumbnail file={file} className="h-full w-full object-cover" />
                                 </button>
-                                <p className="text-[11px] font-medium text-gray-800 truncate w-full">{file.name}</p>
-                                <p className="text-[10px] text-gray-400 mt-0.5">{formatFileSize(file.size)}</p>
+                                <p className="text-[11px] font-medium text-foreground truncate w-full">{file.name}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{formatFileSize(file.size)}</p>
                               </div>
                             ))}
                           </div>

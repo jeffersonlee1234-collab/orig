@@ -1008,26 +1008,26 @@ export default function ApplyPWDSenior() {
               {!isSenior && !isAssistance && (
                 <>
                   <div className="space-y-3">
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-blue-900">{t("importantReminder")}</p>
-                        <p className="text-sm text-blue-800 mt-1">{t("pwdGeneralReminderDesc")}</p>
+                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{t("importantReminder")}</p>
+                        <p className="text-sm text-blue-800 dark:text-blue-300 mt-1">{t("pwdGeneralReminderDesc")}</p>
                       </div>
                     </div>
 
                     <div className={`rounded-xl p-4 flex items-start gap-3 border ${
                       urlType === "renewal"
-                        ? "bg-amber-50 border-amber-200"
+                        ? "bg-amber-500/10 border-amber-500/30"
                         : urlType === "loss"
-                        ? "bg-orange-50 border-orange-200"
-                        : "bg-green-50 border-green-200"
+                        ? "bg-orange-500/10 border-orange-500/30"
+                        : "bg-emerald-500/10 border-emerald-500/30"
                     }`}>
                       <RefreshCw className={`h-5 w-5 shrink-0 mt-0.5 ${
-                        urlType === "renewal" ? "text-amber-600" : urlType === "loss" ? "text-orange-600" : "text-green-600"
+                        urlType === "renewal" ? "text-amber-600 dark:text-amber-400" : urlType === "loss" ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400"
                       }`} />
                       <p className={`text-sm font-semibold ${
-                        urlType === "renewal" ? "text-amber-900" : urlType === "loss" ? "text-orange-900" : "text-green-900"
+                        urlType === "renewal" ? "text-amber-900 dark:text-amber-200" : urlType === "loss" ? "text-orange-900 dark:text-orange-200" : "text-emerald-900 dark:text-emerald-200"
                       }`}>
                         {urlType === "renewal"
                           ? t("pwdRenewalAlert")
@@ -1098,33 +1098,33 @@ export default function ApplyPWDSenior() {
               {/* SENIOR CITIZEN ID SECTION */}
               {isSeniorId && (
                 <>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-900">
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-200">
                       {t("seniorDualCitizenshipNote")}
                     </p>
                   </div>
 
                   <div className={`rounded-xl p-4 flex items-start gap-3 border ${
                     urlType === "loss"
-                      ? "bg-orange-50 border-orange-200"
+                      ? "bg-orange-500/10 border-orange-500/30"
                       : urlType === "renewal"
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-green-50 border-green-200"
+                      ? "bg-amber-500/10 border-amber-500/30"
+                      : "bg-emerald-500/10 border-emerald-500/30"
                   }`}>
                     <RefreshCw className={`h-5 w-5 shrink-0 mt-0.5 ${
                       urlType === "loss"
-                        ? "text-orange-600"
+                        ? "text-orange-600 dark:text-orange-400"
                         : urlType === "renewal"
-                        ? "text-amber-600"
-                        : "text-green-600"
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-emerald-600 dark:text-emerald-400"
                     }`} />
                     <p className={`text-sm font-semibold ${
                       urlType === "loss"
-                        ? "text-orange-900"
+                        ? "text-orange-900 dark:text-orange-200"
                         : urlType === "renewal"
-                        ? "text-amber-900"
-                        : "text-green-900"
+                        ? "text-amber-900 dark:text-amber-200"
+                        : "text-emerald-900 dark:text-emerald-200"
                     }`}>
                       {urlType === "loss"
                         ? t("seniorLossAlert") || "Paalala: Para sa pagpapalit ng nawala o nasirang Senior Citizen ID. Ihanda ang Notarized Affidavit of Loss at valid ID."

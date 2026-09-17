@@ -1751,11 +1751,11 @@ export default function AICSServiceWizard({
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
                       barangayCertFiles.length > 0
-                        ? "border-emerald-500/40 bg-emerald-500/5"
-                        : "border-dashed border-gray-300"
+                        ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30"
+                        : "border-dashed border-border bg-card/40 dark:bg-slate-900/30"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       BARANGAY CERTIFICATE OF INDIGENCY / RESIDENCY *
                       {barangayCertFiles.length > 0 && (
                         <span className="flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 shrink-0 text-white">
@@ -1763,7 +1763,7 @@ export default function AICSServiceWizard({
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP (o kumuha gamit ang Camera)"}
                     </p>
 
@@ -1801,20 +1801,20 @@ export default function AICSServiceWizard({
                         {barangayCertFiles.map((file, i) => (
                           <div
                             key={`${file.name}-${i}`}
-                            className="relative w-40 border border-border rounded-lg bg-white p-3 flex flex-col items-center text-center shadow-xs"
+                            className="relative w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-3 flex flex-col items-center text-center shadow-xs"
                           >
                             <button
                               type="button"
                               onClick={() => handleRemoveFile("barangayCert", i)}
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
                             >
                               <X className="h-3 w-3" />
                             </button>
-                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-gray-50">
+                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-muted/40 dark:bg-slate-800">
                               <FileThumbnail file={file} className="h-full w-full object-cover" />
                             </div>
-                            <p className="text-xs font-medium text-gray-800 truncate w-full">{file.name}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
+                            <p className="text-xs font-medium text-foreground truncate w-full">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{formatFileSize(file.size)}</p>
                           </div>
                         ))}
                       </div>
@@ -1828,11 +1828,11 @@ export default function AICSServiceWizard({
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
                       validIdFiles.length > 0
-                        ? "border-emerald-500/40 bg-emerald-500/5"
-                        : "border-dashed border-gray-300"
+                        ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30"
+                        : "border-dashed border-border bg-card/40 dark:bg-slate-900/30"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       QCITIZEN ID O VALID GOVERNMENT-ISSUED ID *
                       {validIdFiles.length > 0 && (
                         <span className="flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 shrink-0 text-white">
@@ -1840,7 +1840,7 @@ export default function AICSServiceWizard({
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP (o kumuha gamit ang Camera)"}
                     </p>
 
@@ -1878,20 +1878,20 @@ export default function AICSServiceWizard({
                         {validIdFiles.map((file, i) => (
                           <div
                             key={`${file.name}-${i}`}
-                            className="relative w-40 border border-border rounded-lg bg-white p-3 flex flex-col items-center text-center shadow-xs"
+                            className="relative w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-3 flex flex-col items-center text-center shadow-xs"
                           >
                             <button
                               type="button"
                               onClick={() => handleRemoveFile("validId", i)}
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
                             >
                               <X className="h-3 w-3" />
                             </button>
-                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-gray-50">
+                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-muted/40 dark:bg-slate-800">
                               <FileThumbnail file={file} className="h-full w-full object-cover" />
                             </div>
-                            <p className="text-xs font-medium text-gray-800 truncate w-full">{file.name}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
+                            <p className="text-xs font-medium text-foreground truncate w-full">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{formatFileSize(file.size)}</p>
                           </div>
                         ))}
                       </div>
@@ -1905,11 +1905,11 @@ export default function AICSServiceWizard({
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
                       supportingDocFiles.length > 0
-                        ? "border-emerald-500/40 bg-emerald-500/5"
-                        : "border-dashed border-gray-300"
+                        ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30"
+                        : "border-dashed border-border bg-card/40 dark:bg-slate-900/30"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       SUPPORTING DOCUMENT *
                       {supportingDocFiles.length > 0 && (
                         <span className="flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500 shrink-0 text-white">
@@ -1917,7 +1917,7 @@ export default function AICSServiceWizard({
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP (o kumuha gamit ang Camera)"}
                     </p>
 
@@ -1955,20 +1955,20 @@ export default function AICSServiceWizard({
                         {supportingDocFiles.map((file, i) => (
                           <div
                             key={`${file.name}-${i}`}
-                            className="relative w-40 border border-border rounded-lg bg-white p-3 flex flex-col items-center text-center shadow-xs"
+                            className="relative w-40 border border-border rounded-lg bg-card dark:bg-slate-900/90 shadow-sm p-3 flex flex-col items-center text-center shadow-xs"
                           >
                             <button
                               type="button"
                               onClick={() => handleRemoveFile("supportingDoc", i)}
-                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-700 hover:bg-red-600 flex items-center justify-center text-white transition-colors z-10 cursor-pointer"
                             >
                               <X className="h-3 w-3" />
                             </button>
-                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-gray-50">
+                            <div className="h-12 w-12 rounded-md overflow-hidden border border-border mb-2 flex items-center justify-center bg-muted/40 dark:bg-slate-800">
                               <FileThumbnail file={file} className="h-full w-full object-cover" />
                             </div>
-                            <p className="text-xs font-medium text-gray-800 truncate w-full">{file.name}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
+                            <p className="text-xs font-medium text-foreground truncate w-full">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{formatFileSize(file.size)}</p>
                           </div>
                         ))}
                       </div>
