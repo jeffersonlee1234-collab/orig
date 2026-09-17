@@ -23,24 +23,58 @@ export function SessionInactivityWatcher() {
   }, []);
 
   const getCurrentUserEmail = useCallback(() => {
-    const directEmail = sessionStorage.getItem("user_email") || localStorage.getItem("user_email");
-    if (directEmail) return directEmail.toLowerCase().trim();
+    // 1. Primary: this tab's own sessionStorage
+    const sessionEmail = sessionStorage.getItem("user_email");
+    if (sessionEmail) return sessionEmail.toLowerCase().trim();
+
     try {
-      const rawUser = sessionStorage.getItem("currentUser") || localStorage.getItem("currentUser");
+      const rawUser = sessionStorage.getItem("currentUser");
       if (rawUser) {
         const parsed = JSON.parse(rawUser);
-        return (parsed.email || "").toLowerCase().trim();
+        if (parsed?.email) return String(parsed.email).toLowerCase().trim();
       }
     } catch {}
+
+    // 2. Fallback: localStorage
+    const directEmail = localStorage.getItem("user_email");
+    if (directEmail) return directEmail.toLowerCase().trim();
+
+    try {
+      const rawUser = localStorage.getItem("currentUser");
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        if (parsed?.email) return String(parsed.email).toLowerCase().trim();
+      }
+    } catch {}
+
     return "";
   }, []);
 
   const getSessionToken = useCallback(() => {
-    return localStorage.getItem("sessionToken") || sessionStorage.getItem("sessionToken") || "";
-  }, []);
+    const email = getCurrentUserEmail();
+
+    // 1. Strict priority: check this tab's own sessionStorage token first
+    const tabToken = sessionStorage.getItem("sessionToken");
+    if (tabToken) return tabToken;
+
+    // 2. Check email-scoped token in localStorage
+    if (email) {
+      const emailSpecific = localStorage.getItem(`sessionToken_${email}`);
+      if (emailSpecific) return emailSpecific;
+    }
+
+    // 3. Fallback to generic localStorage token only if email matches localStorage's current user_email
+    const localUserEmail = (localStorage.getItem("user_email") || "").toLowerCase().trim();
+    if (email && localUserEmail === email) {
+      return localStorage.getItem("sessionToken") || "";
+    }
+
+    return "";
+  }, [getCurrentUserEmail]);
 
   const clearAuthSession = useCallback(() => {
     try {
+      const email = getCurrentUserEmail();
       sessionStorage.removeItem("isAuthenticated");
       sessionStorage.removeItem("userRole");
       sessionStorage.removeItem("currentUser");
@@ -48,15 +82,22 @@ export function SessionInactivityWatcher() {
       sessionStorage.removeItem("sessionToken");
       sessionStorage.removeItem("session_terminated_reason");
       sessionStorage.removeItem("terminated_new_device");
-      localStorage.removeItem("isAuthenticated");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("user_email");
-      localStorage.removeItem("sessionToken");
-      localStorage.removeItem("user_profile");
-      localStorage.removeItem("token");
+
+      if (email) {
+        localStorage.removeItem(`sessionToken_${email}`);
+      }
+      const localEmail = (localStorage.getItem("user_email") || "").toLowerCase().trim();
+      if (!localEmail || localEmail === email) {
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("user_email");
+        localStorage.removeItem("sessionToken");
+        localStorage.removeItem("user_profile");
+        localStorage.removeItem("token");
+      }
     } catch {}
-  }, []);
+  }, [getCurrentUserEmail]);
 
   const isVerifyingRef = useRef(false);
 
@@ -182,12 +223,19 @@ export function SessionInactivityWatcher() {
   }
 
   const handleReLogin = () => {
+    const email = getCurrentUserEmail();
     sessionStorage.clear();
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("sessionToken");
+    if (email) {
+      localStorage.removeItem(`sessionToken_${email}`);
+    }
+    const localEmail = (localStorage.getItem("user_email") || "").toLowerCase().trim();
+    if (!localEmail || localEmail === email) {
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("user_email");
+      localStorage.removeItem("sessionToken");
+    }
     window.location.href = "/login";
   };
 

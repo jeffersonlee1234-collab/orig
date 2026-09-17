@@ -317,15 +317,18 @@ export const Login = () => {
           if (data.token) {
             sessionStorage.setItem('token', data.token);
             localStorage.setItem('token', data.token);
+            localStorage.setItem(`token_${cleanEmail}`, data.token);
           }
           if (data.sessionToken) {
             sessionStorage.setItem('sessionToken', data.sessionToken);
             localStorage.setItem('sessionToken', data.sessionToken);
+            localStorage.setItem(`sessionToken_${cleanEmail}`, data.sessionToken);
           }
           if (data.user) {
             sessionStorage.setItem('currentUser', JSON.stringify(data.user));
             localStorage.setItem('currentUser', JSON.stringify(data.user));
             localStorage.setItem('user_profile', JSON.stringify(data.user));
+            localStorage.setItem(`user_profile_${cleanEmail}`, JSON.stringify(data.user));
           }
 
           // Trigger auth listeners across app
