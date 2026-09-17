@@ -602,7 +602,6 @@ export default function SeniorCitizenApplicationWizard({
 
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File[]>>({})
   const [cameraDoc, setCameraDoc] = useState<DocumentItem | null>(null)
-  const [selectedSampleDoc, setSelectedSampleDoc] = useState<DocumentItem | null>(null)
   const [previewDocModal, setPreviewDocModal] = useState<{ title: string; file: File } | null>(null)
 
   // Reload / Navigation warning protection — active from Step 2 onwards

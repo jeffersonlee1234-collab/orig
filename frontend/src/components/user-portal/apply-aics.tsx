@@ -27,7 +27,6 @@ import { notifyApplicationChange } from "../../utils/realtimeSync"
 
 export default function ApplyAICS({ initialType, initialTypeKey }: ApplyAICSProps) {
   const { t, language } = useLanguage()
-  const [sampleDocOpen, setSampleDocOpen] = useState<string | null>(null)
 
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 

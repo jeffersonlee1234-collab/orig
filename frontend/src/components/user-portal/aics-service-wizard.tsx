@@ -35,12 +35,6 @@ function formatFileSize(bytes: number) {
   return `${(kb / 1024).toFixed(1)} MB`
 }
 
-const SAMPLE_DOC_IMAGES: Record<string, string> = {
-  "BARANGAY CERTIFICATE OF INDIGENCY / RESIDENCY": "/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg",
-  "QCITIZEN ID O VALID GOVERNMENT-ISSUED ID": "/samples/QC ID NG PASYENTE.jpg",
-  "SUPPORTING DOCUMENT": "/samples/AUTHORIZATION  PERSONAL LETTER.jpg",
-}
-
 function CustomCheckbox({
   checked,
   onChange,
@@ -253,7 +247,6 @@ export default function AICSServiceWizard({
   // Camera modal state
   const [cameraModalOpen, setCameraModalOpen] = useState(false)
   const [cameraTargetField, setCameraTargetField] = useState<string>("")
-  const [sampleDocOpen, setSampleDocOpen] = useState<string | null>(null)
 
   // ===================== FORM DATA =====================
   // Step 1: Checklist & Primary Requirements

@@ -493,86 +493,6 @@ function LockedField({ value, placeholder }: { value: string; placeholder?: stri
   )
 }
 
-const SAMPLE_DOC_IMAGES: Record<string, string> = {
-  "Proof of Residence": "/samples/PROOF OF RESIDENCE.webp",
-  "ID Picture (2x2)": "/samples/ID PICTURE (2X2).webp",
-  "Signature": "/samples/SIGNATURE.avif",
-  "Certificate of Disability from Specialist": "/samples/CERTIFICATE OF DISABILITY.jpg",
-  "Whole Body Picture": "/samples/WHOLE BODY.jpg",
-}
-
-function SampleDocPreview({ title, noSampleText }: { title: string; noSampleText: string }) {
-  const src = SAMPLE_DOC_IMAGES[title]
-  if (!src) {
-    return (
-      <div className="w-full max-w-sm mx-auto border border-dashed border-border rounded-lg bg-white p-8 text-center text-sm text-muted-foreground">
-        {noSampleText}
-      </div>
-    )
-  }
-  return (
-    <img
-      src={src}
-      alt={`Sample ${title}`}
-      className="w-full max-w-sm mx-auto rounded-lg border border-border object-contain"
-    />
-  )
-}
-
-function SampleDocumentModal({ title, onClose }: { title: string; onClose: () => void }) {
-  const { t } = useLanguage()
-  const src = SAMPLE_DOC_IMAGES[title]
-
-  const handleDownload = () => {
-    if (!src) return
-    const link = document.createElement("a")
-    link.href = src
-    const ext = src.split(".").pop()
-    link.download = `${title.replace(/[^a-z0-9]+/gi, "-")}.${ext}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h4 className="text-sm font-bold text-foreground uppercase tracking-wide">
-            {t("sampleLabel", { name: title })}
-          </h4>
-        </div>
-        <div className="p-6 max-h-[60vh] overflow-y-auto bg-gray-50">
-          <SampleDocPreview
-            title={title}
-            noSampleText={`No sample image set yet for "${title}". Add its URL to SAMPLE_DOC_IMAGES.`}
-          />
-        </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={!src}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              src
-                ? "bg-gray-100 text-foreground hover:bg-gray-200"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            {t("download").toUpperCase()}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {t("close").toUpperCase()}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // full-size preview modal for a document the user actually uploaded
 function UploadedDocPreviewModal({
@@ -782,7 +702,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
   })
 
   const [uploaded, setUploaded] = useState<Record<string, UploadedDoc | undefined>>({})
-  const [sampleDoc, setSampleDoc] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<string | null>(null) // which uploaded doc is being previewed
   const [cameraDoc, setCameraDoc] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
