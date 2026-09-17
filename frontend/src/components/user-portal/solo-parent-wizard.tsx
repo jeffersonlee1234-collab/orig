@@ -630,7 +630,6 @@ function DocumentUploadRow({
   invalid,
   onUpload,
   onRemove,
-  onSampleClick,
   onCameraClick,
 }: {
   doc: SampleDocument
@@ -639,7 +638,6 @@ function DocumentUploadRow({
   invalid?: boolean
   onUpload: (files: File[]) => void
   onRemove: (fileIndex: number) => void
-  onSampleClick: (doc: SampleDocument) => void
   onCameraClick: (doc: SampleDocument) => void
 }) {
   const { t } = useLanguage()

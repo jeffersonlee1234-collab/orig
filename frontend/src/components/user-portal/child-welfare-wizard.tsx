@@ -731,8 +731,6 @@ export default function ChildWelfareApplicationWizard({
   }, [step, onStepChange])
 
   const [attemptedNext, setAttemptedNext] = useState(false)
-  const [showSampleModal, setShowSampleModal] = useState(false)
-  const [selectedSampleDoc, setSelectedSampleDoc] = useState<{ id: string; label: string; sampleImage?: string; description?: string } | null>(null)
   const [cameraDoc, setCameraDoc] = useState<{ id: string; label: string } | null>(null)
   const [previewDocModal, setPreviewDocModal] = useState<{ title: string; file: File } | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)

@@ -469,76 +469,6 @@ function ReviewField({ label, value }: { label: string; value?: string }) {
   )
 }
 
-// ── Sample Document Modal ──
-function SampleDocModal({
-  doc,
-  isOpen,
-  onClose,
-}: {
-  doc: RequiredDocument | null
-  isOpen: boolean
-  onClose: () => void
-}) {
-  const { t } = useLanguage()
-  if (!isOpen || !doc) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        <div className="p-5 border-b flex items-center justify-between">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-4 w-4 text-blue-600" />
-            {t("sampleLabel", { name: doc.label })}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-800 cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="p-5 overflow-y-auto space-y-4">
-          <p className="text-sm text-muted-foreground">{doc.description}</p>
-          {doc.note && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 font-medium">
-              💡 {doc.note}
-            </div>
-          )}
-          {doc.images && doc.images.length > 0 ? (
-            <div className="space-y-3">
-              {doc.images.map((imgSrc, idx) => (
-                <div key={idx} className="border border-border rounded-xl overflow-hidden bg-gray-50 p-2 flex items-center justify-center">
-                  <img
-                    src={imgSrc}
-                    alt={doc.label}
-                    className="max-h-80 w-auto object-contain rounded-lg shadow-xs"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = "none"
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-muted-foreground text-sm">
-              {t("noSampleImageAvailable")}
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-t bg-gray-50 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold bg-gray-800 text-white rounded-lg hover:bg-gray-900 cursor-pointer"
-          >
-            {t("close").toUpperCase()}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 interface PWDSocialAssistanceWizardProps {
   userProfile?: UserProfile
   onBack?: () => void
@@ -594,8 +524,6 @@ export default function PWDSocialAssistanceWizard({
   const [step, setStep] = useState(1)
   const [returnToReview, setReturnToReview] = useState(false)
   const [attemptedNext, setAttemptedNext] = useState(false)
-  const [selectedSampleDoc, setSelectedSampleDoc] = useState<RequiredDocument | null>(null)
-  const [showSampleModal, setShowSampleModal] = useState(false)
   const [cameraDoc, setCameraDoc] = useState<RequiredDocument | null>(null)
   const [previewDocModal, setPreviewDocModal] = useState<{ title: string; file: File } | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
