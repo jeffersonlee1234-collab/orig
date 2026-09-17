@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 
 // In-memory fallback if database query fails or tables are initializing
 let memoryBeneficiaries = [];
@@ -113,6 +115,27 @@ async function insertBeneficiaryIfMissing(applicantData) {
   } catch (err) {
     console.warn('⚠️ insertBeneficiaryIfMissing error:', err.message);
   }
+}
+
+let lastSyncTimestamp = 0;
+let isSyncInProgress = false;
+
+function triggerBackgroundSyncIfStale() {
+  const now = Date.now();
+  if (isSyncInProgress || (now - lastSyncTimestamp < 15 * 60 * 1000)) {
+    return;
+  }
+  isSyncInProgress = true;
+  syncRealUsersAndApplicantsToBeneficiaries()
+    .then(() => {
+      lastSyncTimestamp = Date.now();
+    })
+    .catch((err) => {
+      console.warn('⚠️ Background beneficiary sync error:', err.message);
+    })
+    .finally(() => {
+      isSyncInProgress = false;
+    });
 }
 
 async function syncRealUsersAndApplicantsToBeneficiaries() {
@@ -678,52 +701,39 @@ async function logBeneficiaryEvent(eventData) {
  */
 async function getAllBeneficiaries(req, res) {
   try {
-    // 1. Sync real user accounts and purge obsolete mock accounts
-    await syncRealUsersAndApplicantsToBeneficiaries();
+    // 1. Trigger background sync non-blocking (does not delay response)
+    triggerBackgroundSyncIfStale();
 
-    let dbBeneficiaries = [];
-    try {
-      const bRes = await db.query(`SELECT * FROM beneficiaries ORDER BY id DESC`);
-      dbBeneficiaries = bRes.rows;
-    } catch {
-      dbBeneficiaries = [];
-    }
+    // 2. Fetch all service tables concurrently in parallel
+    const [
+      bRes,
+      hRes,
+      aRes,
+      pRes,
+      sRes,
+      cRes,
+      lRes,
+      trRes,
+    ] = await Promise.all([
+      db.query(`SELECT * FROM beneficiaries ORDER BY id DESC`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM beneficiary_history ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM aics_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM pwd_senior_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'SOLO_PARENT' OR module_type IS NULL`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM livelihood_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM training_applications`).catch(() => ({ rows: [] })),
+    ]);
 
-    // Fetch history logs for each beneficiary
-    let allHistory = [];
-    try {
-      const hRes = await db.query(`SELECT * FROM beneficiary_history ORDER BY created_at DESC`);
-      allHistory = hRes.rows;
-    } catch {
-      allHistory = [];
-    }
+    const dbBeneficiaries = bRes.rows || [];
+    const allHistory = hRes.rows || [];
+    const aicsList = aRes.rows || [];
+    const pwdList = pRes.rows || [];
+    const soloList = sRes.rows || [];
+    const childList = cRes.rows || [];
+    const livList = lRes.rows || [];
+    let trainingList = trRes.rows || [];
 
-    // Cross-link applications from all service tables
-    let aicsList = [], pwdList = [], soloList = [], childList = [], livList = [], trainingList = [];
-    try {
-      const a = await db.query(`SELECT * FROM aics_applications`).catch(() => ({ rows: [] }));
-      aicsList = a.rows;
-    } catch {}
-    try {
-      const p = await db.query(`SELECT * FROM pwd_senior_applications`).catch(() => ({ rows: [] }));
-      pwdList = p.rows;
-    } catch {}
-    try {
-      const s = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'SOLO_PARENT' OR module_type IS NULL`).catch(() => ({ rows: [] }));
-      soloList = s.rows;
-    } catch {}
-    try {
-      const c = await db.query(`SELECT * FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE'`).catch(() => ({ rows: [] }));
-      childList = c.rows;
-    } catch {}
-    try {
-      const l = await db.query(`SELECT * FROM livelihood_applications`).catch(() => ({ rows: [] }));
-      livList = l.rows;
-    } catch {}
-    try {
-      const trRes = await db.query(`SELECT * FROM training_applications`).catch(() => ({ rows: [] }));
-      trainingList = trRes.rows || [];
-    } catch {}
     try {
       const trainJsonPath = path.join(__dirname, '../data/training_applications.json');
       if (fs.existsSync(trainJsonPath)) {

@@ -697,8 +697,12 @@ export default function BeneficiaryManagement() {
   const [filterProgram, setFilterProgram] = useState<"all" | ProgramKey>("all")
   const [filterVerification, setFilterVerification] = useState<"all" | VerificationStatus>("all")
 
+  const isFetchingRef = useRef(false)
+
   // Fetch beneficiaries from backend database
   const fetchBeneficiaries = useCallback(async (isSilent = false) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
     if (!isSilent) setIsLoading(true)
     setError(null)
     try {
@@ -722,6 +726,7 @@ export default function BeneficiaryManagement() {
       console.warn("[BeneficiaryManagement] Fetch failed:", err.message)
       setError(err.message || "Could not connect to database.")
     } finally {
+      isFetchingRef.current = false
       if (!isSilent) setIsLoading(false)
     }
   }, [])
@@ -734,10 +739,10 @@ export default function BeneficiaryManagement() {
       fetchBeneficiaries(true)
     })
 
-    // Silent background poll every 4 seconds for multi-device live sync
+    // Silent background poll every 12 seconds for multi-device live sync
     const interval = setInterval(() => {
       fetchBeneficiaries(true)
-    }, 4000)
+    }, 12000)
 
     return () => {
       unsubscribe()
