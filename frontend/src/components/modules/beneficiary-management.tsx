@@ -171,13 +171,7 @@ function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (b: Beneficiar
       className="border border-border rounded-xl p-4 bg-white transition-all hover:shadow-md hover:border-blue-200 cursor-pointer group"
     >
       <div className="flex items-start gap-4">
-        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-white text-sm font-semibold group-hover:bg-blue-600 transition-colors overflow-hidden">
-          {getBeneficiaryCardPhoto(b) ? (
-            <img src={getBeneficiaryCardPhoto(b)} alt={b.fullName} className="h-full w-full object-cover" />
-          ) : (
-            initials(b.fullName)
-          )}
-        </div>
+        <BeneficiaryAvatar b={b} size="md" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <p className="text-sm font-semibold text-foreground uppercase group-hover:text-blue-600 transition-colors">{b.fullName}</p>
@@ -216,42 +210,50 @@ function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (b: Beneficiar
   )
 }
 
+function BeneficiaryAvatar({
+  b,
+  size = "md",
+}: {
+  b: Beneficiary
+  size?: "sm" | "md" | "lg"
+}) {
+  const [hasError, setHasError] = useState(false)
+  const photo = !hasError ? getBeneficiaryCardPhoto(b) : ""
+
+  const sizeClasses =
+    size === "lg"
+      ? "h-12 w-12 text-base bg-slate-800"
+      : size === "sm"
+      ? "h-8 w-8 text-xs bg-slate-700"
+      : "h-10 w-10 text-sm bg-slate-700"
+
+  return (
+    <div
+      className={`hidden sm:flex shrink-0 items-center justify-center rounded-full text-white font-semibold overflow-hidden group-hover:bg-blue-600 transition-colors shadow-inner ${sizeClasses}`}
+    >
+      {photo ? (
+        <img
+          src={photo}
+          alt={b.fullName}
+          className="h-full w-full object-cover"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        initials(b.fullName)
+      )}
+    </div>
+  )
+}
+
 function getBeneficiaryCardPhoto(b: Beneficiary): string {
-  if (b.photoUrl && (b.photoUrl.startsWith("data:") || b.photoUrl.startsWith("http") || b.photoUrl.startsWith("/"))) {
+  if (b.photoUrl && (b.photoUrl.startsWith("data:image/") || b.photoUrl.startsWith("http") || b.photoUrl.startsWith("/uploads/"))) {
     return b.photoUrl
   }
 
   const resolved = getApplicantPhotoUrl(b)
-  if (resolved && resolved !== "/samples/ID PICTURE (2X2).webp") {
+  if (resolved && resolved !== "/samples/ID PICTURE (2X2).webp" && !resolved.toLowerCase().includes("sample")) {
     return resolved
   }
-
-  try {
-    const qcid = (b.qcidNumber || b.idNumber || "").trim().toLowerCase()
-    const email = (b.email || "").trim().toLowerCase()
-    const name = (b.fullName || "").trim().toLowerCase()
-
-    const localKeys = ["pwd_senior_applications", "solo_parent_applications", "child_welfare_applications", "applications", "all_user_applications"]
-    for (const k of localKeys) {
-      const raw = localStorage.getItem(k)
-      if (raw) {
-        const list = JSON.parse(raw)
-        if (Array.isArray(list)) {
-          const match = list.find((a: any) => {
-            if (!a) return false
-            const aQc = String(a.referenceNumber || a.qcid || a.qcidNo || a.assignedIdNumber || "").trim().toLowerCase()
-            const aEmail = String(a.email || "").trim().toLowerCase()
-            const aName = `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase()
-            return (qcid && aQc.includes(qcid)) || (email && aEmail === email) || (name && aName === name)
-          })
-          if (match) {
-            const mPhoto = getApplicantPhotoUrl(match)
-            if (mPhoto && mPhoto !== "/samples/ID PICTURE (2X2).webp") return mPhoto
-          }
-        }
-      }
-    }
-  } catch {}
 
   return ""
 }
@@ -294,13 +296,7 @@ function BeneficiaryProfileModal({
         <div className="px-6 pt-5 pb-4 border-b border-border bg-slate-50/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white text-base font-semibold shadow-inner overflow-hidden">
-                {getBeneficiaryCardPhoto(b) ? (
-                  <img src={getBeneficiaryCardPhoto(b)} alt={b.fullName} className="h-full w-full object-cover" />
-                ) : (
-                  initials(b.fullName)
-                )}
-              </div>
+              <BeneficiaryAvatar b={b} size="lg" />
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-foreground truncate uppercase">{b.fullName}</h2>
                 <p className="text-sm text-muted-foreground mt-0.5 font-mono">{b.beneficiaryNo}</p>

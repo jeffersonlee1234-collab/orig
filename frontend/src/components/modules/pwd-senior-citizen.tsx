@@ -747,6 +747,21 @@ function getDocImageUrl(doc: ApplicationDocument | null, app?: ApplicationSubmis
   return ""
 }
 
+function isWebImageFormat(src: string): boolean {
+  if (!src || typeof src !== "string") return false
+  if (src.startsWith("data:image/") || src.startsWith("blob:")) return true
+  const clean = src.split("?")[0].toLowerCase()
+  return (
+    clean.endsWith(".jpg") ||
+    clean.endsWith(".jpeg") ||
+    clean.endsWith(".png") ||
+    clean.endsWith(".webp") ||
+    clean.endsWith(".svg") ||
+    clean.endsWith(".gif") ||
+    clean.endsWith(".bmp")
+  )
+}
+
 export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): string {
   if (!app) return ""
 
@@ -786,7 +801,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     (app as any).extra_data?.formData?.idPhoto ||
     (app as any).extraData?.photoUrl ||
     (app as any).extraData?.idPhoto
-  if (direct && typeof direct === "string" && !direct.toLowerCase().includes("sample")) {
+  if (direct && typeof direct === "string" && !direct.toLowerCase().includes("sample") && isWebImageFormat(direct)) {
     if (direct.startsWith("data:") || direct.startsWith("http://") || direct.startsWith("https://")) {
       return direct
     }
@@ -803,7 +818,7 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
 
   const resolveDocSrc = (d: any): string => {
     if (!d) return ""
-    if (typeof d === "string") {
+    if (typeof d === "string" && isWebImageFormat(d)) {
       if (d.startsWith("data:") || d.startsWith("http://") || d.startsWith("https://")) return d
       if (d.startsWith("blob:")) return d
       if (d.startsWith("/")) return `${API_BASE}${d}`
@@ -814,14 +829,14 @@ export function getApplicantPhotoUrl(app: ApplicationSubmission | null | any): s
     if (primaryData && typeof primaryData === "string" && primaryData.startsWith("data:")) return primaryData
 
     const rawUrl = d.previewUrl || d.fileUrl || d.url || d.path || d.filePath || d.src || d.file_path
-    if (rawUrl && typeof rawUrl === "string") {
+    if (rawUrl && typeof rawUrl === "string" && isWebImageFormat(rawUrl)) {
       if (rawUrl.startsWith("data:") || rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) return rawUrl
       if (rawUrl.startsWith("blob:")) return rawUrl
       if (rawUrl.startsWith("/")) return `${API_BASE}${rawUrl}`
       if (rawUrl.startsWith("uploads/")) return `${API_BASE}/${rawUrl}`
       return `${API_BASE}/uploads/${rawUrl}`
     }
-    if (d.filename && typeof d.filename === "string" && !d.filename.toLowerCase().startsWith("sample") && !d.filename.toLowerCase().includes("samples/")) {
+    if (d.filename && typeof d.filename === "string" && isWebImageFormat(d.filename) && !d.filename.toLowerCase().startsWith("sample") && !d.filename.toLowerCase().includes("samples/")) {
       return `${API_BASE}/uploads/${d.filename}`
     }
     return ""
