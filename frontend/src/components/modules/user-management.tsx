@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   Users,
   Search,
@@ -562,8 +562,12 @@ export default function UserManagement() {
   const [filterRole, setFilterRole] = useState<"ALL" | AccountRole>("ALL")
   const [filterStatus, setFilterStatus] = useState<"ALL" | AccountStatus>("ALL")
 
+  const isFetchingRef = useRef(false)
+
   // Fetch real central users directly from Backend API
   const loadUsers = async (silent = false) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
     if (!silent) setIsLoading(true)
     setErrorMessage(null)
     try {
@@ -587,6 +591,7 @@ export default function UserManagement() {
       console.warn("Could not fetch user records:", err)
       if (!silent) setErrorMessage("Could not connect to database server.")
     } finally {
+      isFetchingRef.current = false
       if (!silent) setIsLoading(false)
     }
   }

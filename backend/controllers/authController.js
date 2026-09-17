@@ -1616,108 +1616,113 @@ exports.changePassword = async (req, res) => {
 };
 
 
+let lastUserSyncTime = 0;
+let isUserSyncInProgress = false;
+
+async function runUserTableSync() {
+  try {
+    const defaultHash = await hashPassword('default123');
+    const adminHash = await hashPassword('admin123');
+
+    await db.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+
+      -- Ensure default administrator account exists
+      INSERT INTO users (email, password, first_name, last_name, role, status, is_email_verified, qcid_number)
+      VALUES ('admin@quezoncity.gov.ph', '${adminHash}', 'System', 'Administrator', 'admin', 'active', true, '110000116932100')
+      ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'active';
+
+      -- Sync AICS applicants into users
+      INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
+      SELECT DISTINCT ON (LOWER(email))
+        LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, phone, qc_id, 'user', 'active', true, created_at
+      FROM aics_applications
+      WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
+      ON CONFLICT (email) DO NOTHING;
+
+      -- Sync PWD / Senior applicants into users
+      INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
+      SELECT DISTINCT ON (LOWER(email))
+        LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, contact_no, COALESCE(assigned_id_number, reference_number), 'user', 'active', true, submitted_at
+      FROM pwd_senior_applications
+      WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
+      ON CONFLICT (email) DO NOTHING;
+
+      -- Sync Solo Parent applicants into users
+      INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
+      SELECT DISTINCT ON (LOWER(email))
+        LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, contact_no, COALESCE(solo_parent_id_number, qcid_number), 'user', 'active', true, created_at
+      FROM solo_parent_child_welfare_applications
+      WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
+      ON CONFLICT (email) DO NOTHING;
+
+      -- Sync Livelihood applicants into users
+      INSERT INTO users (email, password, first_name, last_name, mobile_number, qcid_number, role, status, is_email_verified, created_at)
+      SELECT DISTINCT ON (LOWER(email))
+        LOWER(email), '${defaultHash}', first_name, last_name, contact_no, qcid_no, 'user', 'active', true, created_at
+      FROM livelihood_applications
+      WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
+      ON CONFLICT (email) DO NOTHING;
+    `).catch(() => {});
+  } catch (err) {
+    console.warn('[DB Note] Background user sync warning:', err.message);
+  }
+}
+
+function triggerUserSyncIfStale() {
+  const now = Date.now();
+  if (isUserSyncInProgress || (now - lastUserSyncTime < 15 * 60 * 1000)) {
+    return;
+  }
+  isUserSyncInProgress = true;
+  runUserTableSync()
+    .then(() => {
+      lastUserSyncTime = Date.now();
+    })
+    .catch((err) => {
+      console.warn('⚠️ Background user sync error:', err.message);
+    })
+    .finally(() => {
+      isUserSyncInProgress = false;
+    });
+}
+
 /**
  * GET /api/users or GET /api/auth/users
  * Returns all real registered user records directly from the central database
  */
 exports.getAllUsers = async (req, res) => {
   try {
-    // 1. Ensure required columns exist without breaking if previously missing
-    try {
-      await db.query(`
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS qcid_number VARCHAR(100);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
-      `);
-    } catch (colErr) {
-      // Non-fatal
-    }
+    triggerUserSyncIfStale();
 
-    // 2. Auto-sync existing module applicants and ensure default admin account exists
-    try {
-      const defaultHash = await hashPassword('default123');
-      const adminHash = await hashPassword('admin123');
+    // 1. Fetch all users and applications in parallel
+    const [
+      usersRes,
+      aicsRes,
+      pwdRes,
+      soloRes,
+      liveRes,
+      aptRes,
+    ] = await Promise.all([
+      db.query(`SELECT * FROM users ORDER BY id ASC`).catch(() => ({ rows: [] })),
+      db.query(`SELECT email, qc_id FROM aics_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT email, reference_number FROM pwd_senior_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT user_id, email, guardian_email, qcid_number, module_type FROM solo_parent_child_welfare_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT user_id, email, qcid_no FROM livelihood_applications`).catch(() => ({ rows: [] })),
+      db.query(`SELECT email, qcid_no FROM appointments`).catch(() => ({ rows: [] })),
+    ]);
 
-      // Auto-migrate any existing unhashed plain-text passwords in DB to bcrypt
-      try {
-        const plainUsers = await db.query("SELECT id, password FROM users WHERE password IS NOT NULL AND password NOT LIKE '$2%'");
-        for (const row of plainUsers.rows) {
-          if (row.password) {
-            const hashed = await hashPassword(row.password);
-            await db.query("UPDATE users SET password = $1 WHERE id = $2", [hashed, row.id]).catch(() => {});
-          }
-        }
-      } catch (e) {}
-
-      await db.query(`
-        -- Ensure default administrator account exists
-        INSERT INTO users (email, password, first_name, last_name, role, status, is_email_verified, qcid_number)
-        VALUES ('admin@quezoncity.gov.ph', '${adminHash}', 'System', 'Administrator', 'admin', 'active', true, '110000116932100')
-        ON CONFLICT (email) DO UPDATE SET role = 'admin', status = 'active';
-
-        -- Sync AICS applicants into users
-        INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
-        SELECT DISTINCT ON (LOWER(email))
-          LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, phone, qc_id, 'user', 'active', true, created_at
-        FROM aics_applications
-        WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
-        ON CONFLICT (email) DO NOTHING;
-
-        -- Sync PWD / Senior applicants into users
-        INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
-        SELECT DISTINCT ON (LOWER(email))
-          LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, contact_no, COALESCE(assigned_id_number, reference_number), 'user', 'active', true, submitted_at
-        FROM pwd_senior_applications
-        WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
-        ON CONFLICT (email) DO NOTHING;
-
-        -- Sync Solo Parent applicants into users
-        INSERT INTO users (email, password, first_name, last_name, middle_name, suffix, mobile_number, qcid_number, role, status, is_email_verified, created_at)
-        SELECT DISTINCT ON (LOWER(email))
-          LOWER(email), '${defaultHash}', first_name, last_name, middle_name, suffix, contact_no, COALESCE(solo_parent_id_number, qcid_number), 'user', 'active', true, created_at
-        FROM solo_parent_child_welfare_applications
-        WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
-        ON CONFLICT (email) DO NOTHING;
-
-        -- Sync Child Welfare guardians into users
-        INSERT INTO users (email, password, first_name, last_name, middle_name, mobile_number, role, status, is_email_verified, created_at)
-        SELECT DISTINCT ON (LOWER(guardian_email))
-          LOWER(guardian_email), '${defaultHash}', guardian_first_name, guardian_last_name, guardian_middle_name, guardian_contact_no, 'user', 'active', true, created_at
-        FROM solo_parent_child_welfare_applications
-        WHERE module_type = 'CHILD_WELFARE' AND guardian_email IS NOT NULL AND guardian_email != '' AND LOWER(guardian_email) NOT IN (SELECT LOWER(email) FROM users)
-        ON CONFLICT (email) DO NOTHING;
-
-        -- Sync Livelihood applicants into users
-        INSERT INTO users (email, password, first_name, last_name, mobile_number, qcid_number, role, status, is_email_verified, created_at)
-        SELECT DISTINCT ON (LOWER(email))
-          LOWER(email), '${defaultHash}', first_name, last_name, contact_no, qcid_no, 'user', 'active', true, created_at
-        FROM livelihood_applications
-        WHERE email IS NOT NULL AND email != '' AND LOWER(email) NOT IN (SELECT LOWER(email) FROM users)
-        ON CONFLICT (email) DO NOTHING;
-      `);
-    } catch (syncErr) {
-      console.warn('[DB Note] Auto-syncing applicants to users table:', syncErr.message);
-    }
-
-    let dbUsers = [];
-    try {
-      // Strictly standardize all existing names in database to UPPERCASE
-      await db.query(`
-        UPDATE users 
-        SET first_name = UPPER(first_name), 
-            middle_name = UPPER(middle_name), 
-            last_name = UPPER(last_name), 
-            suffix = UPPER(suffix);
-      `).catch(() => {});
-
-      const result = await db.query(`SELECT * FROM users ORDER BY id ASC`);
-      dbUsers = result.rows || [];
-    } catch (dbErr) {
-      console.warn('[DB Warning] Fetching users from DB failed, falling back to memory store:', dbErr.message);
-    }
+    let dbUsers = usersRes.rows || [];
+    const aicsApps = aicsRes.rows || [];
+    const pwdApps = pwdRes.rows || [];
+    const soloApps = soloRes.rows || [];
+    const liveApps = liveRes.rows || [];
+    const appointments = aptRes.rows || [];
 
     // Combine with memory users if any exist that are not in DB
     const seenEmails = new Set(dbUsers.map(u => (u.email || '').toLowerCase()));
@@ -1747,97 +1752,84 @@ exports.getAllUsers = async (req, res) => {
       }
     }
 
-    // Build user representations with connected applications counts
-    const users = await Promise.all(
-      dbUsers.map(async (u) => {
-        const userQcid = u.qcid_number || u.qcid || `110000${String(u.id).padStart(9, '0')}`;
-        const userEmail = (u.email || '').toLowerCase();
-        const userIdStr = String(u.id);
+    // Build user representations with connected applications counts in-memory (0 DB queries per user)
+    const users = dbUsers.map((u) => {
+      const userQcid = String(u.qcid_number || u.qcid || `110000${String(u.id).padStart(9, '0')}`).trim().toLowerCase();
+      const userEmail = (u.email || '').trim().toLowerCase();
+      const userIdStr = String(u.id);
 
-        let totalApps = 0;
-        let appointmentCount = 0;
+      const aicsCount = aicsApps.filter(a => 
+        (a.email && a.email.toLowerCase() === userEmail) || 
+        (a.qc_id && String(a.qc_id).toLowerCase() === userQcid)
+      ).length;
 
-        try {
-          const [aicsRes, pwdRes, soloRes, childRes, liveRes, aptRes] = await Promise.all([
-            db.query(
-              `SELECT COUNT(*) FROM aics_applications WHERE (email IS NOT NULL AND LOWER(email) = $1) OR (qc_id IS NOT NULL AND qc_id = $2)`,
-              [userEmail, userQcid]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-            db.query(
-              `SELECT COUNT(*) FROM pwd_senior_applications WHERE (email IS NOT NULL AND LOWER(email) = $1) OR (reference_number IS NOT NULL AND reference_number = $2)`,
-              [userEmail, userQcid]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-            db.query(
-              `SELECT COUNT(*) FROM solo_parent_child_welfare_applications WHERE (module_type = 'SOLO_PARENT' OR module_type IS NULL) AND (user_id = $1 OR (email IS NOT NULL AND LOWER(email) = $2) OR (qcid_number IS NOT NULL AND qcid_number = $3))`,
-              [userIdStr, userEmail, userQcid]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-            db.query(
-              `SELECT COUNT(*) FROM solo_parent_child_welfare_applications WHERE module_type = 'CHILD_WELFARE' AND (user_id = $1 OR (guardian_email IS NOT NULL AND LOWER(guardian_email) = $2) OR (email IS NOT NULL AND LOWER(email) = $2))`,
-              [userIdStr, userEmail]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-            db.query(
-              `SELECT COUNT(*) FROM livelihood_applications WHERE user_id = $1 OR (email IS NOT NULL AND LOWER(email) = $2) OR (qcid_no IS NOT NULL AND qcid_no = $3)`,
-              [userIdStr, userEmail, userQcid]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-            db.query(
-              `SELECT COUNT(*) FROM appointments WHERE (email IS NOT NULL AND LOWER(email) = $1) OR (qcid_no IS NOT NULL AND qcid_no = $2)`,
-              [userEmail, userQcid]
-            ).catch(() => ({ rows: [{ count: 0 }] })),
-          ]);
+      const pwdCount = pwdApps.filter(p => 
+        (p.email && p.email.toLowerCase() === userEmail) || 
+        (p.reference_number && String(p.reference_number).toLowerCase() === userQcid)
+      ).length;
 
-          const aicsCount = parseInt(aicsRes.rows[0]?.count || 0, 10);
-          const pwdCount = parseInt(pwdRes.rows[0]?.count || 0, 10);
-          const soloCount = parseInt(soloRes.rows[0]?.count || 0, 10);
-          const childCount = parseInt(childRes.rows[0]?.count || 0, 10);
-          const liveCount = parseInt(liveRes.rows[0]?.count || 0, 10);
-          appointmentCount = parseInt(aptRes.rows[0]?.count || 0, 10);
+      const soloCount = soloApps.filter(s => 
+        (s.module_type === 'SOLO_PARENT' || !s.module_type) &&
+        (String(s.user_id) === userIdStr || (s.email && s.email.toLowerCase() === userEmail) || (s.qcid_number && String(s.qcid_number).toLowerCase() === userQcid))
+      ).length;
 
-          totalApps = aicsCount + pwdCount + soloCount + childCount + liveCount;
-        } catch {}
+      const childCount = soloApps.filter(s => 
+        s.module_type === 'CHILD_WELFARE' &&
+        (String(s.user_id) === userIdStr || (s.guardian_email && s.guardian_email.toLowerCase() === userEmail) || (s.email && s.email.toLowerCase() === userEmail))
+      ).length;
 
-        const rawFullName = [u.first_name, u.middle_name, u.last_name, u.suffix]
-          .filter(Boolean)
-          .join(' ')
-          .trim() || (String(u.role || '').toLowerCase() === 'admin' || u.email === 'admin' ? 'System Administrator' : 'Registered Resident');
+      const liveCount = liveApps.filter(l => 
+        String(l.user_id) === userIdStr || (l.email && l.email.toLowerCase() === userEmail) || (l.qcid_no && String(l.qcid_no).toLowerCase() === userQcid)
+      ).length;
 
-        const fullName = rawFullName.toUpperCase();
+      const appointmentCount = appointments.filter(apt => 
+        (apt.email && apt.email.toLowerCase() === userEmail) || (apt.qcid_no && String(apt.qcid_no).toLowerCase() === userQcid)
+      ).length;
 
-        const isAdmin = ['admin', 'administrator', 'super_admin'].includes(String(u.role || '').toLowerCase()) || u.email === 'admin' || u.email === 'admin@quezoncity.gov.ph';
-        const displayRole = isAdmin ? 'ADMINISTRATOR' : 'USER / BENEFICIARY';
-        const isInactive = String(u.status || 'active').toLowerCase() === 'inactive' || String(u.status || 'active').toLowerCase() === 'deactivated';
-        const displayStatus = isInactive ? 'INACTIVE' : 'ACTIVE';
+      const totalApps = aicsCount + pwdCount + soloCount + childCount + liveCount;
 
-        const rawId = String(u.id);
-        const formattedId = rawId.startsWith('USR-') || rawId.startsWith('ADMIN-')
-          ? rawId
-          : isAdmin
-            ? `ADMIN-${rawId.padStart(4, '0')}`
-            : `USR-${rawId.padStart(4, '0')}`;
+      const rawFullName = [u.first_name, u.middle_name, u.last_name, u.suffix]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || (String(u.role || '').toLowerCase() === 'admin' || u.email === 'admin' ? 'System Administrator' : 'Registered Resident');
 
-        const cleanDisplayEmail = u.email === 'admin' ? 'admin@quezoncity.gov.ph' : u.email;
+      const fullName = rawFullName.toUpperCase();
 
-        return {
-          id: formattedId,
-          numericId: u.id,
-          qcidNumber: userQcid,
-          name: fullName,
-          firstName: (u.first_name || '').toUpperCase(),
-          lastName: (u.last_name || '').toUpperCase(),
-          middleName: (u.middle_name || '').toUpperCase(),
-          suffix: (u.suffix || '').toUpperCase(),
-          email: cleanDisplayEmail,
-          contactNumber: u.mobile_number || u.phone || u.contact_no || '—',
-          role: displayRole,
-          status: displayStatus,
-          dateRegistered: u.created_at || u.createdat || new Date().toISOString(),
-          lastLogin: u.last_login || u.lastlogin || u.updated_at || u.created_at || new Date().toISOString(),
-          applicationsCount: totalApps,
-          appointmentsCount: appointmentCount,
-          address: [u.house_no, u.street, u.barangay, u.city].filter(Boolean).join(', ') || u.address || 'Quezon City',
-          occupation: u.occupation || '—',
-        };
-      })
-    );
+      const isAdmin = ['admin', 'administrator', 'super_admin'].includes(String(u.role || '').toLowerCase()) || u.email === 'admin' || u.email === 'admin@quezoncity.gov.ph';
+      const displayRole = isAdmin ? 'ADMINISTRATOR' : 'USER / BENEFICIARY';
+      const isInactive = String(u.status || 'active').toLowerCase() === 'inactive' || String(u.status || 'active').toLowerCase() === 'deactivated';
+      const displayStatus = isInactive ? 'INACTIVE' : 'ACTIVE';
+
+      const rawId = String(u.id);
+      const formattedId = rawId.startsWith('USR-') || rawId.startsWith('ADMIN-')
+        ? rawId
+        : isAdmin
+          ? `ADMIN-${rawId.padStart(4, '0')}`
+          : `USR-${rawId.padStart(4, '0')}`;
+
+      const cleanDisplayEmail = u.email === 'admin' ? 'admin@quezoncity.gov.ph' : u.email;
+
+      return {
+        id: formattedId,
+        numericId: u.id,
+        qcidNumber: u.qcid_number || userQcid,
+        name: fullName,
+        firstName: (u.first_name || '').toUpperCase(),
+        lastName: (u.last_name || '').toUpperCase(),
+        middleName: (u.middle_name || '').toUpperCase(),
+        suffix: (u.suffix || '').toUpperCase(),
+        email: cleanDisplayEmail,
+        contactNumber: u.mobile_number || u.phone || u.contact_no || '—',
+        role: displayRole,
+        status: displayStatus,
+        dateRegistered: u.created_at || u.createdat || new Date().toISOString(),
+        lastLogin: u.last_login || u.lastlogin || u.updated_at || u.created_at || new Date().toISOString(),
+        applicationsCount: totalApps,
+        appointmentsCount: appointmentCount,
+        address: [u.house_no, u.street, u.barangay, u.city].filter(Boolean).join(', ') || u.address || 'Quezon City',
+        occupation: u.occupation || '—',
+      };
+    });
 
     // Ensure all unique accounts are present
     const uniqueMap = new Map();
