@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactElement } from "react"
+import { useState, useEffect, useCallback, useRef, type ReactElement } from "react"
 import {
   IdCard,
   Search,
@@ -171,8 +171,12 @@ function BeneficiaryCard({ b, onOpen }: { b: Beneficiary; onOpen: (b: Beneficiar
       className="border border-border rounded-xl p-4 bg-white transition-all hover:shadow-md hover:border-blue-200 cursor-pointer group"
     >
       <div className="flex items-start gap-4">
-        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-white text-sm font-semibold group-hover:bg-blue-600 transition-colors">
-          {initials(b.fullName)}
+        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-white text-sm font-semibold group-hover:bg-blue-600 transition-colors overflow-hidden">
+          {getBeneficiaryCardPhoto(b) ? (
+            <img src={getBeneficiaryCardPhoto(b)} alt={b.fullName} className="h-full w-full object-cover" />
+          ) : (
+            initials(b.fullName)
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -290,8 +294,12 @@ function BeneficiaryProfileModal({
         <div className="px-6 pt-5 pb-4 border-b border-border bg-slate-50/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white text-base font-semibold shadow-inner">
-                {initials(b.fullName)}
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white text-base font-semibold shadow-inner overflow-hidden">
+                {getBeneficiaryCardPhoto(b) ? (
+                  <img src={getBeneficiaryCardPhoto(b)} alt={b.fullName} className="h-full w-full object-cover" />
+                ) : (
+                  initials(b.fullName)
+                )}
               </div>
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-foreground truncate uppercase">{b.fullName}</h2>
