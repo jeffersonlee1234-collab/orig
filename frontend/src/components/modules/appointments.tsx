@@ -289,14 +289,28 @@ function getAppointmentDeduplicationKey(a: { referenceNo?: string; applicantName
 
 // ---- Main Component ----
 export default function Appointments() {
-  const [appointments, setAppointments] = useState<AppointmentRequest[]>(MOCK_APPOINTMENTS)
+  const [appointments, setAppointments] = useState<AppointmentRequest[]>(() => {
+    try {
+      const cached = localStorage.getItem("cached_appointments_list")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      }
+    } catch {}
+    return MOCK_APPOINTMENTS
+  })
   const [schedulingAppt, setSchedulingAppt] = useState<AppointmentRequest | null>(null)
   const [filterModule, setFilterModule] = useState<"all" | ModuleKey>("all")
   const [filterStatus, setFilterStatus] = useState<"all" | AppointmentStatus>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const isFetchingRef = useState({ current: false })[0]
 
   useEffect(() => {
     const fetchAppointments = async () => {
+      if (isFetchingRef.current) return
+      isFetchingRef.current = true
       try {
         let appts: AppointmentRequest[] = []
 
@@ -319,7 +333,7 @@ export default function Appointments() {
           }
         } catch {}
 
-        // 1. Fetch from PostgreSQL /api/appointments
+        // 1. Fetch from PostgreSQL /api/appointments (already aggregates all modules in DB)
         const resDb = await fetch(`${API_BASE}/api/appointments`)
         if (resDb.ok) {
           const dataDb = await resDb.json()
@@ -361,142 +375,6 @@ export default function Appointments() {
             appts.push(...mapped)
           }
         }
-
-        // 2. Fetch from /api/aics/applications (Approved Only) as fallback sync
-        const resAics = await fetch(`${API_BASE}/api/aics/applications`)
-        if (resAics.ok) {
-          const dataAics = await resAics.json()
-          if (dataAics.applications && Array.isArray(dataAics.applications)) {
-            dataAics.applications.forEach((app: any) => {
-              const ref = app.qc_id || app.qcid || app.reference_no || app.reference_number || "110000116932100"
-              if (app.status === "approved" || app.status === "completed" || app.status === "for_release") {
-                const apptId = `aics-appt-${app.id}`
-                const fullName = [app.first_name, app.middle_name, app.last_name, app.suffix].filter(Boolean).join(" ") || "APPLICANT"
-                const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
-                const cleanType = rawType.charAt(0).toUpperCase() + rawType.slice(1) + " Assistance"
-
-                const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${cleanType}`]
-                appts.push({
-                  id: apptId,
-                  referenceNo: ref,
-                  module: "AICS",
-                  applicantName: fullName,
-                  submittedAt: app.created_at || new Date().toISOString(),
-                  concern: cleanType,
-                  status: (cached?.status || "pending") as AppointmentStatus,
-                  scheduledDate: cached?.scheduledDate,
-                  scheduledTime: cached?.scheduledTime,
-                  officeLocation: cached?.officeLocation,
-                  notes: cached?.notes,
-                })
-              }
-            })
-          }
-        }
-
-        // 3. Fetch from /api/pwd-senior/applications (Approved Social Assistance Only) as fallback sync
-        let pwdSeniorApps: any[] = []
-        let pwdSeniorFetchSuccess = false
-        try {
-          const resPwd = await fetch(`${API_BASE}/api/pwd-senior/applications`)
-          if (resPwd.ok) {
-            pwdSeniorApps = await resPwd.json()
-            pwdSeniorFetchSuccess = true
-          }
-        } catch {}
-
-        if (!pwdSeniorFetchSuccess) {
-          try {
-            const local = localStorage.getItem("pwd_senior_applications")
-            if (local) {
-              const parsed = JSON.parse(local)
-              if (Array.isArray(parsed)) {
-                pwdSeniorApps = parsed
-              }
-            }
-          } catch {}
-        }
-
-        if (Array.isArray(pwdSeniorApps) && pwdSeniorApps.length > 0) {
-          pwdSeniorApps.forEach((app: any) => {
-            const ref = app.qcid || app.qc_id || app.referenceNumber || app.reference_number || app.id
-            const isAssistance =
-              app.type === "assistance" ||
-              app.type === "social-assistance" ||
-              String(app.category || "").toLowerCase().includes("assistance") ||
-              String(app.service || "").toLowerCase().includes("assistance") ||
-              String(app.assistanceType || "").toLowerCase().includes("assistance") ||
-              String(app.disabilityClass || "").toLowerCase().includes("assistance")
-
-            if (isAssistance) {
-              if (app.status === "approved" || app.status === "completed" || app.status === "for_release") {
-                const apptId = `pwd-senior-appt-${app.id || ref}`
-                const fullName =
-                  [app.firstName, app.middleName, app.lastName, app.suffix].filter(Boolean).join(" ") ||
-                  [app.first_name, app.middle_name, app.last_name, app.suffix].filter(Boolean).join(" ") ||
-                  "APPLICANT"
-                const isPwdApp = String(app.category || app.service || app.assistanceType || "").toUpperCase().includes("PWD")
-                const concernName = isPwdApp ? "PWD Social Assistance" : "Senior Social Assistance"
-
-                const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${concernName}`]
-                appts.push({
-                  id: apptId,
-                  referenceNo: ref,
-                  module: isPwdApp ? "PWD" : "Senior Citizen",
-                  applicantName: fullName,
-                  submittedAt: app.submittedAt || app.created_at || new Date().toISOString(),
-                  concern: concernName,
-                  status: (cached?.status || "pending") as AppointmentStatus,
-                  scheduledDate: cached?.scheduledDate,
-                  scheduledTime: cached?.scheduledTime,
-                  officeLocation: cached?.officeLocation,
-                  notes: cached?.notes,
-                })
-              }
-            }
-          })
-        }
-
-        // 4. Fetch from /api/child-welfare/admin/all (Approved Child Welfare Only)
-        try {
-          const resCw = await fetch(`${API_BASE}/api/child-welfare/admin/all?limit=100`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-            },
-          })
-          if (resCw.ok) {
-            const dataCw = await resCw.json()
-            const cwApps = Array.isArray(dataCw.applications) ? dataCw.applications : []
-            cwApps.forEach((c: any) => {
-              const st = String(c.application_status || c.status).toLowerCase()
-              if (st === "approved" || st === "for_release" || st === "released" || st === "completed") {
-                const ref = c.reference_number || `CW-2026-${c.id}`
-                const apptId = `cw-appt-${c.id || ref}`
-                const fullName =
-                  [c.guardian_first_name, c.guardian_last_name].filter(Boolean).join(" ") ||
-                  c.child_name ||
-                  "APPLICANT"
-                const concernName = c.category_title ? `${c.category_title} (Child Welfare)` : "Child Welfare Support"
-                const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${concernName}`]
-
-                appts.push({
-                  id: apptId,
-                  referenceNo: ref,
-                  module: "Child Welfare",
-                  applicantName: fullName,
-                  submittedAt: c.updated_at || c.created_at || new Date().toISOString(),
-                  concern: concernName,
-                  status: (cached?.status || "pending") as AppointmentStatus,
-                  scheduledDate: cached?.scheduledDate,
-                  scheduledTime: cached?.scheduledTime,
-                  officeLocation: cached?.officeLocation || "Quezon City Hall",
-                  notes: cached?.notes,
-                })
-              }
-            })
-          }
-        } catch {}
 
         // Filter out any dismissed / deleted appointments
         appts = appts.filter((a) => {
@@ -543,9 +421,17 @@ export default function Appointments() {
           }
         })
 
-        setAppointments(Array.from(dedupedMap.values()))
+        const finalAppts = Array.from(dedupedMap.values())
+        if (finalAppts.length > 0) {
+          setAppointments(finalAppts)
+          try {
+            localStorage.setItem("cached_appointments_list", JSON.stringify(finalAppts))
+          } catch {}
+        }
       } catch (err) {
         console.warn("Could not fetch appointments from backend:", err)
+      } finally {
+        isFetchingRef.current = false
       }
     }
 
@@ -580,7 +466,7 @@ export default function Appointments() {
         })
         return hasChanges ? updated : prev
       })
-    }, 3000)
+    }, 5000)
 
     const unsubscribeRealtime = subscribeToRealtimeChanges(() => {
       fetchAppointments()
