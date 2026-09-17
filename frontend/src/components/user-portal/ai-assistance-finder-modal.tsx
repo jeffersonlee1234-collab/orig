@@ -25,6 +25,10 @@ import {
   Loader2,
   Scale,
   BadgeCheck,
+  Clock,
+  Building2,
+  MapPin,
+  Activity,
 } from "lucide-react"
 import { useLanguage, type Language } from "../ui/language-context"
 import { API_BASE } from "../../config/api"
@@ -46,8 +50,8 @@ const I18N = {
     step4Tab: "4. AI Assessment & Recommendations",
 
     // Step 1
-    s1Title: "Household Profile & Economic Status",
-    s1Subtitle: "Please provide baseline information about your family and living conditions.",
+    s1Title: "Household Profile & Socio-Economic Demographics",
+    s1Subtitle: "Please provide baseline demographic and living conditions to ensure precise MSWDO policy evaluation.",
     qApplicant: "Who is the primary applicant?",
     optSelf: "Myself (Individual)",
     optChild: "My Child / Minor Dependent",
@@ -76,6 +80,31 @@ const I18N = {
     optResOwner: "Permanent Resident (Own house/lot)",
     optResRenter: "Renting / Boarding resident",
     optResInformal: "Informal Settler / Temporary shelter",
+
+    qBarangay: "Barangay of Residence (Within Municipality):",
+    optBrgyPoblacion: "Barangay Poblacion (Municipal Proper)",
+    optBrgySanIsidro: "Barangay San Isidro",
+    optBrgyStaMaria: "Barangay Santa Maria",
+    optBrgySanVicente: "Barangay San Vicente",
+    optBrgyOther: "Other Registered Barangay (Within Municipality)",
+    optBrgyTransient: "Transient / Non-Resident / Stranded (Displaced / Emergency)",
+
+    qSocialRegistry: "Existing Government Social Welfare Program Status:",
+    optRegNon4Ps: "Non-4Ps Household (Direct Citizen Applicant)",
+    optReg4Ps: "Active 4Ps Beneficiary (Pantawid Pamilyang Pilipino)",
+    optRegSocialPension: "Indigent Social Pensioner / OSCA Member",
+    optRegListahanan: "Listahanan-3 Identified Poor Household",
+
+    qHealthInsurance: "Health Insurance & Medical Coverage (PhilHealth):",
+    optHealthIndigent: "PhilHealth Indigent / Sponsored (LGU / DSWD)",
+    optHealthSenior: "Senior Citizen Automatic Member (RA 10645)",
+    optHealthEmployed: "Direct Contributor / Employed Member",
+    optHealthNone: "No Active PhilHealth / Unenrolled",
+
+    qUrgency: "Assistance Urgency & Timeline Need:",
+    optUrgImmediate: "Immediate Emergency (Within 24–48h - Hospital Discharge / Burial / Crisis)",
+    optUrgUrgent: "Urgent Need (Within 1–2 Weeks - Unpaid bills / Medicines)",
+    optUrgStandard: "Standard Application (Regular Welfare ID / Annual Pension / Livelihood)",
 
     // Step 2: Real Life Circumstances & Hardships
     s2Title: "Current Life Situation & Hardships",
@@ -111,7 +140,7 @@ const I18N = {
     // Step 3
     s3Title: "Narrative Statement of Situation",
     s3Subtitle: "Describe your family's current emergency or financial hardship in your own words:",
-    narrativePlaceholder: "Example: I am a single mother of 3 children. My youngest child was recently hospitalized with pneumonia, and I currently have no stable work to pay the hospital bill...",
+    narrativePlaceholder: "Example: I am a single mother of 3 children living in Barangay Poblacion. My youngest child was recently hospitalized with pneumonia, and I currently have no stable work to pay the hospital bill...",
     quickChipsLabel: "Or click a pre-filled scenario:",
     chip1: "Hospital bills & maintenance medicines",
     chip2: "Solo parent needing store capital & child subsidy",
@@ -133,7 +162,7 @@ const I18N = {
     resSubtitle: "Based on your intake answers, you are eligible for the following municipal government programs:",
     matchConfidence: "Eligibility Match Score",
     statusEligible: "Highly Qualified for Government Aid",
-    reqDocsTitle: "Required Documents to Prepare:",
+    reqDocsTitle: "Required Documents to Prepare (Original & Copies):",
     rationaleTitle: "AI Policy Justification & Legal Basis (Transparency):",
     actionAdviceTitle: "Recommended Action Plan & Next Steps:",
     geminiBadge: "Verified by Google Gemini AI Engine",
@@ -143,6 +172,11 @@ const I18N = {
     incomeTierBadge: "Income Bracket Verified:",
     dependencyBadge: "Household Vulnerability:",
     statusPrescreened: "MSWDO Pre-Screened & Qualified",
+    urgencyTierLabel: "Assessed Priority Tier:",
+    windowLabel: "Designated MSWDO Window / Unit:",
+    turnaroundLabel: "Processing Turnaround:",
+    socialRegistryLabel: "Welfare Registry Status:",
+    healthCoverageLabel: "Health Coverage / PhilHealth:",
     askGeminiTitle: "Ask MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "Have questions regarding documentary requirements, processing days, or appeal procedures? Ask below:",
     askGeminiPlaceholder: "Example: How many days will it take for medical assistance to be released?",
@@ -166,8 +200,8 @@ const I18N = {
     step4Tab: "4. Rekomendasyon ng AI",
 
     // Step 1
-    s1Title: "Profile ng Sambahayan at Antas ng Pamumuhay",
-    s1Subtitle: "Magbigay ng pangunahing impormasyon tungkol sa iyong pamilya at kalagayan sa buhay.",
+    s1Title: "Profile ng Sambahayan at Katayuang Sosyo-Ekonomiko",
+    s1Subtitle: "Magbigay ng detalyadong impormasyon tungkol sa iyong pamilya at kalagayan sa buhay para sa tumpak na ebalwasyon.",
     qApplicant: "Para kanino ang hinihinging tulong?",
     optSelf: "Aking Sarili (Indibidwal)",
     optChild: "Aking Anak / Menor de edad na Dependent",
@@ -196,6 +230,31 @@ const I18N = {
     optResOwner: "Permanenteng Residente (May sariling bahay/lupa)",
     optResRenter: "Nangungupahan / Umuupa ng kwarto",
     optResInformal: "Informal Settler / Pansamantalang tirahan",
+
+    qBarangay: "Barangay ng Paninirahan sa Munisipyo:",
+    optBrgyPoblacion: "Barangay Poblacion (Poblacion Proper)",
+    optBrgySanIsidro: "Barangay San Isidro",
+    optBrgyStaMaria: "Barangay Santa Maria",
+    optBrgySanVicente: "Barangay San Vicente",
+    optBrgyOther: "Ibang Rehistradong Barangay (Sa Loob ng Munisipyo)",
+    optBrgyTransient: "Transient / Dumaraan / Na-stranded (Emergency)",
+
+    qSocialRegistry: "Kasalukuyang Katayuan sa Social Welfare / 4Ps:",
+    optRegNon4Ps: "Hindi Miyembro ng 4Ps (Karaniwang Mamamayan)",
+    optReg4Ps: "Aktibong Benepisyaryo ng 4Ps (Pantawid Pamilya)",
+    optRegSocialPension: "Indigent Social Pensioner / OSCA Member",
+    optRegListahanan: "Kabilang sa Listahanan-3 Identified Poor",
+
+    qHealthInsurance: "Seguro sa Kalusugan / PhilHealth Coverage:",
+    optHealthIndigent: "PhilHealth Indigent / Sponsored (LGU / DSWD)",
+    optHealthSenior: "Senior Citizen Automatic PhilHealth (RA 10645)",
+    optHealthEmployed: "Direktang Nagbabayad / May Trabaho",
+    optHealthNone: "Walang PhilHealth / Hindi Rehistrado",
+
+    qUrgency: "Kagyat na Pangangailangan at Panahon:",
+    optUrgImmediate: "Kagyat na Emergency (Sa loob ng 24–48h - Ospital / Libing / Krisis)",
+    optUrgUrgent: "Mabilisang Pangangailangan (Sa loob ng 1–2 Linggo - Gamot / Reseta)",
+    optUrgStandard: "Karaniwang Aplikasyon (ID Card / Taunang Pensyon / Puhunan)",
 
     // Step 2: Real Life Circumstances & Hardships
     s2Title: "Kasalukuyang Kalagayan at Nararanasang Krisis",
@@ -231,7 +290,7 @@ const I18N = {
     // Step 3
     s3Title: "Kwento at Detalye ng Kasalukuyang Krisis",
     s3Subtitle: "Ilarawan gamit ang sariling salita ang pinakamabigat na suliranin o pangangailangan ng pamilya:",
-    narrativePlaceholder: "Halimbawa: Ako po ay isang solong ina na may 3 anak. Na-ospital po ang bunso kong anak dahil sa pneumonia at wala po akong regular na trabaho pambayad sa billing...",
+    narrativePlaceholder: "Halimbawa: Ako po ay isang solong ina na may 3 anak mula Barangay Poblacion. Na-ospital po ang bunso kong anak dahil sa pneumonia at wala po akong regular na trabaho pambayad sa billing...",
     quickChipsLabel: "O pumili ng mabilisang sitwasyon:",
     chip1: "Hospital bills at maintenance na gamot ng may sakit",
     chip2: "Solong magulang na kailangan ng puhunan at ayuda sa anak",
@@ -253,7 +312,7 @@ const I18N = {
     resSubtitle: "Batay sa iyong mga isinumiteng sagot sa panayam, ikaw ay kwalipikado sa mga sumusunod na programa:",
     matchConfidence: "Antas ng Pagiging Kwalipikado (Match Score)",
     statusEligible: "Lubos na Kwalipikado sa Tulong ng Pamahalaan",
-    reqDocsTitle: "Mga Dokumentong Dapat Ihanda:",
+    reqDocsTitle: "Mga Dokumentong Dapat Ihanda (Orihinal at Kopya):",
     rationaleTitle: "Paliwanag at Batayan sa Batas (AI Transparency):",
     actionAdviceTitle: "Mga Inirerekomendang Hakbang at Plano:",
     geminiBadge: "Sinuri at Pinatotohanan ng Google Gemini AI",
@@ -263,6 +322,11 @@ const I18N = {
     incomeTierBadge: "Antas ng Kita:",
     dependencyBadge: "Kalagayan ng Pamilya:",
     statusPrescreened: "Pre-Screened ng MSWDO",
+    urgencyTierLabel: "Antas ng Prayoridad:",
+    windowLabel: "Nakatalagang Window / Unit ng MSWDO:",
+    turnaroundLabel: "Araw ng Pagproseso:",
+    socialRegistryLabel: "Katayuan sa 4Ps / Registry:",
+    healthCoverageLabel: "PhilHealth / Medical Coverage:",
     askGeminiTitle: "Magtanong sa MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "May mga katanungan tungkol sa mga dokumento, araw ng pag-release, o proseso? Magtanong dito:",
     askGeminiPlaceholder: "Halimbawa: Ilang araw bago makuha ang guarantee letter para sa ospital?",
@@ -287,7 +351,7 @@ const I18N = {
 
     // Step 1
     s1Title: "Profile sa Panimalay ug Panginabuhian",
-    s1Subtitle: "Palihog paghatag og kasayuran bahin sa imong pamilya ug kahimtang sa kinabuhi.",
+    s1Subtitle: "Palihog paghatag og detalyadong kasayuran bahin sa imong pamilya ug kahimtang sa kinabuhi.",
     qApplicant: "Para kang kinsa ang gipangayo nga tabang?",
     optSelf: "Akong Kaugalingon (Indibidwal)",
     optChild: "Akong Anak / Menor de edad nga Pamilya",
@@ -317,6 +381,31 @@ const I18N = {
     optResRenter: "Nag-abang og kwarto o balay",
     optResInformal: "Informal Settler / Temporaryong puy-anan",
 
+    qBarangay: "Barangay sa Puy-anan sa Munisipyo:",
+    optBrgyPoblacion: "Barangay Poblacion (Sentro)",
+    optBrgySanIsidro: "Barangay San Isidro",
+    optBrgyStaMaria: "Barangay Santa Maria",
+    optBrgySanVicente: "Barangay San Vicente",
+    optBrgyOther: "Laing Rehistradong Barangay (Sulod sa Munisipyo)",
+    optBrgyTransient: "Transient / Na-stranded (Dinalian)",
+
+    qSocialRegistry: "Kahimtang sa Social Welfare / 4Ps:",
+    optRegNon4Ps: "Dili Miyembro sa 4Ps (Direktang Lungsuranon)",
+    optReg4Ps: "Aktibong Benepisyaryo sa 4Ps (Pantawid Pamilya)",
+    optRegSocialPension: "Indigent Social Pensioner / OSCA Member",
+    optRegListahanan: "Listahanan-3 Identified Poor",
+
+    qHealthInsurance: "Seguro sa Panglawas / PhilHealth Coverage:",
+    optHealthIndigent: "PhilHealth Indigent / Sponsored (LGU / DSWD)",
+    optHealthSenior: "Senior Citizen Automatic PhilHealth (RA 10645)",
+    optHealthEmployed: "Direktang Nagbayad / May Trabaho",
+    optHealthNone: "Walay PhilHealth / Dili Rehistrado",
+
+    qUrgency: "Gidugayon sa Panginahanglan:",
+    optUrgImmediate: "Dinalian nga Emergency (Sulod sa 24–48h - Ospital / Lubong / Krisis)",
+    optUrgUrgent: "Gikinahanglan Diriot (Sulod sa 1–2 Semana - Tambal / Reseta)",
+    optUrgStandard: "Standard nga Aplikasyon (ID Card / Pension / Puhunan)",
+
     // Step 2: Real Life Circumstances & Hardships
     s2Title: "Kasamtangang Kalisdanan ug Sitwasyon sa Panimalay",
     s2Subtitle: "Pilia ang tanang tinuod nga kalisod o emerhensiya nga gi-atubang sa inyong panimalay karon. Tumbokon sa AI ang tanang tabang sa gobyerno nga angayan ninyong madawat:",
@@ -328,7 +417,7 @@ const I18N = {
     hBurialDesc: "Namatyan bag-ohay lang ug walay ikabayad sa punerarya, lungon, haya, o paglubong.",
 
     hFoodTitle: "Kulang sa Pagkaon ug Adlaw-adlaw nga Panginahanglan",
-    hFoodDesc: "Walay makaon, gutom, o dinaliang nawad-an og kita ang nag-unang nagtrabaho sa panimalay.",
+    hFoodDesc: "Walang makaon, gutom, o dinaliang nawad-an og kita ang nag-unang nagtrabaho sa panimalay.",
 
     hTranspoTitle: "Na-stranded o Plete Pauli sa Probinsya",
     hTranspoDesc: "Walay pamasahe pauli sa probinsya o na-stranded sa syudad nga walay kapaingnan.",
@@ -351,7 +440,7 @@ const I18N = {
     // Step 3
     s3Title: "Sugilanon ug Detalye sa Kasamtangang Sitwasyon",
     s3Subtitle: "Ihulagway gamit ang imong kaugalingong pulong ang pinakalisod nga suliran o panginahanglan sa pamilya:",
-    narrativePlaceholder: "Pananglitan: Ako usa ka solo nga inahan nga dunay 3 ka anak. Na-ospital ang akong kamanghuran tungod sa pneumonia ug wala koy regular nga trabaho...",
+    narrativePlaceholder: "Pananglitan: Ako usa ka solo nga inahan nga dunay 3 ka anak nga nagpuyo sa Poblacion. Na-ospital ang akong kamanghuran tungod sa pneumonia ug wala koy regular nga trabaho...",
     quickChipsLabel: "O pagpili og dali nga sitwasyon:",
     chip1: "Hospital bills ug maintenance nga tambal sa masakiton",
     chip2: "Solo parent nga nagkinahanglan og puhunan ug ayuda sa anak",
@@ -373,7 +462,7 @@ const I18N = {
     resSubtitle: "Base sa imong mga tubag sa interbyu, kwalipikado ka sa mga mosunod nga programa:",
     matchConfidence: "Lebel sa Pagka-Kwalipikado (Match Score)",
     statusEligible: "Hingpit nga Kwalipikado sa Tabang sa Gobyerno",
-    reqDocsTitle: "Mga Dokumento nga Kinahanglang Andamon:",
+    reqDocsTitle: "Mga Dokumento nga Kinahanglang Andamon (Orihinal ug Kopya):",
     rationaleTitle: "Katin-awan ug Basehanan sa Balaod (AI Transparency):",
     actionAdviceTitle: "Girekomendar nga Plano ug Sunod nga Lakang:",
     geminiBadge: "Gipamatud-an sa Google Gemini AI Engine",
@@ -383,6 +472,11 @@ const I18N = {
     incomeTierBadge: "Ang-ang sa Kita:",
     dependencyBadge: "Kahimtang sa Panimalay:",
     statusPrescreened: "Pre-Screened sa MSWDO",
+    urgencyTierLabel: "Lebel sa Dinaliang Pagtagad:",
+    windowLabel: "Window / Unit sa MSWDO:",
+    turnaroundLabel: "Gidugayon sa Pagproseso:",
+    socialRegistryLabel: "Kahimtang sa 4Ps / Registry:",
+    healthCoverageLabel: "PhilHealth / Medical Coverage:",
     askGeminiTitle: "Pangutana sa MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "Naay mga pangutana bahin sa mga rekisitos, gidugayon sa pagpagawas, o proseso? Pangutana dinhi:",
     askGeminiPlaceholder: "Pananglitan: Pila ka adlaw una makuha ang tabang pinansyal sa ospital?",
@@ -425,6 +519,10 @@ export default function AIAssistanceFinderModal({
   const [dependentsCount, setDependentsCount] = useState("3-5")
   const [employmentStatus, setEmploymentStatus] = useState("daily")
   const [residencyType, setResidencyType] = useState("owner")
+  const [barangay, setBarangay] = useState("poblacion")
+  const [socialRegistry, setSocialRegistry] = useState("non_4ps")
+  const [healthInsurance, setHealthInsurance] = useState("indigent")
+  const [urgency, setUrgency] = useState("immediate")
 
   // Step 2: Real Life Circumstances & Hardship Indicators
   const [selectedHardships, setSelectedHardships] = useState<Record<string, boolean>>({
@@ -522,6 +620,10 @@ export default function AIAssistanceFinderModal({
           dependentsCount,
           employmentStatus,
           residencyType,
+          barangay,
+          socialRegistry,
+          healthInsurance,
+          urgency,
           selectedHardships,
           narrativeText,
         }),
@@ -588,6 +690,8 @@ export default function AIAssistanceFinderModal({
       const hasSenior =
         selectedHardships.elderly_care ||
         applicantType === "senior" ||
+        socialRegistry === "social_pension" ||
+        healthInsurance === "senior" ||
         narrativeLower.includes("senior") ||
         narrativeLower.includes("lolo") ||
         narrativeLower.includes("lola")
@@ -625,6 +729,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Immediate Crisis Relief" : selectedLang === "tl" ? "Kagyat na Tulong sa Krisis" : "Dinalian nga Tabang",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Urgent Healthcare Need)" : selectedLang === "tl" ? "Kwalipikado (Kagyat na Gastusing Medikal)" : "Kwalipikado (Dinaliang Gasto sa Ospital)",
           legalBasis: selectedLang === "en" ? "DSWD Crisis Intervention Unit (CIU) Guidelines & Municipal AICS Ordinance" : selectedLang === "tl" ? "DSWD Crisis Intervention Unit (CIU) at Municipal AICS Ordinance" : "DSWD CIU Guidelines ug Municipal AICS Ordinansa",
+          windowUnit: selectedLang === "en" ? "Window 2: Crisis Intervention Unit (CIU)" : selectedLang === "tl" ? "Window 2: Crisis Intervention Unit (CIU)" : "Window 2: Crisis Intervention Unit (CIU)",
+          turnaround: selectedLang === "en" ? "Same-Day Release (Guarantee Letter) / 2-3 Days (Cash)" : selectedLang === "tl" ? "Same-Day Release (GL) / 2-3 Araw (Cash Aid)" : "Same-Day Release (GL) / 2-3 ka Adlaw (Cash)",
           estBenefit: "₱3,000 – ₱25,000 (Based on Hospital Bill / Prescription)",
           desc: selectedLang === "en"
             ? "Direct financial aid or hospital guarantee letter covering medicine costs, dialysis sessions, laboratory fees, and hospital bills."
@@ -634,13 +740,18 @@ export default function AIAssistanceFinderModal({
           criteriaMatched: [
             selectedLang === "en" ? "Documented urgent medical condition, hospital confinement, dialysis, or costly maintenance prescription." : selectedLang === "tl" ? "May kagyat na gastusin sa ospital, dialysis, chemotherapy, o reseta ng gamot." : "Adunay bayronon sa ospital, dialysis, o mahal nga tambal.",
             selectedLang === "en" ? "Household monthly income falls within indigent/low-income threshold." : selectedLang === "tl" ? "Pasok ang kita ng pamilya sa indigent o low-income threshold." : "Ang kita sa pamilya nasulod sa indigent o ubos nga kita.",
-            selectedLang === "en" ? "Eligible for local MSWDO Guarantee Letter issuance." : selectedLang === "tl" ? "Kwalipikado sa pag-isyu ng Guarantee Letter sa partner hospitals." : "Kwalipikado sa pag-isyu og Guarantee Letter sa ospital.",
+            healthInsurance === "indigent" || healthInsurance === "senior"
+              ? (selectedLang === "en" ? "Eligible for PhilHealth + MSWDO AICS Guarantee Letter co-financing (Zero Balance Billing)." : selectedLang === "tl" ? "Kwalipikado sa PhilHealth + MSWDO AICS co-financing para sa Zero Balance Billing." : "Kwalipikado sa PhilHealth + MSWDO AICS co-financing.")
+              : (selectedLang === "en" ? "Eligible for direct municipal emergency hospital subsidy." : selectedLang === "tl" ? "Kwalipikado sa direktang emergency medical assistance mula sa munisipyo." : "Kwalipikado sa direct municipal emergency subsidy."),
+            socialRegistry === "4ps"
+              ? (selectedLang === "en" ? "4Ps Beneficiary verified: Co-assistance permitted without regular grant deduction." : selectedLang === "tl" ? "Beripikadong 4Ps: Pinapayagan ang tulong nang walang bawas sa regular na 4Ps grant." : "Beripikadong 4Ps: Gitugotan ang tabang nga walay bawas sa 4Ps grant.")
+              : (selectedLang === "en" ? "Non-4Ps indigent citizen qualification verified." : selectedLang === "tl" ? "Kumpirmadong kwalipikadong indigent citizen." : "Kumpirmadong indigent citizen.")
           ],
           docs: [
-            selectedLang === "en" ? "Medical Abstract / Medical Certificate" : selectedLang === "tl" ? "Medical Abstract o Sertipiko ng Doktor" : "Medical Abstract o Sertipiko sa Doktor",
+            selectedLang === "en" ? "Medical Abstract / Medical Certificate (Original)" : selectedLang === "tl" ? "Medical Abstract o Sertipiko ng Doktor (Original)" : "Medical Abstract o Sertipiko sa Doktor (Original)",
             selectedLang === "en" ? "Hospital Billing Statement / Pharmacy Prescription" : selectedLang === "tl" ? "Hospital Billing Statement / Reseta ng Gamot" : "Hospital Billing Statement / Reseta sa Tambal",
-            selectedLang === "en" ? "Barangay Certificate of Indigency" : selectedLang === "tl" ? "Barangay Certificate of Indigency" : "Barangay Certificate of Indigency",
-            selectedLang === "en" ? "Valid Government-Issued ID" : selectedLang === "tl" ? "Valid Government ID ng Pasyente o Kinatawan" : "Valid Government ID sa Pasyente o Representante",
+            selectedLang === "en" ? "Barangay Certificate of Indigency (Medical Purpose)" : selectedLang === "tl" ? "Barangay Certificate of Indigency (Para sa Tulong Medikal)" : "Barangay Certificate of Indigency (Para sa Tabang Medikal)",
+            selectedLang === "en" ? "Valid Government-Issued ID of Patient & Claimant" : selectedLang === "tl" ? "Valid Government ID ng Pasyente at Mag-aasikaso" : "Valid Government ID sa Pasyente ug Nagproseso",
           ],
           actionUrl: "/portal/aics?type=medical",
           actionLabel: selectedLang === "en" ? "Apply for AICS Medical" : selectedLang === "tl" ? "Mag-apply sa AICS Medical" : "Mag-apply sa AICS Medikal",
@@ -660,49 +771,54 @@ export default function AIAssistanceFinderModal({
           id: "aics_burial",
           category: selectedLang === "en" ? "AICS Crisis Assistance" : selectedLang === "tl" ? "Tulong sa Libing ng AICS" : "Tabang sa Lubong sa AICS",
           icon: ShieldAlert,
-          badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
-          title: selectedLang === "en" ? "AICS Funeral & Burial Cash Grant" : selectedLang === "tl" ? "AICS Funeral & Burial Cash Assistance" : "AICS Tabang Pinansyal sa Lubong",
+          badgeColor: "bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700",
+          title: selectedLang === "en" ? "AICS Funeral & Burial Cash Assistance" : selectedLang === "tl" ? "AICS Funeral & Burial Cash Assistance" : "AICS Tabang Pinansyal sa Lubong",
           priority: selectedLang === "en" ? "Immediate Crisis Relief" : selectedLang === "tl" ? "Kagyat na Tulong sa Krisis" : "Dinalian nga Tabang",
-          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Bereavement Grant)" : selectedLang === "tl" ? "Kwalipikado (Tulong sa Burol)" : "Kwalipikado (Tabang sa Lubong)",
-          legalBasis: selectedLang === "en" ? "DSWD CIU Guidelines on Bereavement Financial Assistance" : selectedLang === "tl" ? "DSWD CIU Guidelines sa Tulong sa Namatayan" : "DSWD CIU Guidelines sa Tabang sa Namatyan",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Bereavement Grant)" : selectedLang === "tl" ? "Kwalipikado sa Ayuda sa Libing" : "Kwalipikado sa Tabang sa Lubong",
+          legalBasis: selectedLang === "en" ? "DSWD Crisis Intervention Unit Guidelines on Funeral Aid" : selectedLang === "tl" ? "DSWD CIU Guidelines sa Tulong sa Namatayan" : "DSWD CIU Guidelines sa Tabang sa Namatyan",
+          windowUnit: selectedLang === "en" ? "Window 2: Crisis Intervention Unit (CIU)" : selectedLang === "tl" ? "Window 2: Crisis Intervention Unit (CIU)" : "Window 2: Crisis Intervention Unit (CIU)",
+          turnaround: selectedLang === "en" ? "1–2 Working Days (Direct Cash Voucher)" : selectedLang === "tl" ? "1–2 Araw ng Pagproseso (Direct Cash Voucher)" : "1–2 ka Adlaw (Direct Cash)",
           estBenefit: "₱5,000 – ₱10,000 Cash Grant",
           desc: selectedLang === "en"
-            ? "Emergency cash support for funeral home services, casket, and burial plot fees for deceased family members."
+            ? "Financial assistance for funeral parlor expenses, casket, and burial plot for deceased family members."
             : selectedLang === "tl"
             ? "Tulong-pinansyal sa serbisyo ng punerarya, kabaong, at pagpapalibing para sa namatayang pamilya."
             : "Tabang pinansyal sa serbisyo sa punerarya, lungon, ug paglubong para sa namatyan nga pamilya.",
           criteriaMatched: [
-            selectedLang === "en" ? "Direct family member claiming for deceased relative." : selectedLang === "tl" ? "Direktang kaanak ng namatayang pamilya na nagpoproseso ng tulong." : "Direktang kabanay sa namatyan nga nagproseso sa tabang.",
-            selectedLang === "en" ? "Financial distress for funeral, casket, or burial expenses." : selectedLang === "tl" ? "Kakulangan sa pambayad sa punerarya, kabaong, at sementeryo." : "Kulang ang pundo para sa haya, lungon, ug lubong.",
+            selectedLang === "en" ? "Immediate family relation to deceased." : selectedLang === "tl" ? "Direktang kamag-anak ng namatay." : "Direktang kapamilya sa namatay.",
+            selectedLang === "en" ? "Struggling with funeral and mortuary debts." : selectedLang === "tl" ? "Kakulangan sa pambayad ng punerarya at libing." : "Kulang ang pambayad sa punerarya ug lubong.",
           ],
           docs: [
-            selectedLang === "en" ? "Death Certificate (Certified True Copy)" : selectedLang === "tl" ? "Death Certificate (Certified True Copy)" : "Death Certificate (Certified True Copy)",
-            selectedLang === "en" ? "Funeral Service Contract / Official Receipt" : selectedLang === "tl" ? "Funeral Service Contract / Resibo" : "Funeral Service Contract / Resibo",
-            selectedLang === "en" ? "Barangay Indigency Certificate" : selectedLang === "tl" ? "Barangay Certificate of Indigency" : "Barangay Certificate of Indigency",
+            selectedLang === "en" ? "Registered Death Certificate (Original & Copy)" : selectedLang === "tl" ? "Rehistradong Death Certificate (Original at Kopya)" : "Rehistradong Death Certificate",
+            selectedLang === "en" ? "Funeral Contract / Official Receipt" : selectedLang === "tl" ? "Kontrata sa Punerarya o Resibo" : "Kontrata sa Punerarya o Resibo",
+            selectedLang === "en" ? "Barangay Certificate of Indigency" : selectedLang === "tl" ? "Barangay Certificate of Indigency" : "Barangay Certificate of Indigency",
+            selectedLang === "en" ? "Valid ID of Claimant" : selectedLang === "tl" ? "Valid ID ng Mag-aasikaso" : "Valid ID sa Nagproseso",
           ],
-          actionUrl: "/portal/aics?type=funeral",
+          actionUrl: "/portal/aics?type=burial",
           actionLabel: selectedLang === "en" ? "Apply for Burial Aid" : selectedLang === "tl" ? "Mag-apply sa Tulong sa Libing" : "Mag-apply sa Tabang sa Lubong",
         })
         justifications.push(
           selectedLang === "en"
-            ? "Bereavement crisis assistance qualified under municipal burial relief protocols."
+            ? "Eligible for bereavement crisis grant under municipal AICS welfare provisions."
             : selectedLang === "tl"
-            ? "Kwalipikado sa emergency bereavement aid batay sa municipal social welfare burial protocol."
-            : "Kwalipikado sa emergency bereavement aid base sa municipal social welfare protocol."
+            ? "Kwalipikado sa bereavement crisis cash grant sa ilalim ng municipal AICS guidelines."
+            : "Kwalipikado sa bereavement crisis cash grant ubos sa municipal AICS guidelines."
         )
       }
 
-      // 2b. AICS Food & Emergency Relief
-      if (hasFoodCrisis) {
+      // 3. Food / Crisis Survival
+      if (hasFoodCrisis && !hasMed && !hasBurial) {
         recs.push({
-          id: "aics_food_relief",
-          category: selectedLang === "en" ? "AICS Food & Relief Assistance" : selectedLang === "tl" ? "Tulong sa Pagkain at Ayuda ng AICS" : "Tabang sa Pagkaon ug Ayuda sa AICS",
+          id: "aics_food",
+          category: selectedLang === "en" ? "AICS Crisis Assistance" : selectedLang === "tl" ? "Tulong sa Pagkain ng AICS" : "Tabang sa Pagkaon sa AICS",
           icon: ShieldAlert,
           badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
           title: selectedLang === "en" ? "AICS Food Assistance & Crisis Cash Relief" : selectedLang === "tl" ? "AICS Food Assistance & Emergency Cash Relief" : "AICS Tabang sa Pagkaon ug Cash Relief",
           priority: selectedLang === "en" ? "Immediate Survival Aid" : selectedLang === "tl" ? "Kagyat na Ayuda sa Pagkain" : "Dinalian nga Ayuda sa Pagkaon",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Emergency Subsidy)" : selectedLang === "tl" ? "Kwalipikado sa Ayuda" : "Kwalipikado sa Ayuda",
           legalBasis: "DSWD Crisis Intervention Unit Guidelines",
+          windowUnit: selectedLang === "en" ? "Window 2: Crisis Intervention Unit (CIU)" : selectedLang === "tl" ? "Window 2: Crisis Intervention Unit (CIU)" : "Window 2: Crisis Intervention Unit (CIU)",
+          turnaround: selectedLang === "en" ? "Same-Day Food Voucher / 1-2 Days Cash" : selectedLang === "tl" ? "Same-Day Food Voucher / 1-2 Araw Cash" : "Same-Day Food Voucher",
           estBenefit: "₱2,000 – ₱5,000 Cash / Food Voucher",
           desc: selectedLang === "en"
             ? "Emergency food assistance and cash relief for families in extreme hunger, disaster distress, or acute loss of income."
@@ -721,7 +837,7 @@ export default function AIAssistanceFinderModal({
         })
       }
 
-      // 3. Solo Parent Welfare (RA 11861)
+      // 4. Solo Parent Welfare (RA 11861)
       if (hasSoloParent) {
         recs.push({
           id: "solo_parent",
@@ -732,6 +848,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Statutory Special Sector Benefit" : selectedLang === "tl" ? "Batas Panlipunan (RA 11861)" : "Balaod Sosyal (RA 11861)",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 11861" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 11861" : "Kwalipikado ubos sa RA 11861",
           legalBasis: "Republic Act No. 11861 (Expanded Solo Parents Welfare Act)",
+          windowUnit: selectedLang === "en" ? "Window 1: Family & Child Welfare Desk" : selectedLang === "tl" ? "Window 1: Family & Child Welfare Desk" : "Window 1: Family & Child Welfare Desk",
+          turnaround: selectedLang === "en" ? "7–10 Working Days (ID & Subsidy Processing)" : selectedLang === "tl" ? "7–10 Araw (ID at Subsidy Processing)" : "7–10 ka Adlaw (ID ug Subsidy)",
           estBenefit: selectedLang === "en" ? "₱1,000 Monthly Cash Subsidy + 10% Essentials Discount" : selectedLang === "tl" ? "₱1,000 Buwanang Ayuda + 10% Diskwento sa Gatas/Pagkain" : "₱1,000 Binuwan nga Ayuda + 10% Diskwento sa Gatas",
           desc: selectedLang === "en"
             ? "Comprehensive package under the Expanded Solo Parents Welfare Act granting monthly local cash allowance, 7-day parental leave, and educational scholarship priorities."
@@ -743,9 +861,10 @@ export default function AIAssistanceFinderModal({
             selectedLang === "en" ? "Income fits statutory bracket for local government monthly cash assistance." : selectedLang === "tl" ? "Pasok sa antas ng kita para sa ₱1,000 buwanang ayuda." : "Pasok sa kita alang sa ₱1,000 binuwan nga ayuda.",
           ],
           docs: [
-            selectedLang === "en" ? "Barangay Certificate of Solo Parent" : selectedLang === "tl" ? "Barangay Certificate of Solo Parent" : "Barangay Certificate of Solo Parent",
+            selectedLang === "en" ? "Barangay Certificate of Solo Parent Residency (6+ mos)" : selectedLang === "tl" ? "Barangay Certificate of Solo Parent Residency (6+ buwan)" : "Barangay Certificate of Solo Parent",
             selectedLang === "en" ? "PSA Birth Certificate of Minor Children" : selectedLang === "tl" ? "PSA Birth Certificate ng mga Anak" : "PSA Birth Certificate sa mga Anak",
-            selectedLang === "en" ? "Affidavit of Abandonment / Death Certificate of Spouse (if applicable)" : selectedLang === "tl" ? "Sinumpaang Salaysay / Death Certificate ng Asawa" : "Sinumpaang Salaysay / Death Certificate sa Asawa",
+            selectedLang === "en" ? "Affidavit of Abandonment / Death Certificate of Spouse" : selectedLang === "tl" ? "Sinumpaang Salaysay / Death Certificate ng Asawa" : "Sinumpaang Salaysay / Death Certificate sa Asawa",
+            selectedLang === "en" ? "Certificate of Low Income / ITR" : selectedLang === "tl" ? "ITR o Certificate of Low Income" : "ITR o Certificate of Low Income",
           ],
           actionUrl: "/portal/apply-solo-parent",
           actionLabel: selectedLang === "en" ? "Apply for Solo Parent ID" : selectedLang === "tl" ? "Mag-apply para sa Solo Parent ID" : "Mag-apply para sa Solo Parent ID",
@@ -759,7 +878,7 @@ export default function AIAssistanceFinderModal({
         )
       }
 
-      // 4. PWD Services
+      // 5. PWD Services
       if (hasPwd) {
         recs.push({
           id: "pwd_services",
@@ -770,6 +889,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Persons with Disability Sector" : selectedLang === "tl" ? "Sektor ng may Kapansanan (PWD)" : "Sektor sa may Kapansanan (PWD)",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 7277" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 7277" : "Kwalipikado ubos sa RA 7277",
           legalBasis: "Republic Act No. 7277 & RA 10754 (Magna Carta for Persons with Disabilities)",
+          windowUnit: selectedLang === "en" ? "Window 5: Persons with Disability Affairs Office (PDAO)" : selectedLang === "tl" ? "Window 5: Persons with Disability Affairs Office (PDAO)" : "Window 5: Persons with Disability Affairs Office (PDAO)",
+          turnaround: selectedLang === "en" ? "5–7 Working Days (ID Printing & Device Scheduling)" : selectedLang === "tl" ? "5–7 Araw (ID Printing at Device Scheduling)" : "5–7 ka Adlaw (ID Printing ug Schedule)",
           estBenefit: selectedLang === "en" ? "20% Discount + VAT Exemption + Free Assistive Devices" : selectedLang === "tl" ? "20% Diskwento + VAT Exemption + Libreng Wheelchair/Gamit" : "20% Diskwento + VAT Exemption + Libreng Wheelchair",
           desc: selectedLang === "en"
             ? "Official municipal PWD registry benefits including 20% discount on medicines, grocery essentials, transport, plus priority distribution of wheelchairs, canes, and hearing aids."
@@ -781,7 +902,7 @@ export default function AIAssistanceFinderModal({
             selectedLang === "en" ? "Entitled to statutory 20% discount + VAT exemption and MSWDO assistive tools." : selectedLang === "tl" ? "May karapatan sa 20% diskwento at libreng kagamitan mula sa MSWDO." : "May katungod sa 20% diskwento ug libreng gamit sa MSWDO.",
           ],
           docs: [
-            selectedLang === "en" ? "Medical Certificate with Disability Assessment" : selectedLang === "tl" ? "Medical Certificate na may pirma ng Doktor ukol sa kapansanan" : "Medical Certificate gikan sa Doktor bahin sa kapansanan",
+            selectedLang === "en" ? "Medical Certificate with Disability Assessment (with PTR)" : selectedLang === "tl" ? "Medical Certificate na may pirma ng Doktor ukol sa kapansanan" : "Medical Certificate gikan sa Doktor bahin sa kapansanan",
             selectedLang === "en" ? "Barangay Certificate of Residency" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
             selectedLang === "en" ? "2x2 Recent ID Photos (2 copies)" : selectedLang === "tl" ? "2x2 ID Pictures (2 piraso)" : "2x2 ID Pictures (2 ka buok)",
           ],
@@ -797,7 +918,7 @@ export default function AIAssistanceFinderModal({
         )
       }
 
-      // 5. Senior Citizen Welfare & Social Pension
+      // 6. Senior Citizen Welfare & Social Pension
       if (hasSenior) {
         recs.push({
           id: "senior_services",
@@ -808,6 +929,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Senior Citizen Sector (60+)" : selectedLang === "tl" ? "Sektor ng Nakatatanda (60+ Anyos)" : "Sektor sa mga Tigulang (60+)",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 9994 / RA 11916" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 9994 / RA 11916" : "Kwalipikado ubos sa RA 9994 / RA 11916",
           legalBasis: "Republic Act No. 9994 & RA 11916 (Social Pension for Indigent Seniors Act)",
+          windowUnit: selectedLang === "en" ? "Window 4: Office of Senior Citizens Affairs (OSCA)" : selectedLang === "tl" ? "Window 4: Office of Senior Citizens Affairs (OSCA)" : "Window 4: Office of Senior Citizens Affairs (OSCA)",
+          turnaround: selectedLang === "en" ? "Same-Day ID Card Release / Quarterly Pension Payout" : selectedLang === "tl" ? "Same-Day ID Release / Quarterly Pension Payout" : "Same-Day ID / Quarterly Pension",
           estBenefit: selectedLang === "en" ? "₱1,000/Month Social Pension + 20% Senior Discount" : selectedLang === "tl" ? "₱1,000 Buwanang Social Pension + 20% Senior Diskwento" : "₱1,000 Binuwan nga Social Pension + 20% Diskwento",
           desc: selectedLang === "en"
             ? "Municipal OSCA ID issuance, medicine booklet, 20% discount on groceries/dining/fare, and quarterly ₱1,000/month social pension for indigent seniors."
@@ -819,9 +942,9 @@ export default function AIAssistanceFinderModal({
             selectedLang === "en" ? "No existing pension from SSS, GSIS, or military/private providers." : selectedLang === "tl" ? "Walang natatanggap na regular na pensyon sa SSS o GSIS." : "Walay regular nga pension sa SSS o GSIS.",
           ],
           docs: [
-            selectedLang === "en" ? "PSA Birth Certificate / Valid ID showing Date of Birth (60+)" : selectedLang === "tl" ? "PSA Birth Certificate o Valid ID na nagpapatunay ng edad (60+)" : "PSA Birth Certificate o Valid ID nga nagpamatuod sa edad (60+)",
-            selectedLang === "en" ? "Barangay Certificate of Residency (at least 6 months)" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
-            selectedLang === "en" ? "Certificate of No Pension / Indigency (for Social Pension)" : selectedLang === "tl" ? "Sertipikasyon na walang ibang tinatanggap na SSS/GSIS pension" : "Sertipikasyon nga walay laing pension sa SSS/GSIS",
+            selectedLang === "en" ? "PSA Birth Certificate / Valid ID proving age 60+" : selectedLang === "tl" ? "PSA Birth Certificate o Valid ID na nagpapatunay ng edad (60+)" : "PSA Birth Certificate o Valid ID nga nagpamatuod sa edad (60+)",
+            selectedLang === "en" ? "Barangay Certificate of Indigency & Non-Pensioner Status" : selectedLang === "tl" ? "Barangay Indigency (Walang natatanggap na SSS/GSIS)" : "Barangay Indigency (Walay nadawat nga SSS/GSIS)",
+            selectedLang === "en" ? "2x2 Recent ID Photos (2 copies)" : selectedLang === "tl" ? "2 pirasong 2x2 ID Picture" : "2 ka 2x2 ID Picture",
           ],
           actionUrl: "/portal/apply-pwd-senior?type=senior",
           actionLabel: selectedLang === "en" ? "Apply for Senior ID" : selectedLang === "tl" ? "Mag-apply sa Senior ID" : "Mag-apply sa Senior ID",
@@ -835,7 +958,7 @@ export default function AIAssistanceFinderModal({
         )
       }
 
-      // 6. Child Welfare & ECCD Daycare Program
+      // 7. Child Welfare & ECCD Daycare Program
       if (hasChildWelfare) {
         recs.push({
           id: "child_welfare",
@@ -846,6 +969,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Child Protection & Nutrition" : selectedLang === "tl" ? "Nutrisyon at Edukasyon ng Bata" : "Nutrisyon ug Edukasyon sa Bata",
           eligibilityBadge: selectedLang === "en" ? "Qualified for ECCD Enrollment" : selectedLang === "tl" ? "Kwalipikado sa Daycare & Feeding" : "Kwalipikado sa Daycare & Feeding",
           legalBasis: "Early Childhood Care and Development (ECCD) Act & DSWD Guidelines",
+          windowUnit: selectedLang === "en" ? "Window 6: Early Childhood Care & Development (ECCD) Unit" : selectedLang === "tl" ? "Window 6: Early Childhood Care & Development Unit" : "Window 6: Early Childhood Care & Development Unit",
+          turnaround: selectedLang === "en" ? "3–5 Working Days (Enrollment & Weight Screening)" : selectedLang === "tl" ? "3–5 Araw (Enrollment at Screening sa Nutrisyon)" : "3–5 ka Adlaw (Enrollment)",
           estBenefit: selectedLang === "en" ? "Free Early Education + 120-day Supplemental Milk & Meals" : selectedLang === "tl" ? "Libreng Daycare + 120-araw na Feeding Program at Gatas" : "Libreng Daycare + 120-adlaw nga Feeding Program",
           desc: selectedLang === "en"
             ? "Early childhood development center admission and targeted nutritional rehabilitation for malnourished or underweight toddlers."
@@ -872,7 +997,7 @@ export default function AIAssistanceFinderModal({
         )
       }
 
-      // 7. Sustainable Livelihood & Skills Training
+      // 8. Sustainable Livelihood & Skills Training
       if (hasLivelihood || recs.length < 2) {
         recs.push({
           id: "livelihood_prog",
@@ -883,6 +1008,8 @@ export default function AIAssistanceFinderModal({
           priority: selectedLang === "en" ? "Long-Term Socioeconomic Recovery" : selectedLang === "tl" ? "Pangmatagalang Pangkabuhayan" : "Malungtarong Panginabuhi",
           eligibilityBadge: selectedLang === "en" ? "Pre-Qualified for SLP Seed Capital" : selectedLang === "tl" ? "Kwalipikado sa SLP Puhunan" : "Kwalipikado sa SLP Puhunan",
           legalBasis: "DSWD Sustainable Livelihood Program (SLP) Guidelines",
+          windowUnit: selectedLang === "en" ? "Window 3: Sustainable Livelihood Program (SLP) Desk" : selectedLang === "tl" ? "Window 3: Sustainable Livelihood Program Desk" : "Window 3: Sustainable Livelihood Program Desk",
+          turnaround: selectedLang === "en" ? "10–14 Working Days (Proposal Review & Disbursal)" : selectedLang === "tl" ? "10–14 Araw (Ebalwasyon ng Panukala at Puhunan)" : "10–14 ka Adlaw (Pagsusi ug Puhunan)",
           estBenefit: selectedLang === "en" ? "₱5,000 – ₱15,000 Seed Capital + Free NC-II Course" : selectedLang === "tl" ? "₱5,000 – ₱15,000 Panimulang Puhunan + Libreng Sertipikasyon" : "₱5,000 – ₱15,000 Puhunan + Libreng Kurso sa TESDA",
           desc: selectedLang === "en"
             ? "Micro-enterprise capital grants for sari-sari stores, street food, small trading, plus free vocational training in baking, culinary, driving, and tailoring."
@@ -915,10 +1042,10 @@ export default function AIAssistanceFinderModal({
         baseScore = 98
         justifications.unshift(
           selectedLang === "en"
-            ? `Household monthly income declared is below the official municipal poverty threshold for a household with ${dependentsCount} dependents.`
+            ? `Household monthly income declared is below the official municipal poverty threshold for a household with ${dependentsCount} dependents in Barangay ${barangay.replace('_', ' ').toUpperCase()}.`
             : selectedLang === "tl"
-            ? `Ang idineklarang buwanang kita ng sambahayan ay pasok sa indigency poverty threshold para sa pamilyang may ${dependentsCount} miyembro.`
-            : `Ang gideklara nga kita sa panimalay pasok sa indigency poverty threshold para sa pamilya nga dunay ${dependentsCount} ka miyembro.`
+            ? `Ang idineklarang buwanang kita ng sambahayan ay pasok sa indigency poverty threshold para sa pamilyang may ${dependentsCount} miyembro sa Barangay ${barangay.replace('_', ' ').toUpperCase()}.`
+            : `Ang gideklara nga kita sa panimalay pasok sa indigency poverty threshold para sa pamilya nga dunay ${dependentsCount} ka miyembro sa Barangay ${barangay.replace('_', ' ').toUpperCase()}.`
         )
       } else if (incomeLevel === "mid") {
         baseScore = 89
@@ -1153,6 +1280,26 @@ export default function AIAssistanceFinderModal({
                   </select>
                 </div>
 
+                {/* Registered Barangay */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                    {t.qBarangay}
+                  </label>
+                  <select
+                    value={barangay}
+                    onChange={(e) => setBarangay(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="poblacion">{t.optBrgyPoblacion}</option>
+                    <option value="san_isidro">{t.optBrgySanIsidro}</option>
+                    <option value="sta_maria">{t.optBrgyStaMaria}</option>
+                    <option value="san_vicente">{t.optBrgySanVicente}</option>
+                    <option value="other">{t.optBrgyOther}</option>
+                    <option value="transient">{t.optBrgyTransient}</option>
+                  </select>
+                </div>
+
                 {/* Dependents count */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
@@ -1183,6 +1330,59 @@ export default function AIAssistanceFinderModal({
                     <option value="daily">{t.optEmpDaily}</option>
                     <option value="contractual">{t.optEmpContractual}</option>
                     <option value="regular">{t.optEmpRegular}</option>
+                  </select>
+                </div>
+
+                {/* Social Welfare / 4Ps Status */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5 text-indigo-500" />
+                    {t.qSocialRegistry}
+                  </label>
+                  <select
+                    value={socialRegistry}
+                    onChange={(e) => setSocialRegistry(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="non_4ps">{t.optRegNon4Ps}</option>
+                    <option value="4ps">{t.optReg4Ps}</option>
+                    <option value="social_pension">{t.optRegSocialPension}</option>
+                    <option value="listahanan">{t.optRegListahanan}</option>
+                  </select>
+                </div>
+
+                {/* Health Insurance / PhilHealth */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Stethoscope className="h-3.5 w-3.5 text-emerald-500" />
+                    {t.qHealthInsurance}
+                  </label>
+                  <select
+                    value={healthInsurance}
+                    onChange={(e) => setHealthInsurance(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="indigent">{t.optHealthIndigent}</option>
+                    <option value="senior">{t.optHealthSenior}</option>
+                    <option value="employed">{t.optHealthEmployed}</option>
+                    <option value="none">{t.optHealthNone}</option>
+                  </select>
+                </div>
+
+                {/* Assistance Urgency */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-rose-500" />
+                    {t.qUrgency}
+                  </label>
+                  <select
+                    value={urgency}
+                    onChange={(e) => setUrgency(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="immediate">{t.optUrgImmediate}</option>
+                    <option value="urgent">{t.optUrgUrgent}</option>
+                    <option value="standard">{t.optUrgStandard}</option>
                   </select>
                 </div>
 
@@ -1662,41 +1862,56 @@ export default function AIAssistanceFinderModal({
                       </button>
                     </div>
 
-                    {/* Household Qualification Snapshot Matrix */}
-                    <div className="pt-2 border-t border-emerald-500/20 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    {/* Granular Household Qualification Snapshot Matrix */}
+                    <div className="pt-2 border-t border-emerald-500/20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                      {/* Income Bracket */}
                       <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <div>
+                        <div className="min-w-0">
                           <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
                             {t.incomeTierBadge}
                           </span>
-                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200 truncate block">
                             {incomeLevel === "none" ? "No Regular Income" : incomeLevel === "low" ? "Low Income (<₱10,000)" : incomeLevel === "mid" ? "₱10,000 – ₱18,000" : ">₱18,000"}
                           </span>
                         </div>
                       </div>
 
+                      {/* Dependents & Applicant */}
                       <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
                         <Users className="h-4 w-4 text-blue-600 shrink-0" />
-                        <div>
+                        <div className="min-w-0">
                           <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
                             {t.dependencyBadge}
                           </span>
-                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
-                            {dependentsCount} Dependents ({applicantType === "self" ? "Individual" : applicantType === "child" ? "Minor Guardian" : applicantType === "senior" ? "Senior Citizen" : applicantType === "pwd" ? "PWD Member" : "Family"})
+                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200 truncate block">
+                            {dependentsCount} Dep. ({applicantType === "self" ? "Individual" : applicantType === "child" ? "Minor" : applicantType === "senior" ? "Senior" : applicantType === "pwd" ? "PWD" : "Family"})
                           </span>
                         </div>
                       </div>
 
+                      {/* Barangay & Urgency */}
                       <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
-                        <ShieldAlert className="h-4 w-4 text-indigo-600 shrink-0" />
-                        <div>
+                        <Clock className="h-4 w-4 text-rose-500 shrink-0" />
+                        <div className="min-w-0">
                           <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
-                            {t.statusPrescreened}
+                            {t.urgencyTierLabel}
                           </span>
-                          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                            <Check className="h-3 w-3" />
-                            {analysisResult.recommendations.length} Programs Qualified
+                          <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 truncate block">
+                            {urgency === "immediate" ? "24–48h Emergency" : urgency === "urgent" ? "Priority (1–2 Wks)" : "Standard Track"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Welfare Registry Status */}
+                      <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-indigo-600 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
+                            {t.socialRegistryLabel}
+                          </span>
+                          <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 truncate block">
+                            {socialRegistry === "4ps" ? "Active 4Ps Beneficiary" : socialRegistry === "social_pension" ? "Social Pensioner" : socialRegistry === "listahanan" ? "Listahanan Poor" : "Direct Citizen"}
                           </span>
                         </div>
                       </div>
@@ -1745,13 +1960,29 @@ export default function AIAssistanceFinderModal({
                             </div>
                           </div>
 
-                          {/* Legal Basis & Statutory Framework */}
-                          {rec.legalBasis && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-semibold border border-slate-200 dark:border-slate-800">
-                              <Scale className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                              <span><strong>{t.legalBasisLabel}</strong> {rec.legalBasis}</span>
-                            </div>
-                          )}
+                          {/* Specific Window & Processing Turnaround Row */}
+                          <div className="flex flex-wrap gap-2 text-[11px]">
+                            {rec.windowUnit && (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200 font-semibold border border-blue-200 dark:border-blue-900">
+                                <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                <span>{rec.windowUnit}</span>
+                              </div>
+                            )}
+
+                            {rec.turnaround && (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 font-semibold border border-amber-200 dark:border-amber-900">
+                                <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                <span><strong>{t.turnaroundLabel}</strong> {rec.turnaround}</span>
+                              </div>
+                            )}
+
+                            {rec.legalBasis && (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-800">
+                                <Scale className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                <span><strong>{t.legalBasisLabel}</strong> {rec.legalBasis}</span>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Why You Are Eligible (Matched Criteria) */}
                           {rec.criteriaMatched && rec.criteriaMatched.length > 0 && (
