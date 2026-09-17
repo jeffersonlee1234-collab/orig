@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Sparkles,
@@ -396,9 +396,8 @@ export default function AIAssistanceFinderModal({
     disbursement_track: false,
   })
 
-  // Step 3: Narrative & Urgency
+  // Step 3: Narrative
   const [narrativeText, setNarrativeText] = useState("")
-  const [urgencyLevel, setUrgencyLevel] = useState<"crisis" | "urgent" | "moderate">("urgent")
 
   // Step 4: AI Analysis Output
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -549,6 +548,30 @@ export default function AIAssistanceFinderModal({
             ? "Kwalipikado sa emergency bereavement aid batay sa municipal social welfare burial protocol."
             : "Kwalipikado sa emergency bereavement aid base sa municipal social welfare protocol."
         )
+      }
+
+      // 2b. AICS Food & Emergency Relief
+      if (hasFoodCrisis) {
+        recs.push({
+          id: "aics_food_relief",
+          category: selectedLang === "en" ? "AICS Food & Relief Assistance" : selectedLang === "tl" ? "Tulong sa Pagkain at Ayuda ng AICS" : "Tabang sa Pagkaon ug Ayuda sa AICS",
+          icon: ShieldAlert,
+          badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
+          title: selectedLang === "en" ? "AICS Food Assistance & Crisis Cash Relief" : selectedLang === "tl" ? "AICS Food Assistance & Emergency Cash Relief" : "AICS Tabang sa Pagkaon ug Cash Relief",
+          priority: selectedLang === "en" ? "Immediate Survival Aid" : selectedLang === "tl" ? "Kagyat na Ayuda sa Pagkain" : "Dinalian nga Ayuda sa Pagkaon",
+          estBenefit: "₱2,000 – ₱5,000 Cash / Food Voucher",
+          desc: selectedLang === "en"
+            ? "Emergency food assistance and cash relief for families in extreme hunger, disaster distress, or acute loss of income."
+            : selectedLang === "tl"
+            ? "Tulong sa agarang pagkain at ayuda para sa mga pamilyang walang makain, nasalanta, o biglaang nawalan ng kita."
+            : "Tabang sa pagkaon ug ayuda para sa mga pamilya nga walay makaon o dinaliang nawad-an og panginabuhian.",
+          docs: [
+            selectedLang === "en" ? "Barangay Certificate of Indigency / Calamity" : selectedLang === "tl" ? "Barangay Certificate of Indigency" : "Barangay Certificate of Indigency",
+            selectedLang === "en" ? "Valid Government ID" : selectedLang === "tl" ? "Valid ID" : "Valid ID",
+          ],
+          actionUrl: "/portal/aics?type=food",
+          actionLabel: selectedLang === "en" ? "Apply for Food & Cash Relief" : selectedLang === "tl" ? "Mag-apply sa Food & Cash Relief" : "Mag-apply sa Food & Cash Relief",
+        })
       }
 
       // 3. Solo Parent Welfare (RA 11861)
