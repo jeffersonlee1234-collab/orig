@@ -187,7 +187,7 @@ async function syncAndCleanAppointments() {
 
 function triggerAppointmentSyncIfStale() {
   const now = Date.now();
-  if (isAppointmentSyncInProgress || (now - lastAppointmentSyncTime < 15 * 60 * 1000)) {
+  if (isAppointmentSyncInProgress || (now - lastAppointmentSyncTime < 30 * 1000)) {
     return;
   }
   isAppointmentSyncInProgress = true;
