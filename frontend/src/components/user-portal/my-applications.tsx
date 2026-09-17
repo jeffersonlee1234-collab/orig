@@ -3341,11 +3341,8 @@ export default function MyApplications() {
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              User Application Portal
-            </span>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
               {t("myApplicationsTitle") || "Application History"}
             </h1>
           </div>
