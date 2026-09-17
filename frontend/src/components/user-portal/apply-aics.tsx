@@ -25,7 +25,7 @@ import { API_BASE } from "../../config/api"
 import { getCurrentUserProfile, getLoggedInUserQcid, toISODateString } from "../../utils/userProfile"
 import { notifyApplicationChange } from "../../utils/realtimeSync"
 
-export default function ApplyAICS({ initialType, initialTypeKey, onBack }: ApplyAICSProps) {
+export default function ApplyAICS({ initialType, initialTypeKey }: ApplyAICSProps) {
   const { t, language } = useLanguage()
   const [sampleDocOpen, setSampleDocOpen] = useState<string | null>(null)
 

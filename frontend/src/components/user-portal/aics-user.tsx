@@ -65,15 +65,11 @@ const AICS_CONFIG: Record<
 
 export default function AICSUser() {
   const { t } = useLanguage()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
 
   const rawType = searchParams.get("type")?.toLowerCase() || "medical"
   const typeParam = AICS_CONFIG[rawType] ? rawType : "medical"
   const selectedConfig = AICS_CONFIG[typeParam] || AICS_CONFIG.medical
-
-  const handleNavigateType = (newType: string) => {
-    setSearchParams({ type: newType.toLowerCase() })
-  }
 
   if (
     typeParam === "material" ||
@@ -85,7 +81,6 @@ export default function AICSUser() {
         <AICSServiceWizard
           key={typeParam}
           serviceType={typeParam as AICSServiceType}
-          onBack={() => handleNavigateType("medical")}
         />
       </div>
     )
