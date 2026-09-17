@@ -552,8 +552,26 @@ function ManageUserModal({
 // =====================================================================================
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<CentralUser[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [users, setUsers] = useState<CentralUser[]>(() => {
+    try {
+      const cached = localStorage.getItem("cached_central_users")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cached_central_users")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return false
+      }
+    } catch {}
+    return true
+  })
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [selectedUser, setSelectedUser] = useState<CentralUser | null>(null)
 
@@ -568,7 +586,7 @@ export default function UserManagement() {
   const loadUsers = async (silent = false) => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
-    if (!silent) setIsLoading(true)
+    if (!silent && users.length === 0) setIsLoading(true)
     setErrorMessage(null)
     try {
       let res = await fetch(`${API_BASE}/api/users`, {
@@ -583,16 +601,19 @@ export default function UserManagement() {
         const data = await res.json()
         if (data.users && Array.isArray(data.users)) {
           setUsers(data.users)
+          try {
+            localStorage.setItem("cached_central_users", JSON.stringify(data.users))
+          } catch {}
         }
       } else {
-        if (!silent) setErrorMessage("Failed to load user accounts from database.")
+        if (!silent && users.length === 0) setErrorMessage("Failed to load user accounts from database.")
       }
     } catch (err) {
       console.warn("Could not fetch user records:", err)
-      if (!silent) setErrorMessage("Could not connect to database server.")
+      if (!silent && users.length === 0) setErrorMessage("Could not connect to database server.")
     } finally {
       isFetchingRef.current = false
-      if (!silent) setIsLoading(false)
+      setIsLoading(false)
     }
   }
 

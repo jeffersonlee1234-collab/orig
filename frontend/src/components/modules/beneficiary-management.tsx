@@ -692,8 +692,26 @@ function BeneficiaryProfileModal({
 type MainTab = "list" | "verification" | "history"
 
 export default function BeneficiaryManagement() {
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(() => {
+    try {
+      const cached = localStorage.getItem("cached_beneficiary_records")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cached_beneficiary_records")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return false
+      }
+    } catch {}
+    return true
+  })
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<MainTab>("list")
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null)
@@ -707,7 +725,7 @@ export default function BeneficiaryManagement() {
   const fetchBeneficiaries = useCallback(async (isSilent = false) => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
-    if (!isSilent) setIsLoading(true)
+    if (!isSilent && beneficiaries.length === 0) setIsLoading(true)
     setError(null)
     try {
       const res = await fetch(`${API_BASE}/api/beneficiaries`)
@@ -715,6 +733,9 @@ export default function BeneficiaryManagement() {
       const data = await res.json()
       if (data.success && Array.isArray(data.beneficiaries)) {
         setBeneficiaries(data.beneficiaries)
+        try {
+          localStorage.setItem("cached_beneficiary_records", JSON.stringify(data.beneficiaries))
+        } catch {}
         // Live update currently open beneficiary modal
         setSelectedBeneficiary((prev) => {
           if (!prev) return null
@@ -728,12 +749,14 @@ export default function BeneficiaryManagement() {
       }
     } catch (err: any) {
       console.warn("[BeneficiaryManagement] Fetch failed:", err.message)
-      setError(err.message || "Could not connect to database.")
+      if (beneficiaries.length === 0) {
+        setError(err.message || "Could not connect to database.")
+      }
     } finally {
       isFetchingRef.current = false
-      if (!isSilent) setIsLoading(false)
+      setIsLoading(false)
     }
-  }, [])
+  }, [beneficiaries.length])
 
   useEffect(() => {
     fetchBeneficiaries()
