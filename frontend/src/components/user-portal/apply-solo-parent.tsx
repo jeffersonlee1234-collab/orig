@@ -226,6 +226,108 @@ function getLocalizedSoloParentRequirements(
   ]
 }
 
+function getLocalSoloParentApplications(): any[] {
+  const localKeys = [
+    "solo_parent_applications",
+    "applications",
+    "all_user_applications",
+    "active_applications",
+    "user_applications",
+    "citizen_applications",
+  ]
+  const collected: any[] = []
+  for (const k of localKeys) {
+    try {
+      const raw = localStorage.getItem(k)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item && typeof item === "object") {
+              const itemRef = item.id || item.reference_number || item.referenceNumber
+              if (itemRef && !collected.some((c) => (c.id || c.reference_number || c.referenceNumber) === itemRef)) {
+                collected.push(item)
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+  return collected
+}
+
+function evaluateSoloParentBlockedState(
+  allApps: any[],
+  typeParam: string,
+  userProf: any,
+  currentQcid: string
+): { isBlocked: boolean; blockedApp: any } {
+  const uid = userProf?.id || (userProf as any)?.userId || ""
+  const currentEmail = (userProf?.email || "").toLowerCase().trim()
+  const cleanUserQcid = String(currentQcid || userProf?.qcidNo || userProf?.qcidNumber || "110000572516915").replace(/\D/g, "")
+  const currentFirst = (userProf?.firstName || "").toLowerCase().trim()
+  const currentLast = (userProf?.lastName || "").toLowerCase().trim()
+
+  const isMatchUser = (a: any) => {
+    if (!a) return false
+    const mod = String(a.module_type || a.moduleType || a.category || "").toLowerCase()
+    const srv = String(a.service || a.service_name || "").toLowerCase()
+    const isSP = mod.includes("solo") || srv.includes("solo") || a.solo_parent_id_number || a.soloParentIdNumber || a.category_id || a.categoryId
+    if (!isSP && mod && !mod.includes("solo")) return false
+
+    const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || a.form_data?.qcidNumber || "").trim().replace(/\D/g, "")
+    const appEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
+    const appUid = String(a.user_id || a.userId || "").trim()
+    const appFirst = String(a.first_name || a.firstName || a.form_data?.firstName || "").toLowerCase().trim()
+    const appLast = String(a.last_name || a.lastName || a.form_data?.lastName || "").toLowerCase().trim()
+
+    if (uid && appUid && String(uid) === appUid && String(uid) !== "0") return true
+    if (cleanUserQcid && appRef && (cleanUserQcid === appRef || cleanUserQcid.includes(appRef) || appRef.includes(cleanUserQcid))) return true
+    if (currentEmail && appEmail && currentEmail === appEmail) return true
+    if (currentFirst && currentLast && appFirst && appLast && currentFirst === appFirst && currentLast === appLast) return true
+
+    return false
+  }
+
+  const userApps = allApps.filter(isMatchUser)
+
+  const anyApproved = userApps.find((a) => {
+    const s = String(a.application_status || a.status || "").toLowerCase()
+    return s === "approved" || s === "completed" || s === "for_release" || s === "active"
+  })
+
+  const isMatchForType = (a: any) => {
+    const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
+    if (typeParam === "renewal") return aType === "renewal"
+    if (typeParam === "loss") return aType === "loss" || aType === "replacement"
+    return aType !== "loss" && aType !== "replacement" && aType !== "renewal"
+  }
+
+  const appsForType = userApps.filter(isMatchForType)
+
+  const matchedApproved = appsForType.find((a) => {
+    const s = String(a.application_status || a.status || "").toLowerCase()
+    return s === "approved" || s === "completed" || s === "for_release" || s === "active"
+  }) || (typeParam === "new" || !typeParam ? anyApproved : null)
+
+  const matchedPending = appsForType.find((a) => {
+    const s = String(a.application_status || a.status || "pending").toLowerCase()
+    return s === "pending" || s === "draft" || s === "under_review"
+  })
+
+  const matchedRejected = appsForType.find((a) => {
+    const s = String(a.application_status || a.status || "").toLowerCase()
+    return s === "rejected" || s === "disapproved"
+  })
+
+  if (matchedApproved) return { isBlocked: true, blockedApp: matchedApproved }
+  if (matchedPending) return { isBlocked: true, blockedApp: matchedPending }
+  if (matchedRejected) return { isBlocked: true, blockedApp: matchedRejected }
+
+  return { isBlocked: false, blockedApp: null }
+}
+
 export default function ApplySoloParent() {
   const { t, language } = useLanguage()
   const [searchParams] = useSearchParams()
@@ -238,45 +340,28 @@ export default function ApplySoloParent() {
   const currentCwPrograms = getLocalizedChildWelfarePrograms(language)
   const matchedCwProgram = currentCwPrograms.find((p) => p.key === programParam) || currentCwPrograms[0]
 
-  const [showRequirementsModal, setShowRequirementsModal] = useState(false)
-  const [blockedApp, setBlockedApp] = useState<any>(() => {
+  // Fast synchronous evaluation of local cached applications so blocked screen renders in 0ms
+  const [initialBlockedState] = useState(() => {
     try {
-      if (typeof window === "undefined") return null
+      if (typeof window === "undefined") return { isBlocked: false, blockedApp: null }
       const isReapp =
         window.location.search.includes("reapply=true") ||
         localStorage.getItem(`solo_parent_reapplying_${typeParam}`) === "true" ||
         localStorage.getItem("solo_parent_reapplying") === "true"
-      if (isReapp) return null
+      if (isReapp) return { isBlocked: false, blockedApp: null }
 
       const prof = getCurrentUserProfile()
-      const userQcidClean = (prof?.qcidNo || prof?.qcidNumber || "").replace(/\D/g, "")
-      const userEmailClean = (prof?.email || "").toLowerCase().trim()
-      const raw = localStorage.getItem("solo_parent_applications")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const match = parsed.find((a: any) => {
-            const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
-            const matchType =
-              typeParam === "renewal" ? aType === "renewal" :
-              typeParam === "loss" ? (aType === "loss" || aType === "replacement") :
-              (aType === "new" || !aType)
-            if (!matchType) return false
-
-            const aQcid = String(a.qcid_number || a.qcidNumber || a.qcid || a.reference_number || a.referenceNumber || "").replace(/\D/g, "")
-            const aEmail = String(a.email || "").toLowerCase().trim()
-            return (userQcidClean && (aQcid.includes(userQcidClean) || userQcidClean.includes(aQcid))) || (userEmailClean && aEmail === userEmailClean)
-          })
-          if (match) return match
-        }
-      }
-      return null
+      const currentQcid = getLoggedInUserQcid() || "110000572516915"
+      const localApps = getLocalSoloParentApplications()
+      return evaluateSoloParentBlockedState(localApps, typeParam, prof, currentQcid)
     } catch {
-      return null
+      return { isBlocked: false, blockedApp: null }
     }
   })
 
-  const [isBlocked, setIsBlocked] = useState<boolean>(() => Boolean(blockedApp))
+  const [showRequirementsModal, setShowRequirementsModal] = useState(false)
+  const [blockedApp, setBlockedApp] = useState<any>(initialBlockedState.blockedApp)
+  const [isBlocked, setIsBlocked] = useState<boolean>(initialBlockedState.isBlocked)
   const [selectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
@@ -307,50 +392,20 @@ export default function ApplySoloParent() {
       }
 
       try {
-        const currentQcid = getLoggedInUserQcid() || ""
+        const currentQcid = getLoggedInUserQcid() || "110000572516915"
         const userProf = getCurrentUserProfile()
-        const currentEmail = (userProf?.email || "").toLowerCase().trim()
         const uid = userProf?.id || (userProf as any)?.userId || ""
-
-        const isMatchForSoloParent = (a: any) => {
-          if (!a) return false
-          const aType = String(a.application_type || a.applicationType || a.type || "new").toLowerCase()
-          if (typeParam === "renewal") {
-            if (aType !== "renewal") return false
-          } else if (typeParam === "loss") {
-            if (aType !== "loss" && aType !== "replacement") return false
-          } else {
-            if (aType === "loss" || aType === "replacement" || aType === "renewal") return false
-          }
-
-          const appRef = String(a.reference_number || a.referenceNumber || a.qcid_number || a.qcidNumber || a.qcid || a.form_data?.qcidNumber || "").trim().replace(/\D/g, "")
-          const appEmail = String(a.email || a.form_data?.email || "").toLowerCase().trim()
-          const appUid = String(a.user_id || a.userId || "").trim()
-          const cleanUserQcid = String(currentQcid).replace(/\D/g, "")
-
-          const matchUser =
-            (uid && appUid && String(uid) === appUid && String(uid) !== "0") ||
-            (cleanUserQcid && appRef && (cleanUserQcid === appRef || (cleanUserQcid.length >= 10 && appRef.startsWith(cleanUserQcid)))) ||
-            (currentEmail && appEmail && currentEmail === appEmail)
-
-          return Boolean(matchUser)
-        }
+        const currentEmail = (userProf?.email || "").toLowerCase().trim()
 
         // 1. Fast evaluation from local storage (0ms)
-        let localApps: any[] = []
-        try {
-          const raw = localStorage.getItem("solo_parent_applications")
-          if (raw) localApps = JSON.parse(raw)
-          if (!Array.isArray(localApps)) localApps = []
-        } catch {}
-
-        const localMatch = localApps.find(isMatchForSoloParent)
-        if (isMounted && localMatch && !bypassedBlockRef.current) {
+        const localApps = getLocalSoloParentApplications()
+        const localRes = evaluateSoloParentBlockedState(localApps, typeParam, userProf, currentQcid)
+        if (isMounted && localRes.isBlocked) {
           setIsBlocked(true)
-          setBlockedApp(localMatch)
+          setBlockedApp(localRes.blockedApp)
         }
 
-        // 2. Fetch fresh backend applications with 15s cache
+        // 2. Fresh backend applications sync with 15s cache
         let backendApps: any[] = []
         try {
           const data = await cachedApiFetch(
@@ -374,35 +429,14 @@ export default function ApplySoloParent() {
             allApps.push(la)
           }
         }
+        try {
+          localStorage.setItem("solo_parent_applications", JSON.stringify(allApps))
+        } catch {}
 
-        const userMatchingApps = allApps.filter(isMatchForSoloParent)
-        const matchedApproved = userMatchingApps.find((a) => {
-          const s = String(a.application_status || a.status || "").toLowerCase()
-          return s === "approved" || s === "completed" || s === "for_release" || s === "active"
-        })
-        const matchedPending = userMatchingApps.find((a) => {
-          const s = String(a.application_status || a.status || "pending").toLowerCase()
-          return (s === "pending" || s === "draft" || s === "under_review") && (!matchedApproved || (a.id !== matchedApproved.id && a.reference_number !== matchedApproved.reference_number))
-        })
-        const matchedRejected = userMatchingApps.find((a) => {
-          const s = String(a.application_status || a.status || "").toLowerCase()
-          return (s === "rejected" || s === "disapproved") && !matchedApproved && !matchedPending
-        })
-
-        if (isMounted && !bypassedBlockRef.current) {
-          if (matchedApproved) {
-            setIsBlocked(true)
-            setBlockedApp(matchedApproved)
-          } else if (matchedPending) {
-            setIsBlocked(true)
-            setBlockedApp(matchedPending)
-          } else if (matchedRejected) {
-            setIsBlocked(true)
-            setBlockedApp(matchedRejected)
-          } else {
-            setIsBlocked(false)
-            setBlockedApp(null)
-          }
+        const finalRes = evaluateSoloParentBlockedState(allApps, typeParam, userProf, currentQcid)
+        if (isMounted) {
+          setIsBlocked(finalRes.isBlocked)
+          setBlockedApp(finalRes.blockedApp)
         }
       } catch (err) {
         console.warn("Solo parent eligibility check skipped/offline:", err)
@@ -498,16 +532,17 @@ export default function ApplySoloParent() {
   const activeProfile = getCurrentUserProfile()
 
   // Render blocked active application UI directly (matches ApplyPWDSenior)
-  if (isBlocked && !bypassedBlock && !isChildWelfare && (typeParam === "new" || !typeParam)) {
-    const isAppApproved =
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "approved" ||
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "completed" ||
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "for_release" ||
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "active"
+  const isAppApproved =
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "approved" ||
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "completed" ||
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "for_release" ||
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "active"
 
-    const isAppRejected =
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "rejected" ||
-      String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "disapproved"
+  const isAppRejected =
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "rejected" ||
+    String(blockedApp?.application_status || blockedApp?.status || "").toLowerCase() === "disapproved"
+
+  if (isBlocked && (!bypassedBlock || isAppApproved) && !isChildWelfare) {
 
     const rejectionReason = blockedApp?.rejection_reason || blockedApp?.rejectionReason || blockedApp?.admin_notes || ""
 
