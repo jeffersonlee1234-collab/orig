@@ -592,12 +592,16 @@ exports.login = async (req, res) => {
         // Generate unique single active session token
         const sessionToken = generateSessionToken();
 
-        // Non-blocking background operations so login HTTP response is instant (< 100ms)
-        clearFailedLogins(req, cleanEmail).catch(() => {});
-        db.query('UPDATE users SET last_login = NOW(), active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
-        recordNewSession(dbUser.id, dbUser.email, sessionToken, req).catch(() => {});
+        // 1. Persist active session token in DB synchronously before returning
+        try {
+          await db.query('UPDATE users SET last_login = NOW(), active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]);
+          await recordNewSession(dbUser.id, dbUser.email, sessionToken, req);
+        } catch (sessErr) {
+          console.warn('[Session Init Warning]:', sessErr.message);
+        }
 
-        // Auto-upgrade legacy plain-text password to bcrypt hash in DB in background
+        // 2. Background cleanup of failed logins & legacy password upgrade
+        clearFailedLogins(req, cleanEmail).catch(() => {});
         if (dbUser.password && !dbUser.password.startsWith('$2')) {
           hashPassword(cleanPassword).then((upgradedHash) => {
             db.query('UPDATE users SET password = $1 WHERE id = $2', [upgradedHash, dbUser.id]).catch(() => {});
