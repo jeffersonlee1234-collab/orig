@@ -23,6 +23,7 @@ const userApplicationRoutes = require('./routes/userApplicationRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const caseManagementRoutes = require('./routes/caseManagementRoutes');
 const beneficiaryRoutes = require('./routes/beneficiaryRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const { autoReleaseScheduledDisbursements } = require('./controllers/financialAidController');
 
 const app = express();
@@ -182,6 +183,8 @@ app.use('/api/user-applications', userApplicationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/case-management', caseManagementRoutes);
 app.use('/api/beneficiaries', beneficiaryRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/ai', aiRoutes);
 
 // Global user cleanup endpoint for test data & history deletion
 app.delete('/api/cleanup-user/:nameOrRef', async (req, res) => {

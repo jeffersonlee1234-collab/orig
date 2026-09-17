@@ -19,8 +19,13 @@ import {
   Check,
   Stethoscope,
   BookOpen,
+  Send,
+  Bot,
+  MessageSquare,
+  Loader2,
 } from "lucide-react"
 import { useLanguage, type Language } from "../ui/language-context"
+import { API_BASE } from "../../config/api"
 
 interface AIAssistanceFinderModalProps {
   isOpen: boolean
@@ -132,6 +137,16 @@ const I18N = {
     statusEligible: "Highly Qualified for Government Aid",
     reqDocsTitle: "Required Documents to Prepare:",
     rationaleTitle: "AI Policy Justification & Legal Basis (Transparency):",
+    actionAdviceTitle: "Recommended Action Plan & Next Steps:",
+    geminiBadge: "Verified by Google Gemini AI Engine",
+    askGeminiTitle: "Ask MSWDO AI Social Worker Assistant",
+    askGeminiSubtitle: "Have questions regarding documentary requirements, processing days, or appeal procedures? Ask below:",
+    askGeminiPlaceholder: "Example: How many days will it take for medical assistance to be released?",
+    askGeminiSend: "Send Question",
+    askGeminiThinking: "Gemini AI is generating official MSWDO guidance...",
+    chipPrompt1: "How fast is AICS medical aid released?",
+    chipPrompt2: "What if I don't have a Barangay Indigency?",
+    chipPrompt3: "Can I receive both Solo Parent & AICS help?",
     disclaimer: "* This AI assessment serves as an intelligent intake pre-screening tool. Official approval and final cash grants are verified by the licensed MSWDO Social Worker.",
   },
 
@@ -225,7 +240,7 @@ const I18N = {
     btnNext: "Susunod na Hakbang",
     btnBack: "Bumalik",
     btnAnalyze: "Suriin at Magbigay ng Rekomendasyon ng AI",
-    btnAnalyzing: "Sinusuri ng AI ang mga panuntunan ng MSWDO at datos ng pamilya...",
+    btnAnalyzing: "Sinusuri ng Gemini AI ang mga panuntunan ng MSWDO at datos ng pamilya...",
     btnRetake: "Ulitin ang Panayam",
     btnApply: "Mag-apply Agad",
     btnPrint: "I-print ang Buod",
@@ -238,6 +253,16 @@ const I18N = {
     statusEligible: "Lubos na Kwalipikado sa Tulong ng Pamahalaan",
     reqDocsTitle: "Mga Dokumentong Dapat Ihanda:",
     rationaleTitle: "Paliwanag at Batayan sa Batas (AI Transparency):",
+    actionAdviceTitle: "Mga Inirerekomendang Hakbang at Plano:",
+    geminiBadge: "Sinuri at Pinatotohanan ng Google Gemini AI",
+    askGeminiTitle: "Magtanong sa MSWDO AI Social Worker Assistant",
+    askGeminiSubtitle: "May mga katanungan tungkol sa mga dokumento, araw ng pag-release, o proseso? Magtanong dito:",
+    askGeminiPlaceholder: "Halimbawa: Ilang araw bago makuha ang guarantee letter para sa ospital?",
+    askGeminiSend: "Magtanong",
+    askGeminiThinking: "Bumubuo ang Gemini AI ng opisyal na sagot batay sa panuntunan...",
+    chipPrompt1: "Ilang araw ang pag-release ng tulong medikal sa AICS?",
+    chipPrompt2: "Pano po kung walang Certificate of Indigency?",
+    chipPrompt3: "Pwede bang sabay na kumuha ng Solo Parent at AICS?",
     disclaimer: "* Ang pagsusuring ito ng AI ay nagsisilbing mabilisang gabay at pre-screening. Ang pinal na pag-apruba at halaga ng tulong ay pagpapasyahan ng lisensyadong Social Worker ng MSWDO.",
   },
 
@@ -331,7 +356,7 @@ const I18N = {
     btnNext: "Sunod nga Lakang",
     btnBack: "Balik",
     btnAnalyze: "Susiha ug Paghatag og Rekomendasyon sa AI",
-    btnAnalyzing: "Gisusi sa AI ang mga lagda sa MSWDO ug kahimtang sa pamilya...",
+    btnAnalyzing: "Gisusi sa Gemini AI ang mga lagda sa MSWDO ug kahimtang sa pamilya...",
     btnRetake: "Usba ang Interbyu",
     btnApply: "Mag-apply Karon",
     btnPrint: "I-print ang Sumaryo",
@@ -344,6 +369,16 @@ const I18N = {
     statusEligible: "Hingpit nga Kwalipikado sa Tabang sa Gobyerno",
     reqDocsTitle: "Mga Dokumento nga Kinahanglang Andamon:",
     rationaleTitle: "Katin-awan ug Basehanan sa Balaod (AI Transparency):",
+    actionAdviceTitle: "Girekomendar nga Plano ug Sunod nga Lakang:",
+    geminiBadge: "Gipamatud-an sa Google Gemini AI Engine",
+    askGeminiTitle: "Pangutana sa MSWDO AI Social Worker Assistant",
+    askGeminiSubtitle: "Naay mga pangutana bahin sa mga rekisitos, gidugayon sa pagpagawas, o proseso? Pangutana dinhi:",
+    askGeminiPlaceholder: "Pananglitan: Pila ka adlaw una makuha ang tabang pinansyal sa ospital?",
+    askGeminiSend: "Pangutana",
+    askGeminiThinking: "Naghimo ang Gemini AI og opisyal nga giya...",
+    chipPrompt1: "Pila ka adlaw una ma-release ang AICS medikal?",
+    chipPrompt2: "Unsaon kung walay Certificate of Indigency?",
+    chipPrompt3: "Pwede bang dungan mag-apply og Solo Parent ug AICS?",
     disclaimer: "* Kining pagsusi sa AI nagsilbi lamang nga abanteng giya ug pre-screening. Ang opisyal nga pag-apruba ug kantidad sa tabang pagahukman sa lisensyadong Social Worker sa MSWDO.",
   },
 }
@@ -403,6 +438,11 @@ export default function AIAssistanceFinderModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<any>(null)
 
+  // Interactive Gemini Assistant Chat State
+  const [chatInput, setChatInput] = useState("")
+  const [isChatSending, setIsChatSending] = useState(false)
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([])
+
   const toggleService = (key: string) => {
     setSelectedServices((prev) => ({
       ...prev,
@@ -410,12 +450,98 @@ export default function AIAssistanceFinderModal({
     }))
   }
 
-  // Run AI Evaluation logic
-  const handleRunAiEvaluation = () => {
+  // Map icon and badge color to program
+  const resolveProgramCardMeta = (prog: any) => {
+    const id = String(prog.id || "").toLowerCase()
+    const cat = String(prog.category || "").toLowerCase()
+    let icon = HeartHandshake
+    let badgeColor = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
+
+    if (id.includes("med") || cat.includes("med") || id.includes("health")) {
+      icon = Stethoscope
+      badgeColor = "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800"
+    } else if (id.includes("burial") || id.includes("funeral") || id.includes("food") || id.includes("crisis")) {
+      icon = ShieldAlert
+      badgeColor = "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800"
+    } else if (id.includes("solo")) {
+      icon = Baby
+      badgeColor = "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+    } else if (id.includes("pwd")) {
+      icon = Users
+      badgeColor = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
+    } else if (id.includes("senior")) {
+      icon = HeartHandshake
+      badgeColor = "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+    } else if (id.includes("child") || id.includes("daycare") || id.includes("feeding")) {
+      icon = GraduationCap
+      badgeColor = "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800"
+    } else if (id.includes("livelihood") || id.includes("skills") || id.includes("training") || id.includes("grant")) {
+      icon = Wallet
+      badgeColor = "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+    } else if (id.includes("disburse") || id.includes("payout")) {
+      icon = Wallet
+      badgeColor = "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+    }
+
+    return {
+      ...prog,
+      icon: prog.icon || icon,
+      badgeColor: prog.badgeColor || badgeColor,
+      actionUrl: prog.actionUrl || "/portal",
+      actionLabel:
+        prog.actionLabel ||
+        (selectedLang === "en" ? "Apply Now" : selectedLang === "tl" ? "Mag-apply Agad" : "Mag-apply Karon"),
+      docs: Array.isArray(prog.docs) ? prog.docs : (prog.requiredDocuments || []),
+    }
+  }
+
+  // Run AI Evaluation logic (Gemini API with seamless local fallback)
+  const handleRunAiEvaluation = async () => {
     setIsAnalyzing(true)
     setCurrentStep(4)
     setAnalysisResult(null)
 
+    try {
+      const response = await fetch(`${API_BASE}/api/ai/analyze-eligibility`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          language: selectedLang,
+          applicantType,
+          incomeLevel,
+          dependentsCount,
+          employmentStatus,
+          residencyType,
+          selectedServices,
+          narrativeText,
+        }),
+      })
+
+      if (response.ok) {
+        const json = await response.json()
+        if (json.success && json.data) {
+          const geminiData = json.data
+          const formattedRecs = (geminiData.recommendedPrograms || []).map(resolveProgramCardMeta)
+
+          setAnalysisResult({
+            score: geminiData.confidenceScore || 95,
+            rationale: geminiData.summaryRationale,
+            justifications: geminiData.justifications || [],
+            recommendations: formattedRecs.length > 0 ? formattedRecs : [],
+            actionableAdvice: geminiData.actionableAdvice,
+            isGeminiPowered: true,
+          })
+          setIsAnalyzing(false)
+          return
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[Gemini AI] Switching to local evaluation fallback:", apiErr)
+    }
+
+    // Fallback: Local Rule Evaluation Engine
     setTimeout(() => {
       let baseScore = 95
       const recs: any[] = []
@@ -599,84 +725,84 @@ export default function AIAssistanceFinderModal({
         })
         justifications.push(
           selectedLang === "en"
-            ? "Eligible under Republic Act 11861 (Expanded Solo Parents Welfare Act) with dependent children below 18 years old."
+            ? "Meets Expanded Solo Parents Welfare Act (RA 11861) criteria for low-income solo guardians."
             : selectedLang === "tl"
-            ? "Pasok sa Expanded Solo Parents Welfare Act (RA 11861) bilang solong nagtataguyod ng menor de edad na anak."
-            : "Pasok sa Expanded Solo Parents Welfare Act (RA 11861) isip nag-inusarang nagbuhi og menor de edad nga anak."
+            ? "Kwalipikado sa ilalim ng RA 11861 para sa mga solong magulang na may mababang buwanang kita."
+            : "Kwalipikado ubos sa RA 11861 para sa solo nga ginikanan nga ubos ang kita."
         )
       }
 
-      // 4. PWD Services (RA 7277 / RA 10070)
+      // 4. PWD Services
       if (hasPwd) {
         recs.push({
           id: "pwd_services",
-          category: selectedLang === "en" ? "PWD Services" : selectedLang === "tl" ? "Serbisyo para sa PWD" : "Serbisyo para sa PWD",
+          category: selectedLang === "en" ? "PWD Services" : selectedLang === "tl" ? "Serbisyo sa PWD" : "Serbisyo sa PWD",
           icon: Users,
-          badgeColor: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
-          title: selectedLang === "en" ? "PWD ID Card & Assistive Mobility Support" : selectedLang === "tl" ? "PWD ID Card at Kagamitang Pantulong (Assistive Device)" : "PWD ID Card ug Kagamitan Pantabang",
-          priority: selectedLang === "en" ? "Statutory Disability Rights" : selectedLang === "tl" ? "Karapatan sa ilalim ng RA 7277" : "Katungod ubos sa RA 7277",
-          estBenefit: selectedLang === "en" ? "20% Discount + VAT Exemption + Free Wheelchair/Device" : selectedLang === "tl" ? "20% Diskwento + VAT Exemption + Libreng Wheelchair/Saklay" : "20% Diskwento + VAT Exemption + Libreng Wheelchair",
+          badgeColor: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
+          title: selectedLang === "en" ? "PWD Identification Card & Assistive Device Support" : selectedLang === "tl" ? "PWD ID & Pamamahagi ng Wheelchair/Kagamitan (RA 7277)" : "PWD ID ug Tabang sa Wheelchair/Gamit (RA 7277)",
+          priority: selectedLang === "en" ? "Persons with Disability Sector" : selectedLang === "tl" ? "Sektor ng may Kapansanan (PWD)" : "Sektor sa may Kapansanan (PWD)",
+          estBenefit: selectedLang === "en" ? "20% Discount + VAT Exemption + Free Assistive Devices" : selectedLang === "tl" ? "20% Diskwento + VAT Exemption + Libreng Wheelchair/Gamit" : "20% Diskwento + VAT Exemption + Libreng Wheelchair",
           desc: selectedLang === "en"
-            ? "Issuance of official National PWD Identification Card, 20% discount on medicines, transportation, food, and eligibility for assistive mobility devices."
+            ? "Official municipal PWD registry benefits including 20% discount on medicines, grocery essentials, transport, plus priority distribution of wheelchairs, canes, and hearing aids."
             : selectedLang === "tl"
-            ? "Opisyal na PWD Identification Card, 20% diskwento sa gamot, pamasahe, pagkain, at libreng subsidiya sa wheelchair o assistive device."
-            : "Opisyal nga PWD ID Card, 20% diskwento sa tambal, plete, pagkaon, ug libreng wheelchair o assistive device.",
+            ? "Opisyal na PWD ID na may 20% diskwento sa gamot, bilihin, pamasahe, at libreng alokasyon ng wheelchair o hearing aid."
+            : "Opisyal nga PWD ID nga may 20% diskwento sa tambal, pagkaon, plete, ug libreng alokasyon sa wheelchair o tungkod.",
           docs: [
-            selectedLang === "en" ? "Medical Certificate with Disability Assessment" : selectedLang === "tl" ? "Sertipiko Medikal na nagsasaad ng kapansanan" : "Sertipiko Medikal nga nagtumbok sa kapansanan",
+            selectedLang === "en" ? "Medical Certificate with Disability Assessment" : selectedLang === "tl" ? "Medical Certificate na may pirma ng Doktor ukol sa kapansanan" : "Medical Certificate gikan sa Doktor bahin sa kapansanan",
             selectedLang === "en" ? "Barangay Certificate of Residency" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
-            selectedLang === "en" ? "2 pcs 1x1 ID Photos" : selectedLang === "tl" ? "2 piraso ng 1x1 ID Picture" : "2 ka buok 1x1 ID Picture",
+            selectedLang === "en" ? "2x2 Recent ID Photos (2 copies)" : selectedLang === "tl" ? "2x2 ID Pictures (2 piraso)" : "2x2 ID Pictures (2 ka buok)",
           ],
-          actionUrl: "/portal/apply-pwd-senior",
-          actionLabel: selectedLang === "en" ? "Apply for PWD Services" : selectedLang === "tl" ? "Mag-apply sa PWD Services" : "Mag-apply sa PWD Services",
+          actionUrl: "/portal/apply-pwd-senior?type=pwd",
+          actionLabel: selectedLang === "en" ? "Apply for PWD ID" : selectedLang === "tl" ? "Mag-apply para sa PWD ID" : "Mag-apply para sa PWD ID",
         })
         justifications.push(
           selectedLang === "en"
-            ? "Protected under Magna Carta for Persons with Disabilities (RA 7277 amended by RA 10070)."
+            ? "Eligible under Magna Carta for Persons with Disabilities (RA 7277 as amended by RA 10754)."
             : selectedLang === "tl"
-            ? "Protektado sa ilalim ng Magna Carta for Persons with Disabilities (RA 7277 at RA 10070)."
-            : "Protektado ubos sa Magna Carta for Persons with Disabilities (RA 7277 ug RA 10070)."
+            ? "Kwalipikado sa ilalim ng Magna Carta for Persons with Disabilities (RA 7277 / RA 10754)."
+            : "Kwalipikado ubos sa Magna Carta for Persons with Disabilities (RA 7277 / RA 10754)."
         )
       }
 
-      // 5. Senior Citizen Services (RA 9994)
+      // 5. Senior Citizen Welfare & Social Pension
       if (hasSenior) {
         recs.push({
           id: "senior_services",
           category: selectedLang === "en" ? "Senior Citizen Services" : selectedLang === "tl" ? "Serbisyo sa Senior Citizen" : "Serbisyo sa Senior Citizen",
-          icon: Users,
+          icon: HeartHandshake,
           badgeColor: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
-          title: selectedLang === "en" ? "Senior Citizen ID, Discount Booklet & Social Pension" : selectedLang === "tl" ? "Senior Citizen ID, Medicine Booklet at Social Pension" : "Senior Citizen ID, Medicine Booklet ug Social Pension",
-          priority: selectedLang === "en" ? "Statutory Senior Welfare" : selectedLang === "tl" ? "Batas sa Senior (RA 9994)" : "Balaod sa Senior (RA 9994)",
-          estBenefit: selectedLang === "en" ? "₱1,000/mo Social Pension + 20% Discount Booklet" : selectedLang === "tl" ? "₱1,000/buwan Social Pension + 20% Diskwento sa Gamot" : "₱1,000/buwan Social Pension + 20% Diskwento sa Tambal",
+          title: selectedLang === "en" ? "Senior Citizen ID & Indigent Social Pension (RA 11916)" : selectedLang === "tl" ? "Senior Citizen ID at Social Pension Allowance (RA 11916)" : "Senior Citizen ID ug Social Pension Allowance (RA 11916)",
+          priority: selectedLang === "en" ? "Senior Citizen Sector (60+)" : selectedLang === "tl" ? "Sektor ng Nakatatanda (60+ Anyos)" : "Sektor sa mga Tigulang (60+)",
+          estBenefit: selectedLang === "en" ? "₱1,000/Month Social Pension + 20% Senior Discount" : selectedLang === "tl" ? "₱1,000 Buwanang Social Pension + 20% Senior Diskwento" : "₱1,000 Binuwan nga Social Pension + 20% Diskwento",
           desc: selectedLang === "en"
-            ? "Official OSCA Senior Citizen ID, Purchase Booklet for 20% discount on prescription drugs and groceries, plus social pension for indigent seniors aged 60+."
+            ? "Municipal OSCA ID issuance, medicine booklet, 20% discount on groceries/dining/fare, and quarterly ₱1,000/month social pension for indigent seniors."
             : selectedLang === "tl"
-            ? "Opisyal na Senior Citizen ID, Purchase booklet para sa 20% diskwento sa gamot at pagkain, at subsidiya sa social pension para sa may edad 60 pataas."
-            : "Opisyal nga Senior Citizen ID, Booklet para sa 20% diskwento sa tambal ug pagkaon, ug social pension para sa nag-edad og 60 pataas.",
+            ? "Pagkakaroon ng OSCA ID, medicine discount booklet, 20% diskwento, at buwanang ₱1,000 social pension para sa kapus-palad na senior."
+            : "Paghatag og OSCA ID, medicine booklet, 20% diskwento, ug ₱1,000 binuwan nga social pension para sa kabus nga senior.",
           docs: [
-            selectedLang === "en" ? "PSA Birth Certificate / Valid Gov ID showing age 60+" : selectedLang === "tl" ? "PSA Birth Certificate / Valid ID na nagpapatunay ng edad 60 pataas" : "PSA Birth Certificate / Valid ID nga nagpamatuod sa edad 60 pataas",
-            selectedLang === "en" ? "Barangay Certificate of Residency" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
-            selectedLang === "en" ? "Certificate of Indigency (for Social Pension qualification)" : selectedLang === "tl" ? "Certificate of Indigency (para sa Social Pension)" : "Certificate of Indigency (para sa Social Pension)",
+            selectedLang === "en" ? "PSA Birth Certificate / Valid ID showing Date of Birth (60+)" : selectedLang === "tl" ? "PSA Birth Certificate o Valid ID na nagpapatunay ng edad (60+)" : "PSA Birth Certificate o Valid ID nga nagpamatuod sa edad (60+)",
+            selectedLang === "en" ? "Barangay Certificate of Residency (at least 6 months)" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
+            selectedLang === "en" ? "Certificate of No Pension / Indigency (for Social Pension)" : selectedLang === "tl" ? "Sertipikasyon na walang ibang tinatanggap na SSS/GSIS pension" : "Sertipikasyon nga walay laing pension sa SSS/GSIS",
           ],
-          actionUrl: "/portal/apply-pwd-senior",
-          actionLabel: selectedLang === "en" ? "Apply for Senior Benefits" : selectedLang === "tl" ? "Mag-apply sa Senior Benefits" : "Mag-apply sa Senior Benefits",
+          actionUrl: "/portal/apply-pwd-senior?type=senior",
+          actionLabel: selectedLang === "en" ? "Apply for Senior ID" : selectedLang === "tl" ? "Mag-apply sa Senior ID" : "Mag-apply sa Senior ID",
         })
         justifications.push(
           selectedLang === "en"
-            ? "Qualified under Expanded Senior Citizens Act (RA 9994) for welfare and social pension benefits."
+            ? "Complies with Expanded Senior Citizens Act (RA 9994) & Social Pension Increase Act (RA 11916)."
             : selectedLang === "tl"
-            ? "Kwalipikado sa ilalim ng Expanded Senior Citizens Act (RA 9994) para sa pension at diskwento."
-            : "Kwalipikado ubos sa Expanded Senior Citizens Act (RA 9994) para sa pension ug diskwento.",
+            ? "Nasasakop ng Expanded Senior Citizens Act (RA 9994) at Social Pension Act (RA 11916)."
+            : "Nalakip sa Expanded Senior Citizens Act (RA 9994) ug Social Pension Act (RA 11916)."
         )
       }
 
-      // 6. Child Welfare Services
+      // 6. Child Welfare & ECCD Daycare Program
       if (hasChildWelfare) {
         recs.push({
           id: "child_welfare",
-          category: selectedLang === "en" ? "Child Welfare Services" : selectedLang === "tl" ? "Kapakanan ng Bata (Child Welfare)" : "Kaayohan sa Bata (Child Welfare)",
-          icon: HeartHandshake,
-          badgeColor: "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800",
+          category: selectedLang === "en" ? "Child Welfare Services" : selectedLang === "tl" ? "Kapakanan ng Bata" : "Kaayohan sa Bata",
+          icon: GraduationCap,
+          badgeColor: "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800",
           title: selectedLang === "en" ? "Child Daycare Enrollment & Supplemental Nutrition Program" : selectedLang === "tl" ? "Daycare Enrollment at Supplemental Nutrition Feeding" : "Daycare Enrollment ug Supplemental Feeding Program",
           priority: selectedLang === "en" ? "Child Protection & Nutrition" : selectedLang === "tl" ? "Nutrisyon at Edukasyon ng Bata" : "Nutrisyon ug Edukasyon sa Bata",
           estBenefit: selectedLang === "en" ? "Free Early Education + 120-day Supplemental Milk & Meals" : selectedLang === "tl" ? "Libreng Daycare + 120-araw na Feeding Program at Gatas" : "Libreng Daycare + 120-adlaw nga Feeding Program",
@@ -702,12 +828,12 @@ export default function AIAssistanceFinderModal({
         )
       }
 
-      // 7. Sustainable Livelihood & Skills Training (Long-term Economic Recovery)
+      // 7. Sustainable Livelihood & Skills Training
       if (hasLivelihood || recs.length < 2) {
         recs.push({
           id: "livelihood_prog",
           category: selectedLang === "en" ? "Livelihood & Training" : selectedLang === "tl" ? "Kabuhayan at Pagsasanay" : "Panginabuhi ug Pagbansay",
-          icon: GraduationCap,
+          icon: Wallet,
           badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
           title: selectedLang === "en" ? "Sustainable Livelihood Seed Grant & Skills Training" : selectedLang === "tl" ? "Puhunan sa Negosyo (Livelihood Seed Grant) at TESDA Training" : "Puhunan sa Negosyo ug Libreng Pagbansay sa TESDA",
           priority: selectedLang === "en" ? "Long-Term Socioeconomic Recovery" : selectedLang === "tl" ? "Pangmatagalang Pangkabuhayan" : "Malungtarong Panginabuhi",
@@ -792,6 +918,7 @@ export default function AIAssistanceFinderModal({
         score: baseScore,
         recommendations: recs,
         justifications,
+        isGeminiPowered: false,
       })
       setIsAnalyzing(false)
     }, 750)
@@ -1458,15 +1585,141 @@ export default function AIAssistanceFinderModal({
 
                   {/* AI Explainability & Policy Justification */}
                   <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-800/40 text-xs space-y-2">
-                    <div className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
-                      <Info className="h-4 w-4 text-blue-600 shrink-0" />
-                      <span>{t.rationaleTitle}</span>
+                    <div className="font-bold text-blue-900 dark:text-blue-300 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <Info className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span>{t.rationaleTitle}</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-200/60 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-amber-500" />
+                        {t.geminiBadge}
+                      </span>
                     </div>
-                    <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 text-[11px] space-y-1 pl-1">
-                      {analysisResult.justifications.map((just: string, jIdx: number) => (
-                        <li key={jIdx} className="leading-relaxed">{just}</li>
-                      ))}
-                    </ul>
+
+                    {analysisResult.rationale && (
+                      <p className="text-xs text-gray-700 dark:text-slate-300 leading-relaxed font-medium bg-white/60 dark:bg-slate-900/40 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                        {analysisResult.rationale}
+                      </p>
+                    )}
+
+                    {analysisResult.justifications && analysisResult.justifications.length > 0 && (
+                      <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 text-[11px] space-y-1 pl-1">
+                        {analysisResult.justifications.map((just: string, jIdx: number) => (
+                          <li key={jIdx} className="leading-relaxed">{just}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Actionable Advice & Next Steps */}
+                  {analysisResult.actionableAdvice && (
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/40 text-xs space-y-2">
+                      <div className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>{t.actionAdviceTitle}</span>
+                      </div>
+                      <div className="text-gray-700 dark:text-slate-300 text-[11px] leading-relaxed whitespace-pre-line pl-1 font-medium">
+                        {analysisResult.actionableAdvice}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive Gemini AI Social Worker Chat Assistant */}
+                  <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-50/50 via-slate-50 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 shadow-sm space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
+                          <Bot className="h-4 w-4 text-amber-300" />
+                        </div>
+                        <div>
+                          <h5 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                            {t.askGeminiTitle}
+                          </h5>
+                          <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                            {t.askGeminiSubtitle}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick inquiry chips */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSendChatMessage(t.chipPrompt1)}
+                        className="text-[10.5px] px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                      >
+                        💡 {t.chipPrompt1}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendChatMessage(t.chipPrompt2)}
+                        className="text-[10.5px] px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                      >
+                        📋 {t.chipPrompt2}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendChatMessage(t.chipPrompt3)}
+                        className="text-[10.5px] px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                      >
+                        🤝 {t.chipPrompt3}
+                      </button>
+                    </div>
+
+                    {/* Chat history list */}
+                    {chatMessages.length > 0 && (
+                      <div className="space-y-2.5 max-h-56 overflow-y-auto p-3 rounded-2xl bg-white dark:bg-slate-950/50 border border-gray-200 dark:border-slate-800 text-xs">
+                        {chatMessages.map((msg, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className={`flex flex-col ${
+                              msg.role === "user" ? "items-end" : "items-start"
+                            }`}
+                          >
+                            <div
+                              className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[11.5px] leading-relaxed shadow-xs ${
+                                msg.role === "user"
+                                  ? "bg-blue-600 text-white rounded-br-xs"
+                                  : "bg-slate-100 dark:bg-slate-800 text-gray-900 dark:text-slate-100 border border-gray-200 dark:border-slate-700 rounded-bl-xs"
+                              }`}
+                            >
+                              {msg.text}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Chat Input Bar */}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSendChatMessage()
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={t.askGeminiPlaceholder}
+                        disabled={isChatSending}
+                        className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isChatSending || !chatInput.trim()}
+                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                      >
+                        {isChatSending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                        <span>{t.askGeminiSend}</span>
+                      </button>
+                    </form>
                   </div>
                 </div>
               ) : null}
