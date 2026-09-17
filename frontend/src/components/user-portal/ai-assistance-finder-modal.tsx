@@ -151,7 +151,9 @@ const I18N = {
     chipPrompt1: "How fast is AICS medical aid released?",
     chipPrompt2: "What if I don't have a Barangay Indigency?",
     chipPrompt3: "Can I receive both Solo Parent & AICS help?",
-    disclaimer: "* This AI assessment serves as an intelligent intake pre-screening tool. Official approval and final cash grants are verified by the licensed MSWDO Social Worker.",
+    officialDisclaimerTitle: "Official Administrative Pre-Screening & Final Approval Notice",
+    officialDisclaimerText: "Please be advised that this assessment is an automated AI-generated diagnostic and pre-screening tool designed to assist citizens in identifying applicable municipal social welfare programs. Official case validation, physical document verification, and the final decision to approve or disapprove any application, ID card, or cash assistance grant remain under the sole official authority and professional evaluation of the licensed MSWDO Social Workers and Department Officers.",
+    disclaimer: "* This AI assessment serves as an automated pre-screening diagnostic. Official approval is subject to case validation by the licensed MSWDO Social Worker.",
   },
 
   tl: {
@@ -269,7 +271,9 @@ const I18N = {
     chipPrompt1: "Ilang araw ang pag-release ng tulong medikal sa AICS?",
     chipPrompt2: "Pano po kung walang Certificate of Indigency?",
     chipPrompt3: "Pwede bang sabay na kumuha ng Solo Parent at AICS?",
-    disclaimer: "* Ang pagsusuring ito ng AI ay nagsisilbing mabilisang gabay at pre-screening. Ang pinal na pag-apruba at halaga ng tulong ay pagpapasyahan ng lisensyadong Social Worker ng MSWDO.",
+    officialDisclaimerTitle: "Opisyal na Paunawa sa AI Pre-Screening at Pinal na Pag-apruba ng Kawani",
+    officialDisclaimerText: "Mahalagang Paunawa: Ang pagsusuring ito ay gabay at automated pre-screening lamang na binuo ng AI upang matulungan kayong matukoy ang mga nararapat na programa ng pamahalaan. Ang opisyal na pagsusuri, beripikasyon ng mga orihinal na dokumento, at ang pinal na pagpapasya kung aaprubahan o tatanggihan ang aplikasyon at ayuda ay ganap na nakasalalay sa pagpapasya at ebalwasyon ng mga lisensyadong Social Worker at opisyal ng MSWDO.",
+    disclaimer: "* Ang pagsusuring ito ng AI ay nagsisilbing automated pre-screening. Ang pinal na pag-apruba ay nakasalalay sa pagsusuri ng lisensyadong Social Worker ng MSWDO.",
   },
 
   bis: {
@@ -387,7 +391,9 @@ const I18N = {
     chipPrompt1: "Pila ka adlaw una ma-release ang AICS medikal?",
     chipPrompt2: "Unsaon kung walay Certificate of Indigency?",
     chipPrompt3: "Pwede bang dungan mag-apply og Solo Parent ug AICS?",
-    disclaimer: "* Kining pagsusi sa AI nagsilbi lamang nga abanteng giya ug pre-screening. Ang opisyal nga pag-apruba ug kantidad sa tabang pagahukman sa lisensyadong Social Worker sa MSWDO.",
+    officialDisclaimerTitle: "Opisyal nga Pahibalo bahin sa AI Pre-Screening ug Pinal nga Pag-aprobar",
+    officialDisclaimerText: "Pahibalo: Kining maong pagsusi maoy usa ka automated AI diagnostic ug pre-screening nga giya aron matabangan ang mga lungsuranon sa pag-ila sa mga programa sa gobyerno. Ang opisyal nga pagsusi, beripikasyon sa mga orihinal nga dokumento, ug ang pinal nga desisyon sa pag-aprobar o dili pag-aprobar sa aplikasyon ug ayuda nagpabilin ubos sa paghukom ug pagdumala sa mga lisensyadong Social Worker ug kawani sa MSWDO.",
+    disclaimer: "* Kining pagsusi sa AI nagsilbi lamang nga automated pre-screening. Ang pinal nga pag-apruba nakasalalay sa pagsusi sa lisensyadong Social Worker sa MSWDO.",
   },
 }
 
@@ -1838,6 +1844,17 @@ export default function AIAssistanceFinderModal({
                       </div>
                     </div>
                   )}
+
+                  {/* Official Administrative Discretion & Approval Notice Banner */}
+                  <div className="p-4 sm:p-4.5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 dark:border-amber-700/40 text-xs space-y-2 shadow-xs">
+                    <div className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-300">
+                      <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="text-xs sm:text-sm tracking-tight">{t.officialDisclaimerTitle}</span>
+                    </div>
+                    <p className="text-[11.5px] text-amber-900/90 dark:text-slate-300 leading-relaxed pl-1 font-normal">
+                      {t.officialDisclaimerText}
+                    </p>
+                  </div>
 
                   {/* Interactive Gemini AI Social Worker Chat Assistant */}
                   <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-50/50 via-slate-50 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 shadow-sm space-y-3.5">
