@@ -90,7 +90,7 @@ initPwdSeniorTable();
 
 let cachedApps = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 4000; // 4 seconds cache
+const CACHE_TTL_MS = 30000; // 30 seconds cache (invalidated on create/update/delete)
 
 function invalidateAppsCache() {
   cachedApps = null;

@@ -75,7 +75,7 @@ export function clearApiCache(urlPattern?: string) {
 
 export async function fetchPwdSeniorApplications(): Promise<any[]> {
   try {
-    const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 4000)
+    const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 15000)
     return Array.isArray(data) ? data : []
   } catch (err) {
     console.warn("Could not fetch PWD/Senior applications:", err)
