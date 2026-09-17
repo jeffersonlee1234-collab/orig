@@ -31,6 +31,7 @@ import { API_BASE } from "../../config/api"
 import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
+import AIAssistanceFinderModal from "./ai-assistance-finder-modal"
 
 function WheelchairIcon({ className, ...props }: React.ComponentProps<"svg">) {
   return (
@@ -60,6 +61,7 @@ export default function CitizenGuideHub() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [recentApps, setRecentApps] = useState<any[]>([])
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
 
   const profile = getCurrentUserProfile()
   const qcid = getLoggedInUserQcid() || profile?.qcidNo || profile?.qcidNumber || ""
@@ -591,7 +593,7 @@ export default function CitizenGuideHub() {
           </div>
 
           {/* Category Filter Pills */}
-          <div className="mt-4 flex flex-wrap gap-2 pt-1">
+          <div className="mt-4 flex flex-wrap items-center gap-2 pt-1">
             {[
               { id: "all", label: "All Services" },
               { id: "aics", label: "AICS Crisis Aid (6 Types)" },
@@ -612,6 +614,17 @@ export default function CitizenGuideHub() {
                 {cat.label}
               </button>
             ))}
+
+            {/* ✨ AI Assistance & Eligibility Finder Button */}
+            <button
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-400 hover:via-rose-400 hover:to-indigo-500 shadow-md shadow-indigo-900/30 border border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer animate-in fade-in"
+              title="Click to assess eligibility and get personalized assistance recommendations"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-200 animate-spin-slow" />
+              <span>✨ AI Assistance &amp; Eligibility Finder</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1221,6 +1234,12 @@ export default function CitizenGuideHub() {
           </button>
         </div>
       </div>
+
+      {/* AI Assistance & Eligibility Finder Modal */}
+      <AIAssistanceFinderModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+      />
     </div>
   )
 }
