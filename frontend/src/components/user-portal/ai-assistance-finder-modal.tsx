@@ -38,10 +38,10 @@ const I18N = {
     modalTitle: "MSWDO Smart Social Assistance Intake Interview",
     modalBadge: "AI POWERED",
     modalSubtitle: "Complete this guided intake survey to identify all municipal social welfare programs you are eligible for.",
-    step1Tab: "1. Household & Income",
-    step2Tab: "2. Services & Needs",
-    step3Tab: "3. Narrative & Urgency",
-    step4Tab: "4. AI Recommendation",
+    step1Tab: "1. Household & Demographics",
+    step2Tab: "2. Current Hardships & Crisis",
+    step3Tab: "3. Narrative Statement",
+    step4Tab: "4. AI Assessment & Recommendations",
 
     // Step 1
     s1Title: "Household Profile & Economic Status",
@@ -75,40 +75,36 @@ const I18N = {
     optResRenter: "Renting / Boarding resident",
     optResInformal: "Informal Settler / Temporary shelter",
 
-    // Step 2
-    s2Title: "Assistance Programs of Interest",
-    s2Subtitle: "Select all categories and specific aid services you or your family need right now:",
-    catAics: "AICS Crisis Assistance",
-    catAicsDesc: "Emergency medical, hospital bills, funeral, acute food, or transportation in crisis.",
-    catPwd: "PWD Services",
-    catPwdDesc: "PWD ID card application/renewal, wheelchairs/assistive devices, and medical aid.",
-    catSenior: "Senior Citizen Services",
-    catSeniorDesc: "Senior ID, medicine discount booklet, social pension (₱1,000/mo), centenarian gift.",
-    catSoloParent: "Solo Parent Services (RA 11861)",
-    catSoloParentDesc: "Solo Parent ID, ₱1,000 monthly subsidy, 10% discount on milk/food, 7-day parental leave.",
-    catChild: "Child Welfare Services",
-    catChildDesc: "Daycare enrollment, supplemental nutrition/feeding for underweight kids, child protection.",
-    catLivelihood: "Livelihood & Training Programs",
-    catLivelihoodDesc: "₱5,000–₱15,000 micro-enterprise seed grant, free TESDA vocational training, toolkits.",
-    catDisbursement: "Financial Aid Payout & Disbursement",
-    catDisbursementDesc: "Tracking approved cash assistance release, payout appointment, and QR voucher.",
+    // Step 2: Real Life Circumstances & Hardships
+    s2Title: "Current Life Situation & Hardships",
+    s2Subtitle: "Select all real-life challenges or emergencies your household is currently facing. Our AI will automatically identify and diagnose the exact government programs you qualify for:",
 
-    // Specific sub-options
-    subMed: "Emergency Hospitalization / Dialysis / Chemo / Medicines",
-    subBurial: "Funeral & Burial Expenses / Casket",
-    subFood: "Immediate Food / Crisis Cash Relief",
-    subTranspo: "Transportation / Balik-Probinsya Assistance",
-    subEdu: "Student Educational Crisis Allowance",
-    subPwdId: "New or Renewal PWD Identification Card",
-    subPwdDevice: "Wheelchair / Cane / Hearing Aid / Assistive Tools",
-    subSeniorId: "Senior Citizen ID & Medicine Booklet",
-    subSeniorPension: "Indigent Senior Social Pension Allowance",
-    subSoloId: "Solo Parent ID (RA 11861) & ₱1,000 Monthly Cash Grant",
-    subDaycare: "Early Childhood Daycare Center Enrollment",
-    subFeeding: "Supplemental Milk & Nutritional Feeding Program",
-    subLivelihoodGrant: "Micro-enterprise Startup Seed Capital (₱5k–₱15k)",
-    subSkillsTraining: "Free Vocational Courses (Baking, Culinary, Driving, Sewing)",
-    subDisbursementTrack: "Check Payout Schedule & Claim Approved Funds",
+    hMedTitle: "Medical Emergency, Hospitalization, or Costly Medications",
+    hMedDesc: "Hospital admission, surgery bills, ongoing dialysis/chemo, laboratory fees, or maintenance prescription drugs you cannot afford.",
+
+    hBurialTitle: "Bereavement & Death in the Family",
+    hBurialDesc: "Recent passing of a loved one and struggling to pay for funeral parlor, casket, or burial plot expenses.",
+
+    hFoodTitle: "Immediate Food Insecurity & Crisis Survival",
+    hFoodDesc: "Lack of funds to buy daily groceries and milk, acute hunger, or total loss of household income.",
+
+    hTranspoTitle: "Stranded / Emergency Provincial Travel",
+    hTranspoDesc: "Stranded in the municipality/city with no money for travel fare to return to your home province.",
+
+    hPwdTitle: "Family Member with Physical or Mental Disability",
+    hPwdDesc: "A member has a physical, mental, visual, or hearing impairment, or lacks assistive devices like wheelchairs/canes.",
+
+    hSeniorTitle: "Vulnerable Senior Citizen (60+ Years Old)",
+    hSeniorDesc: "Living with an elderly parent or relative who has no adequate pension and struggles with medical maintenance.",
+
+    hSoloParentTitle: "Single Parent Raising Children Alone",
+    hSoloParentDesc: "Single-handedly bearing the responsibility of raising minor dependent children without spousal or co-parent support.",
+
+    hChildTitle: "Young Children (0–5 yrs) Nutrition & Early Daycare",
+    hChildDesc: "Have infants or toddlers who are underweight, need supplemental milk feeding, or early daycare education.",
+
+    hLivelihoodTitle: "Lack of Livelihood Capital or Vocational Skills",
+    hLivelihoodDesc: "Unemployed or informal daily earner needing startup seed funds for a micro-enterprise (sari-sari store, street vending) or free TESDA skills certification.",
 
     // Step 3
     s3Title: "Narrative Statement of Situation",
@@ -124,7 +120,7 @@ const I18N = {
     btnNext: "Next Step",
     btnBack: "Previous",
     btnAnalyze: "Analyze & Generate AI Recommendation",
-    btnAnalyzing: "AI is evaluating MSWDO policies & socioeconomic criteria...",
+    btnAnalyzing: "Gemini AI is diagnosing MSWDO policies & household circumstances...",
     btnRetake: "Retake Intake Interview",
     btnApply: "Start Application",
     btnPrint: "Print Summary",
@@ -154,8 +150,8 @@ const I18N = {
     modalTitle: "MSWDO Matalinong Panayam at Gabay sa Tulong Panlipunan",
     modalBadge: "AI POWERED",
     modalSubtitle: "Kumpletuhin ang gabay na panayam na ito upang matukoy ang lahat ng programa ng pamahalaan kung saan ka kwalipikado.",
-    step1Tab: "1. Pamilya at Kita",
-    step2Tab: "2. Mga Tulong at Serbisyo",
+    step1Tab: "1. Pamilya at Demograpiko",
+    step2Tab: "2. Mga Hamon at Sitwasyon",
     step3Tab: "3. Sitwasyon at Kwento",
     step4Tab: "4. Rekomendasyon ng AI",
 
@@ -191,40 +187,36 @@ const I18N = {
     optResRenter: "Nangungupahan / Umuupa ng kwarto",
     optResInformal: "Informal Settler / Pansamantalang tirahan",
 
-    // Step 2
-    s2Title: "Mga Programa at Serbisyong Kinakailangan",
-    s2Subtitle: "Piliin ang lahat ng kategorya at partikular na tulong na kailangan mo o ng iyong pamilya ngayon:",
-    catAics: "Tulong ng AICS (Crisis Assistance)",
-    catAicsDesc: "Emergency sa ospital, gamot, libing, agarang pagkain, o pamasahe pauwi sa probinsya.",
-    catPwd: "Serbisyo para sa PWD",
-    catPwdDesc: "Aplikasyon/renewal ng PWD ID, wheelchair/saklay/hearing aid, at tulong medikal.",
-    catSenior: "Serbisyo sa Senior Citizen",
-    catSeniorDesc: "Senior ID, medicine discount booklet, social pension (₱1,000/buwan), birthday gift.",
-    catSoloParent: "Serbisyo sa Solo Parent (RA 11861)",
-    catSoloParentDesc: "Solo Parent ID, ₱1,000 buwanang ayuda, 10% diskwento sa gatas/pagkain, 7-araw na leave.",
-    catChild: "Kapakanan ng Bata (Child Welfare)",
-    catChildDesc: "Pagpapatala sa Daycare, supplemental feeding para sa payat na bata, proteksyon ng bata.",
-    catLivelihood: "Pangkabuhayan at Pagsasanay (Livelihood)",
-    catLivelihoodDesc: "₱5,000–₱15,000 puhunan sa negosyo, libreng TESDA vocational training courses, gamit.",
-    catDisbursement: "Pag-claim at Releasing ng Financial Aid",
-    catDisbursementDesc: "Pagsusuri sa iskedyul ng payout, QR voucher, at pamamahagi ng naaprubahang cash.",
+    // Step 2: Real Life Circumstances & Hardships
+    s2Title: "Kasalukuyang Kalagayan at Nararanasang Krisis",
+    s2Subtitle: "Piliin ang mga totoong suliranin o krisis na nararanasan ng iyong pamilya ngayon. Awtomatikong tutukuyin ng AI ang lahat ng programa ng tulong na naaangkop sa inyo:",
 
-    // Sub-options
-    subMed: "Emergency sa Ospital / Dialysis / Chemo / Reseta ng Gamot",
-    subBurial: "Gastos sa Libing / Punerarya / Kabaong",
-    subFood: "Agarang Pagkain / Emergency Cash Relief sa Pamilya",
-    subTranspo: "Pamasahe / Balik-Probinsya Assistance",
-    subEdu: "Tulong sa Matrikula at Gamit sa Eskwela ng Bata",
-    subPwdId: "Bagong PWD ID o Pag-renew ng Rehistrasyon",
-    subPwdDevice: "Wheelchair / Saklay / Hearing Aid / Kagamitang Pantulong",
-    subSeniorId: "Senior Citizen ID at Medicine Discount Booklet",
-    subSeniorPension: "Social Pension para sa Mahihirap na Senior Citizen",
-    subSoloId: "Solo Parent ID (RA 11861) at ₱1,000 Buwanang Ayuda",
-    subDaycare: "Pagpapatala ng Bata sa Daycare / Child Development Center",
-    subFeeding: "Supplemental Milk at Feeding Program sa Kulang sa Timbang",
-    subLivelihoodGrant: "Panimulang Puhunan sa Maliit na Negosyo (₱5k–₱15k)",
-    subSkillsTraining: "Libreng Kurso sa Pagsasanay (Baking, Cookery, Driving, Pananahi)",
-    subDisbursementTrack: "Tingnan ang Iskedyul ng Payout at I-claim ang Naaprubahang Pera",
+    hMedTitle: "Emergency sa Ospital, Operasyon, o Reseta ng Gamot",
+    hMedDesc: "Nasa ospital, kailangan ng dialysis, chemotherapy, operasyon, lab tests, o reseta ng maintenance na gamot na walang pambili.",
+
+    hBurialTitle: "Namatayan ng Kapamilya at Gastusin sa Libing",
+    hBurialDesc: "Namatayan kamakailan at walang pambayad sa punerarya, kabaong, burol, o pagpapalibing.",
+
+    hFoodTitle: "Kakulangan sa Pagkain at Arawang Pangangailangan",
+    hFoodDesc: "Walang makain, labis na gutom ang pamilya, o biglaang nawalan ng kita ang pangunahing nagtatrabaho.",
+
+    hTranspoTitle: "Na-stranded o Pamasahe Pauwi sa Probinsya",
+    hTranspoDesc: "Walang pamasahe pauwi sa sariling probinsya o naipit sa lungsod matapos mawalan ng matitirhan o trabaho.",
+
+    hPwdTitle: "May Kapamilyang may Kapansanan (PWD)",
+    hPwdDesc: "Nahihirapan kumilos, makakita, o makarinig; kailangan ng wheelchair, saklay, hearing aid, o PWD ID.",
+
+    hSeniorTitle: "May Nakatatandang Magulang o Kasambahay (60+ Anyos)",
+    hSeniorDesc: "Walang sapat na pensyon, mataas ang gastos sa gamot, o nangangailangan ng social pension at alaga.",
+
+    hSoloParentTitle: "Solong Magulang na Nagtataguyod sa mga Anak",
+    hSoloParentDesc: "Mag-isang nagpapalaki at bumubuhay sa mga anak na menor de edad nang walang suporta mula sa dating kabiyak.",
+
+    hChildTitle: "Bata (0–5 anyos) na Kulang sa Timbang o Kailangan ng Daycare",
+    hChildDesc: "Payat o kulang sa nutrisyon ang bata, o kailangang ipasok sa libreng Daycare / Child Development Center.",
+
+    hLivelihoodTitle: "Walang Trabaho / Kailangan ng Puhunan o Pagsasanay",
+    hLivelihoodDesc: "Nais magsimula ng maliit na negosyo (sari-sari store, paninda) o makakuha ng libreng skills training sa TESDA.",
 
     // Step 3
     s3Title: "Kwento at Detalye ng Kasalukuyang Krisis",
@@ -270,8 +262,8 @@ const I18N = {
     modalTitle: "MSWDO Maalamon nga Interbyu ug Giya sa Tabang Sosyal",
     modalBadge: "AI POWERED",
     modalSubtitle: "Kompletuha kining giya nga interbyu aron mahibal-an ang tanang programa sa gobyerno nga angayan nimong madawat.",
-    step1Tab: "1. Pamilya ug Kita",
-    step2Tab: "2. Tabang ug Serbisyo",
+    step1Tab: "1. Pamilya ug Demograpiko",
+    step2Tab: "2. Mga Kalisod ug Kahimtang",
     step3Tab: "3. Sitwasyon ug Sugilanon",
     step4Tab: "4. Rekomendasyon sa AI",
 
@@ -307,40 +299,36 @@ const I18N = {
     optResRenter: "Nag-abang og kwarto o balay",
     optResInformal: "Informal Settler / Temporaryong puy-anan",
 
-    // Step 2
-    s2Title: "Mga Programa ug Serbisyo nga Gikinahanglan",
-    s2Subtitle: "Pilia ang tanang kategorya ug piho nga tabang nga gikinahanglan nimo o sa imong pamilya karon:",
-    catAics: "Tabang sa AICS (Crisis Assistance)",
-    catAicsDesc: "Emergency sa ospital, tambal, lubong, dinaliang pagkaon, o plete pauli sa probinsya.",
-    catPwd: "Serbisyo para sa PWD",
-    catPwdDesc: "Aplikasyon/renewal sa PWD ID, wheelchair/tungkod/hearing aid, ug tabang medikal.",
-    catSenior: "Serbisyo sa Senior Citizen",
-    catSeniorDesc: "Senior ID, medicine discount booklet, social pension (₱1,000/buwan), birthday gift.",
-    catSoloParent: "Serbisyo sa Solo Parent (RA 11861)",
-    catSoloParentDesc: "Solo Parent ID, ₱1,000 binuwan nga ayuda, 10% diskwento sa gatas/pagkaon, 7-adlaw nga leave.",
-    catChild: "Kaayohan sa Bata (Child Welfare)",
-    catChildDesc: "Pagpa-enrol sa Daycare, supplemental feeding sa niwang nga bata, proteksyon sa bata.",
-    catLivelihood: "Panginabuhi ug Pagbansay (Livelihood)",
-    catLivelihoodDesc: "₱5,000–₱15,000 puhunan sa negosyo, libreng TESDA vocational training, kagamitan.",
-    catDisbursement: "Pag-claim ug Releasing sa Financial Aid",
-    catDisbursementDesc: "Pagsusi sa schedule sa payout, QR voucher, ug pag-apud-apod sa approved nga kwarta.",
+    // Step 2: Real Life Circumstances & Hardships
+    s2Title: "Kasamtangang Kalisdanan ug Sitwasyon sa Panimalay",
+    s2Subtitle: "Pilia ang tanang tinuod nga kalisod o emerhensiya nga gi-atubang sa inyong panimalay karon. Tumbokon sa AI ang tanang tabang sa gobyerno nga angayan ninyong madawat:",
 
-    // Sub-options
-    subMed: "Emergency sa Ospital / Dialysis / Chemo / Reseta sa Tambal",
-    subBurial: "Gasto sa Lubong / Punerarya / Lungon",
-    subFood: "Dinaliang Pagkaon / Emergency Cash Relief",
-    subTranspo: "Plete / Balik-Probinsya Assistance",
-    subEdu: "Tabang sa Matrikula ug Gamit sa Eskwela sa Bata",
-    subPwdId: "Bag-ong PWD ID o Pag-renew sa Rehistrasyon",
-    subPwdDevice: "Wheelchair / Tungkod / Hearing Aid / Gamit Pantabang",
-    subSeniorId: "Senior Citizen ID ug Medicine Discount Booklet",
-    subSeniorPension: "Social Pension para sa Pobreng Senior Citizen",
-    subSoloId: "Solo Parent ID (RA 11861) ug ₱1,000 Binuwan nga Ayuda",
-    subDaycare: "Pagpa-enrol sa Bata sa Daycare / Child Development Center",
-    subFeeding: "Supplemental Milk ug Feeding Program para sa Niwang nga Bata",
-    subLivelihoodGrant: "Panugod nga Puhunan sa Gamay nga Negosyo (₱5k–₱15k)",
-    subSkillsTraining: "Libreng Kurso sa Pagbansay (Baking, Cookery, Driving, Panahi)",
-    subDisbursementTrack: "Tan-awa ang Iskedyul sa Payout ug I-claim ang Naaprubahang Kwarta",
+    hMedTitle: "Emergency sa Ospital, Operasyon, o Reseta sa Tambal",
+    hMedDesc: "Naa sa ospital, nagkinahanglan og dialysis, chemotherapy, operasyon, lab tests, o tambal nga walay ipalit.",
+
+    hBurialTitle: "Namatyan og Pamilya ug Gasto sa Lubong",
+    hBurialDesc: "Namatyan bag-ohay lang ug walay ikabayad sa punerarya, lungon, haya, o paglubong.",
+
+    hFoodTitle: "Kulang sa Pagkaon ug Adlaw-adlaw nga Panginahanglan",
+    hFoodDesc: "Walay makaon, gutom, o dinaliang nawad-an og kita ang nag-unang nagtrabaho sa panimalay.",
+
+    hTranspoTitle: "Na-stranded o Plete Pauli sa Probinsya",
+    hTranspoDesc: "Walay pamasahe pauli sa probinsya o na-stranded sa syudad nga walay kapaingnan.",
+
+    hPwdTitle: "May Miyembro sa Pamilya nga may Kapansanan (PWD)",
+    hPwdDesc: "Naglisod og lihok/lakaw/kita/dungog, nagkinahanglan og wheelchair/tungkod, o PWD ID.",
+
+    hSeniorTitle: "May Tigulang nga Ginikanan o Kabanay (60+ Anyos)",
+    hSeniorDesc: "Walay igong pension, dako ang gasto sa tambal, o nagkinahanglan og social pension.",
+
+    hSoloParentTitle: "Solo nga Ginikanan nga Nagbuhi sa mga Anak",
+    hSoloParentDesc: "Nag-inusarang nagbuhi ug nag-atiman sa mga menor de edad nga anak nga walay suporta gikan sa partner.",
+
+    hChildTitle: "Bata (0–5 anyos) nga Niwang o Nagkinahanglan og Daycare",
+    hChildDesc: "Niwang o kulang sa nutrisyon ang bata, o kinahanglang ipasulod sa libreng Daycare.",
+
+    hLivelihoodTitle: "Walay Trabaho / Nagkinahanglan og Puhunan o Pagbansay",
+    hLivelihoodDesc: "Gusto magtukod og gamayng negosyo (sari-sari store, paninda) o mokuha og libreng pagbansay sa TESDA.",
 
     // Step 3
     s3Title: "Sugilanon ug Detalye sa Kasamtangang Sitwasyon",
@@ -412,23 +400,17 @@ export default function AIAssistanceFinderModal({
   const [employmentStatus, setEmploymentStatus] = useState("daily")
   const [residencyType, setResidencyType] = useState("owner")
 
-  // Step 2: Specific Services checklist (7 Categories from the sidebar photo)
-  const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({
-    aics_med: true,
-    aics_burial: false,
-    aics_food: false,
-    aics_transpo: false,
-    aics_edu: false,
-    pwd_id: false,
-    pwd_device: false,
-    senior_id: false,
-    senior_pension: false,
-    solo_id: false,
-    child_daycare: false,
-    child_feeding: false,
-    livelihood_grant: false,
-    livelihood_skills: false,
-    disbursement_track: false,
+  // Step 2: Real Life Circumstances & Hardship Indicators
+  const [selectedHardships, setSelectedHardships] = useState<Record<string, boolean>>({
+    med_emergency: true,
+    bereavement: false,
+    acute_hunger: false,
+    stranded_transpo: false,
+    mobility_disability: false,
+    elderly_care: false,
+    solo_parenting: false,
+    toddler_daycare: false,
+    unemployed_livelihood: false,
   })
 
   // Step 3: Narrative
@@ -443,8 +425,8 @@ export default function AIAssistanceFinderModal({
   const [isChatSending, setIsChatSending] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([])
 
-  const toggleService = (key: string) => {
-    setSelectedServices((prev) => ({
+  const toggleHardship = (key: string) => {
+    setSelectedHardships((prev) => ({
       ...prev,
       [key]: !prev[key],
     }))
@@ -514,7 +496,7 @@ export default function AIAssistanceFinderModal({
           dependentsCount,
           employmentStatus,
           residencyType,
-          selectedServices,
+          selectedHardships,
           narrativeText,
         }),
       })
@@ -541,7 +523,7 @@ export default function AIAssistanceFinderModal({
       console.warn("[Gemini AI] Switching to local evaluation fallback:", apiErr)
     }
 
-    // Fallback: Local Rule Evaluation Engine
+    // Fallback: Local Rule Diagnostic Engine
     setTimeout(() => {
       let baseScore = 95
       const recs: any[] = []
@@ -549,7 +531,7 @@ export default function AIAssistanceFinderModal({
 
       const narrativeLower = narrativeText.toLowerCase()
       const hasMed =
-        selectedServices.aics_med ||
+        selectedHardships.med_emergency ||
         narrativeLower.includes("gamot") ||
         narrativeLower.includes("hospital") ||
         narrativeLower.includes("ospital") ||
@@ -558,51 +540,48 @@ export default function AIAssistanceFinderModal({
         narrativeLower.includes("surgery")
 
       const hasBurial =
-        selectedServices.aics_burial ||
+        selectedHardships.bereavement ||
         narrativeLower.includes("libing") ||
         narrativeLower.includes("burol") ||
         narrativeLower.includes("namatay") ||
         narrativeLower.includes("kabaong")
 
       const hasFoodCrisis =
-        selectedServices.aics_food ||
-        selectedServices.aics_transpo ||
-        selectedServices.aics_edu
+        selectedHardships.acute_hunger ||
+        selectedHardships.stranded_transpo ||
+        narrativeLower.includes("gutom") ||
+        narrativeLower.includes("pagkain")
 
       const hasPwd =
-        selectedServices.pwd_id ||
-        selectedServices.pwd_device ||
+        selectedHardships.mobility_disability ||
         applicantType === "pwd" ||
         narrativeLower.includes("pwd") ||
         narrativeLower.includes("kapansanan") ||
         narrativeLower.includes("wheelchair")
 
       const hasSenior =
-        selectedServices.senior_id ||
-        selectedServices.senior_pension ||
+        selectedHardships.elderly_care ||
         applicantType === "senior" ||
         narrativeLower.includes("senior") ||
         narrativeLower.includes("lolo") ||
         narrativeLower.includes("lola")
 
       const hasSoloParent =
-        selectedServices.solo_id ||
+        selectedHardships.solo_parenting ||
         applicantType === "child" ||
         narrativeLower.includes("solo parent") ||
         narrativeLower.includes("solong magulang") ||
         narrativeLower.includes("hiwalay")
 
       const hasChildWelfare =
-        selectedServices.child_daycare ||
-        selectedServices.child_feeding ||
+        selectedHardships.toddler_daycare ||
         applicantType === "child" ||
         narrativeLower.includes("daycare") ||
         narrativeLower.includes("gatas") ||
         narrativeLower.includes("feeding")
 
       const hasLivelihood =
-        selectedServices.livelihood_grant ||
-        selectedServices.livelihood_skills ||
+        selectedHardships.unemployed_livelihood ||
         employmentStatus === "unemployed" ||
         employmentStatus === "daily" ||
         narrativeLower.includes("negosyo") ||
@@ -1180,7 +1159,7 @@ export default function AIAssistanceFinderModal({
           )}
 
           {/* ------------------------------------------------------- */}
-          {/* STEP 2: ALL 7 ASSISTANCE PROGRAMS CHECKLIST (FROM PHOTO 2) */}
+          {/* STEP 2: REAL-LIFE HARDSHIP & CRISIS CIRCUMSTANCES */}
           {/* ------------------------------------------------------- */}
           {currentStep === 2 && (
             <div className="space-y-5 animate-in fade-in duration-200">
@@ -1194,192 +1173,311 @@ export default function AIAssistanceFinderModal({
                 </p>
               </div>
 
-              <div className="space-y-4">
-                {/* 1. AICS ASSISTANCE */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-gray-900 dark:text-white">
-                    <ShieldAlert className="h-4 w-4 text-red-600" />
-                    <span>{t.catAics}</span>
-                    <span className="text-[10px] text-gray-400 font-normal">({t.catAicsDesc})</span>
+              {/* 9 Real-life Hardship Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[58vh] overflow-y-auto pr-1">
+                {/* 1. Medical Emergency */}
+                <div
+                  onClick={() => toggleHardship("med_emergency")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.med_emergency
+                      ? "bg-red-50/80 dark:bg-red-950/40 border-red-400 dark:border-red-600 shadow-xs ring-2 ring-red-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.med_emergency
+                      ? "bg-red-600 text-white"
+                      : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
+                  }`}>
+                    <Stethoscope className="h-4 w-4" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hMedTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.aics_med}
-                        onChange={() => toggleService("aics_med")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.med_emergency}
+                        onChange={() => {}}
+                        className="rounded text-red-600 focus:ring-red-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subMed}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.aics_burial}
-                        onChange={() => toggleService("aics_burial")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subBurial}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.aics_food}
-                        onChange={() => toggleService("aics_food")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subFood}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.aics_transpo}
-                        onChange={() => toggleService("aics_transpo")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subTranspo}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hMedDesc}
+                    </p>
                   </div>
                 </div>
 
-                {/* 2. PWD SERVICES */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-gray-900 dark:text-white">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <span>{t.catPwd}</span>
-                    <span className="text-[10px] text-gray-400 font-normal">({t.catPwdDesc})</span>
+                {/* 2. Bereavement / Funeral */}
+                <div
+                  onClick={() => toggleHardship("bereavement")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.bereavement
+                      ? "bg-slate-100 dark:bg-slate-800 border-slate-400 dark:border-slate-500 shadow-xs ring-2 ring-slate-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.bereavement
+                      ? "bg-slate-800 text-white dark:bg-slate-600"
+                      : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  }`}>
+                    <ShieldAlert className="h-4 w-4" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hBurialTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.pwd_id}
-                        onChange={() => toggleService("pwd_id")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.bereavement}
+                        onChange={() => {}}
+                        className="rounded text-slate-700 focus:ring-slate-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subPwdId}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.pwd_device}
-                        onChange={() => toggleService("pwd_device")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subPwdDevice}</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* 3. SENIOR CITIZEN SERVICES */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-gray-900 dark:text-white">
-                    <Users className="h-4 w-4 text-amber-600" />
-                    <span>{t.catSenior}</span>
-                    <span className="text-[10px] text-gray-400 font-normal">({t.catSeniorDesc})</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.senior_id}
-                        onChange={() => toggleService("senior_id")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subSeniorId}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.senior_pension}
-                        onChange={() => toggleService("senior_pension")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subSeniorPension}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hBurialDesc}
+                    </p>
                   </div>
                 </div>
 
-                {/* 4. SOLO PARENT & CHILD WELFARE */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-gray-900 dark:text-white">
-                    <Baby className="h-4 w-4 text-purple-600" />
-                    <span>{t.catSoloParent} &amp; {t.catChild}</span>
+                {/* 3. Food Shortage / Survival */}
+                <div
+                  onClick={() => toggleHardship("acute_hunger")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.acute_hunger
+                      ? "bg-amber-50/80 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600 shadow-xs ring-2 ring-amber-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.acute_hunger
+                      ? "bg-amber-600 text-white"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                  }`}>
+                    <Wallet className="h-4 w-4" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hFoodTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.solo_id}
-                        onChange={() => toggleService("solo_id")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.acute_hunger}
+                        onChange={() => {}}
+                        className="rounded text-amber-600 focus:ring-amber-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subSoloId}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.child_daycare}
-                        onChange={() => toggleService("child_daycare")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subDaycare}</span>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400 sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.child_feeding}
-                        onChange={() => toggleService("child_feeding")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{t.subFeeding}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hFoodDesc}
+                    </p>
                   </div>
                 </div>
 
-                {/* 5. LIVELIHOOD & TRAINING & DISBURSEMENT */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-xs text-gray-900 dark:text-white">
-                    <GraduationCap className="h-4 w-4 text-emerald-600" />
-                    <span>{t.catLivelihood} &amp; {t.catDisbursement}</span>
+                {/* 4. Stranded / Provincial Travel */}
+                <div
+                  onClick={() => toggleHardship("stranded_transpo")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.stranded_transpo
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-xs ring-2 ring-blue-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.stranded_transpo
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
+                  }`}>
+                    <ArrowRight className="h-4 w-4" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hTranspoTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.livelihood_grant}
-                        onChange={() => toggleService("livelihood_grant")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.stranded_transpo}
+                        onChange={() => {}}
+                        className="rounded text-blue-600 focus:ring-blue-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subLivelihoodGrant}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hTranspoDesc}
+                    </p>
+                  </div>
+                </div>
 
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400">
+                {/* 5. Physical / Mental Disability (PWD) */}
+                <div
+                  onClick={() => toggleHardship("mobility_disability")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.mobility_disability
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-xs ring-2 ring-blue-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.mobility_disability
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
+                  }`}>
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hPwdTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.livelihood_skills}
-                        onChange={() => toggleService("livelihood_skills")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.mobility_disability}
+                        onChange={() => {}}
+                        className="rounded text-blue-600 focus:ring-blue-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subSkillsTraining}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hPwdDesc}
+                    </p>
+                  </div>
+                </div>
 
-                    <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:border-blue-400 sm:col-span-2">
+                {/* 6. Elderly Care / Senior Citizen */}
+                <div
+                  onClick={() => toggleHardship("elderly_care")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.elderly_care
+                      ? "bg-amber-50/80 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600 shadow-xs ring-2 ring-amber-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.elderly_care
+                      ? "bg-amber-600 text-white"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                  }`}>
+                    <HeartHandshake className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hSeniorTitle}
+                      </h5>
                       <input
                         type="checkbox"
-                        checked={selectedServices.disbursement_track}
-                        onChange={() => toggleService("disbursement_track")}
-                        className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        checked={selectedHardships.elderly_care}
+                        onChange={() => {}}
+                        className="rounded text-amber-600 focus:ring-amber-500 shrink-0 pointer-events-none"
                       />
-                      <span>{t.subDisbursementTrack}</span>
-                    </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hSeniorDesc}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 7. Solo Parent Raising Kids Alone */}
+                <div
+                  onClick={() => toggleHardship("solo_parenting")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.solo_parenting
+                      ? "bg-purple-50/80 dark:bg-purple-950/40 border-purple-400 dark:border-purple-600 shadow-xs ring-2 ring-purple-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.solo_parenting
+                      ? "bg-purple-600 text-white"
+                      : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+                  }`}>
+                    <Baby className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hSoloParentTitle}
+                      </h5>
+                      <input
+                        type="checkbox"
+                        checked={selectedHardships.solo_parenting}
+                        onChange={() => {}}
+                        className="rounded text-purple-600 focus:ring-purple-500 shrink-0 pointer-events-none"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hSoloParentDesc}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 8. Young Children Nutrition / Daycare */}
+                <div
+                  onClick={() => toggleHardship("toddler_daycare")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                    selectedHardships.toddler_daycare
+                      ? "bg-pink-50/80 dark:bg-pink-950/40 border-pink-400 dark:border-pink-600 shadow-xs ring-2 ring-pink-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.toddler_daycare
+                      ? "bg-pink-600 text-white"
+                      : "bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300"
+                  }`}>
+                    <GraduationCap className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hChildTitle}
+                      </h5>
+                      <input
+                        type="checkbox"
+                        checked={selectedHardships.toddler_daycare}
+                        onChange={() => {}}
+                        className="rounded text-pink-600 focus:ring-pink-500 shrink-0 pointer-events-none"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hChildDesc}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 9. Need Livelihood Seed Capital / Skills */}
+                <div
+                  onClick={() => toggleHardship("unemployed_livelihood")}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none sm:col-span-2 ${
+                    selectedHardships.unemployed_livelihood
+                      ? "bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-xs ring-2 ring-emerald-500/20"
+                      : "bg-white dark:bg-slate-800/70 border-gray-200 dark:border-slate-700/80 hover:border-gray-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedHardships.unemployed_livelihood
+                      ? "bg-emerald-600 text-white"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  }`}>
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                        {t.hLivelihoodTitle}
+                      </h5>
+                      <input
+                        type="checkbox"
+                        checked={selectedHardships.unemployed_livelihood}
+                        onChange={() => {}}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 shrink-0 pointer-events-none"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                      {t.hLivelihoodDesc}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1420,7 +1518,7 @@ export default function AIAssistanceFinderModal({
                       type="button"
                       onClick={() => {
                         setNarrativeText(t.chip1)
-                        setSelectedServices((p) => ({ ...p, aics_med: true }))
+                        setSelectedHardships((p) => ({ ...p, med_emergency: true }))
                       }}
                       className="text-[11px] px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300 border border-red-200 dark:border-red-900 transition-colors cursor-pointer"
                     >
@@ -1430,7 +1528,7 @@ export default function AIAssistanceFinderModal({
                       type="button"
                       onClick={() => {
                         setNarrativeText(t.chip2)
-                        setSelectedServices((p) => ({ ...p, solo_id: true, livelihood_grant: true }))
+                        setSelectedHardships((p) => ({ ...p, solo_parenting: true, unemployed_livelihood: true }))
                       }}
                       className="text-[11px] px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-900 transition-colors cursor-pointer"
                     >
@@ -1440,7 +1538,7 @@ export default function AIAssistanceFinderModal({
                       type="button"
                       onClick={() => {
                         setNarrativeText(t.chip3)
-                        setSelectedServices((p) => ({ ...p, aics_burial: true }))
+                        setSelectedHardships((p) => ({ ...p, bereavement: true }))
                       }}
                       className="text-[11px] px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
                     >
@@ -1450,7 +1548,7 @@ export default function AIAssistanceFinderModal({
                       type="button"
                       onClick={() => {
                         setNarrativeText(t.chip4)
-                        setSelectedServices((p) => ({ ...p, senior_pension: true, pwd_device: true }))
+                        setSelectedHardships((p) => ({ ...p, elderly_care: true, mobility_disability: true }))
                       }}
                       className="text-[11px] px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-900 transition-colors cursor-pointer"
                     >

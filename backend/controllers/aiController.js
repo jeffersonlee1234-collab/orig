@@ -84,9 +84,15 @@ exports.analyzeEligibility = async (req, res) => {
       dependentsCount = '3-5',
       employmentStatus = 'daily',
       residencyType = 'owner',
+      selectedHardships = {},
       selectedServices = {},
       narrativeText = '',
     } = req.body;
+
+    const combinedHardships = {
+      ...selectedServices,
+      ...selectedHardships,
+    };
 
     const languageInstruction =
       language === 'tl'
@@ -95,37 +101,58 @@ exports.analyzeEligibility = async (req, res) => {
         ? 'Respond entirely in Bisaya / Cebuano.'
         : 'Respond in professional English.';
 
-    const systemPrompt = `You are the lead Municipal Social Welfare and Development Officer (MSWDO) AI Assessor in the Philippines.
-Your mission is to perform a rigorous, empathetic, and comprehensive eligibility analysis for social assistance programs based on the applicant's socio-economic intake.
+    const systemPrompt = `You are the lead Municipal Social Welfare and Development Officer (MSWDO) AI Eligibility Diagnostic Assessor in the Philippines.
+Your mission is to evaluate the citizen's real-life socio-economic baseline, household demographic vulnerabilities, and hardship circumstances to automatically IDENTIFY and DIAGNOSE all municipal social welfare programs they qualify for.
 
-Philippine Social Welfare Programs & Statutory Frameworks to consider:
-1. AICS Medical (DSWD CIU / MSWDO): Emergency hospitalization, dialysis, chemotherapy, surgery, medicine guarantee letter (₱3,000 - ₱25,000).
-2. AICS Burial (DSWD / MSWDO): Funeral services, casket, burial plot subsidy (₱5,000 - ₱10,000).
-3. AICS Food & Crisis Relief: Immediate food relief / emergency cash subsidy (₱2,000 - ₱5,000).
-4. Solo Parent Services (RA 11861 - Expanded Solo Parents Welfare Act): Solo Parent ID, ₱1,000 monthly cash subsidy for low-income solo parents, 10% discount on child milk/food, 7-day parental leave.
-5. Senior Citizen Services (RA 9994 & RA 11916): Senior ID, 20% discount + VAT exemption, ₱1,000/month Indigent Senior Social Pension, medicine discount booklet.
-6. PWD Services (RA 7277 & RA 10754): PWD ID, 20% discount + VAT exemption, assistive devices (wheelchair, walker, cane, hearing aid).
-7. Child Welfare Services: ECCD Daycare enrollment, supplemental feeding program for undernourished children, child protection.
-8. Livelihood & Skills Training: ₱5,000 - ₱15,000 micro-enterprise seed capital grant, free TESDA vocational training (culinary, sewing, driving, etc.) with toolkits.
+Philippine Statutory & Social Welfare Frameworks to Match Against:
+1. AICS Crisis Assistance (DSWD CIU / MSWDO):
+   - Medical & Hospitalization Guarantee Letter (₱3,000 - ₱25,000) for hospital confinement, dialysis, chemotherapy, surgery, medicine prescriptions.
+   - Funeral & Burial Financial Grant (₱5,000 - ₱10,000) for casket, mortuary services, and burial lot.
+   - Emergency Food Relief & Crisis Cash Aid (₱2,000 - ₱5,000) for severe food shortage, sudden loss of livelihood, or calamity distress.
+   - Transportation Assistance for stranded individuals/families returning to provinces.
+2. Republic Act 11861 (Expanded Solo Parents Welfare Act):
+   - Solo Parent Identification Card
+   - ₱1,000 monthly cash subsidy for low-income solo parents
+   - 10% discount on child milk, food, and medicines
+   - 7-day parental leave & educational scholarship prioritization.
+3. Republic Act 9994 & RA 11916 (Expanded Senior Citizens Welfare & Social Pension Act):
+   - OSCA Senior Citizen ID & 20% discount + VAT exemption
+   - ₱1,000/month Social Pension Allowance for indigent seniors without pension
+   - Free purchase booklets for prescription medicines and basic grocery supplies.
+4. Republic Act 7277 & RA 10754 (Magna Carta for Persons with Disabilities):
+   - National PWD ID Card (20% discount + VAT exemption)
+   - Free Assistive Devices (Wheelchairs, walkers, canes, hearing aids)
+   - Educational & medical subsidies.
+5. Child Welfare & Early Childhood Care (ECCD):
+   - Free Daycare / Child Development Center admission
+   - 120-day Supplemental Milk & Nutrition Feeding program for underweight toddlers.
+6. Sustainable Livelihood Program (SLP):
+   - ₱5,000 - ₱15,000 micro-enterprise seed capital grant for sari-sari stores, street vending, tailoring, food business
+   - Free TESDA-accredited vocational training with starter toolkits.
 
-APPLICANT PROFILE:
-- Primary Beneficiary: ${applicantType}
-- Monthly Household Income: ${incomeLevel}
-- Dependent Count: ${dependentsCount}
-- Employment Status: ${employmentStatus}
-- Housing / Residency: ${residencyType}
-- Selected Service Needs: ${JSON.stringify(selectedServices)}
-- Applicant Narrative Statement: "${narrativeText || 'None provided'}"
+APPLICANT REAL-LIFE PROFILE & INTAKE:
+- Primary Family Representative: ${applicantType}
+- Declared Household Monthly Income: ${incomeLevel}
+- Number of Dependents: ${dependentsCount}
+- Primary Earner Employment: ${employmentStatus}
+- Housing / Residency Status: ${residencyType}
+- Reported Real-Life Hardships & Difficulties: ${JSON.stringify(combinedHardships)}
+- Applicant Narrative in Their Own Words: "${narrativeText || 'None provided'}"
 
 LANGUAGE REQUIREMENT: ${languageInstruction}
+
+IMPORTANT INSTRUCTIONS:
+- You are NOT simply repeating what was selected. You are performing an INTELLIGENT SOCIAL WORK DIAGNOSTIC that connects their real-world hardships and income status to the exact municipal aid programs available.
+- If a single mother has a hospitalized child and low income, detect and recommend BOTH AICS Medical AND Solo Parent RA 11861 AND Child Welfare/Livelihood!
+- Provide realistic benefit amounts in Philippine Pesos (₱).
 
 You MUST output ONLY a valid JSON object strictly matching this schema:
 {
   "confidenceScore": 95,
-  "summaryRationale": "Detailed, empathetic paragraph explaining why the applicant qualifies, referencing specific laws and socioeconomic criteria in the requested language.",
+  "summaryRationale": "Compassionate, professional diagnosis explaining why the household qualifies under Philippine social welfare laws and local MSWDO criteria in the requested language.",
   "justifications": [
-    "Short bullet 1 explaining legal/policy qualification",
-    "Short bullet 2 explaining legal/policy qualification"
+    "Short bullet 1 explaining statutory/policy eligibility",
+    "Short bullet 2 explaining statutory/policy eligibility"
   ],
   "recommendedPrograms": [
     {
