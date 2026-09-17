@@ -923,92 +923,49 @@ export default function CaseManagement() {
   }, [cases, selectedProgram, selectedStatusTab, selectedPriority, searchQuery])
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto font-sans">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans">
       {/* Module Title Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
-              <FolderKanban className="h-4 w-4" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Case Management
-            </h1>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+          Case Management
+        </h1>
       </div>
 
-
-      {/* KPI Stats Cards */}
+      {/* KPI Stats Cards - Perfectly balanced and symmetrical */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 md:p-5 rounded-2xl border bg-white border-slate-200 text-slate-900 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Total Approved Cases
-            </span>
-            <FolderKanban className="h-4 w-4 text-blue-600" />
+        {[
+          { label: "Total Cases", value: stats.total, text: "text-foreground", icon: <FolderKanban className="h-4 w-4 text-blue-500" /> },
+          { label: "Open Cases", value: stats.open, text: "text-blue-500", icon: <Clock className="h-4 w-4 text-blue-500" /> },
+          { label: "Monitoring & Referred", value: stats.monitoringOrReferred, text: "text-amber-500", icon: <Activity className="h-4 w-4 text-amber-500" /> },
+          { label: "Closed Cases", value: stats.closed, text: "text-emerald-500", icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
+        ].map((stat) => (
+          <div key={stat.label} className="p-4 md:p-5 rounded-xl border bg-card border-border shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
+                {stat.label}
+              </span>
+              <span className="shrink-0">{stat.icon}</span>
+            </div>
+            <p className={`text-2xl md:text-3xl font-bold mt-2 ${stat.text}`}>{stat.value}</p>
           </div>
-          <p className="text-2xl md:text-3xl font-extrabold mt-2 text-slate-900">{stats.total}</p>
-          <span className="text-[11px] font-medium mt-1 block text-slate-400">
-            Live synchronized across modules
-          </span>
-        </div>
-
-        <div className="p-4 md:p-5 rounded-2xl border bg-white border-slate-200 text-slate-900 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Open Cases
-            </span>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </div>
-          <p className="text-2xl md:text-3xl font-extrabold mt-2 text-slate-900">{stats.open}</p>
-          <span className="text-[11px] font-medium mt-1 block text-slate-400">
-            Awaiting payout / claiming
-          </span>
-        </div>
-
-        <div className="p-4 md:p-5 rounded-2xl border bg-white border-slate-200 text-slate-900 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Monitoring &amp; Referred
-            </span>
-            <Activity className="h-4 w-4 text-amber-500" />
-          </div>
-          <p className="text-2xl md:text-3xl font-extrabold mt-2 text-slate-900">{stats.monitoringOrReferred}</p>
-          <span className="text-[11px] font-medium mt-1 block text-slate-400">
-            Active aftercare &amp; coordination
-          </span>
-        </div>
-
-        <div className="p-4 md:p-5 rounded-2xl border bg-white border-slate-200 text-slate-900 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Closed Cases
-            </span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </div>
-          <p className="text-2xl md:text-3xl font-extrabold mt-2 text-slate-900">{stats.closed}</p>
-          <span className="text-[11px] font-medium mt-1 block text-slate-400">
-            Completed &amp; resolved cases
-          </span>
-        </div>
+        ))}
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-2xs space-y-4">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all">
-          <Search className="h-4 w-4 text-slate-400 shrink-0" />
+      <div className="bg-card border border-border rounded-xl p-4 md:p-5 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 bg-background border border-border px-3.5 py-2.5 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"
-            placeholder="SEARCH BY CLIENT NAME, CASE NUMBER (CM-...), QCID, OR REFERENCE NUMBER..."
+            placeholder="Search by client name, case number (CM-...), QCID, or reference number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
-            className="w-full text-xs md:text-sm bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400 uppercase font-medium"
+            className="w-full text-xs md:text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground uppercase font-medium"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-xs text-slate-400 hover:text-slate-700 font-bold px-1"
+              className="text-xs text-muted-foreground hover:text-foreground font-bold px-1 cursor-pointer"
             >
               Clear
             </button>
@@ -1018,11 +975,11 @@ export default function CaseManagement() {
         <div className="flex items-center gap-3 flex-wrap text-xs">
           {/* Program Filter */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-600">Program:</span>
+            <span className="font-semibold text-muted-foreground">Program:</span>
             <select
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-1.5 border border-border rounded-lg bg-background text-foreground font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
             >
               <option value="ALL">All Programs</option>
               <option value="AICS">AICS</option>
@@ -1037,11 +994,11 @@ export default function CaseManagement() {
 
           {/* Status Filter */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-600">Status:</span>
+            <span className="font-semibold text-muted-foreground">Status:</span>
             <select
               value={selectedStatusTab}
               onChange={(e) => setSelectedStatusTab(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-1.5 border border-border rounded-lg bg-background text-foreground font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="OPEN">Open</option>
@@ -1053,11 +1010,11 @@ export default function CaseManagement() {
 
           {/* Priority Filter */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-600">Priority:</span>
+            <span className="font-semibold text-muted-foreground">Priority:</span>
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+              className="px-3 py-1.5 border border-border rounded-lg bg-background text-foreground font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
             >
               <option value="ALL">All Priorities</option>
               <option value="HIGH">High</option>
@@ -1066,8 +1023,8 @@ export default function CaseManagement() {
             </select>
           </div>
 
-          <div className="ml-auto text-slate-400 text-xs font-mono">
-            Showing <strong className="text-slate-700">{filteredCases.length}</strong> of {cases.length} approved cases
+          <div className="ml-auto text-muted-foreground text-xs font-mono">
+            Showing <strong className="text-foreground">{filteredCases.length}</strong> of {cases.length} approved cases
           </div>
         </div>
       </div>
@@ -1075,15 +1032,15 @@ export default function CaseManagement() {
       {/* Cases List / Cards */}
       <div className="space-y-3">
         {isLoading ? (
-          <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
+          <div className="text-center py-16 bg-card border border-border rounded-xl">
             <Clock className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-2" />
-            <p className="text-xs text-slate-500 font-medium">Synchronizing approved case records across modules...</p>
+            <p className="text-xs text-muted-foreground font-medium">Synchronizing approved case records across modules...</p>
           </div>
         ) : filteredCases.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-2xs">
-            <FolderKanban className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-slate-800">No Case Records Found</h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+          <div className="text-center py-16 bg-card border border-border rounded-xl shadow-xs">
+            <FolderKanban className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <h3 className="text-base font-bold text-foreground">No Case Records Found</h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
               Case records only appear when an application in AICS, PWD, Senior, Solo Parent, Child Welfare, or Livelihood is <strong>APPROVED</strong>.
             </p>
           </div>
@@ -1099,7 +1056,7 @@ export default function CaseManagement() {
               <div
                 key={c.caseNumber}
                 onClick={() => setActiveCase(c)}
-                className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md hover:bg-slate-50/40 rounded-2xl p-4 md:p-5 transition-all cursor-pointer group select-none"
+                className="bg-card border border-border hover:border-blue-500/60 hover:shadow-md rounded-xl p-4 md:p-5 transition-all cursor-pointer group select-none"
               >
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 md:gap-4">
                   {/* Left Section: Beneficiary & Case Info (Strictly clean 3 horizontal lines like Card 2) */}
