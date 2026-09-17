@@ -539,21 +539,137 @@ export function ProfileModal({
         }),
       });
 
+      const fullCombinedName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix]
+        .filter((part) => part && part.trim().length > 0)
+        .join(" ");
+
       const localUpdated = {
         ...(currentUser || {}),
         firstName: formData.firstName,
+        first_name: formData.firstName,
         middleName: formData.middleName,
+        middle_name: formData.middleName,
         lastName: formData.lastName,
+        last_name: formData.lastName,
         suffix: formData.suffix,
+        fullName: fullCombinedName,
+        name: fullCombinedName,
         birthMonth: formData.birthMonth,
+        birth_month: formData.birthMonth,
         birthDay: formData.birthDay,
+        birth_day: formData.birthDay,
         birthYear: formData.birthYear,
+        birth_year: formData.birthYear,
+        birthDate: `${formData.birthMonth} ${formData.birthDay}, ${formData.birthYear}`,
+        birthDateDisplay: `${formData.birthMonth} ${formData.birthDay}, ${formData.birthYear}`,
         bloodType: formData.bloodType || "O+",
+        blood_type: formData.bloodType || "O+",
         city: formData.city,
+        addressCity: formData.city,
+        addressCityMunicipality: formData.city,
         houseNo: formData.houseNo,
+        addressHouseNo: formData.houseNo,
+        house_no: formData.houseNo,
         street: formData.street,
+        addressStreet: formData.street,
         barangay: formData.barangay,
+        addressBarangay: formData.barangay,
         workingInQC: formData.workingInCity ? "Yes" : "No",
+        working_in_qc: formData.workingInCity ? "Yes" : "No",
+        workingInCity: formData.workingInCity,
+        occupation: formData.occupation,
+        sex: formData.sex,
+        gender: formData.sex,
+        mobileNumber: formData.mobileNumber,
+        mobile_number: formData.mobileNumber,
+        contactNo: formData.mobileNumber,
+        contact_no: formData.mobileNumber,
+        profilePhotoUrl: photoUrl,
+        profile_photo_url: photoUrl,
+      };
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const finalUser = {
+          ...localUpdated,
+          ...(data.user || {}),
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          suffix: formData.suffix,
+          houseNo: formData.houseNo,
+          addressHouseNo: formData.houseNo,
+          street: formData.street,
+          addressStreet: formData.street,
+          barangay: formData.barangay,
+          addressBarangay: formData.barangay,
+          city: formData.city,
+          addressCity: formData.city,
+          addressCityMunicipality: formData.city,
+          mobileNumber: formData.mobileNumber,
+          contactNo: formData.mobileNumber,
+          sex: formData.sex,
+          gender: formData.sex,
+          workingInQC: formData.workingInCity ? "Yes" : "No",
+          occupation: formData.occupation,
+        };
+
+        setSavedFormData(formData);
+        setIsEditing(false);
+        try {
+          localStorage.setItem("currentUser", JSON.stringify(finalUser));
+          sessionStorage.setItem("currentUser", JSON.stringify(finalUser));
+          localStorage.setItem("user_profile", JSON.stringify(finalUser));
+          sessionStorage.setItem("user_profile", JSON.stringify(finalUser));
+          localStorage.setItem("user", JSON.stringify(finalUser));
+        } catch {}
+
+        window.dispatchEvent(new Event("user_profile_updated"));
+        window.dispatchEvent(new CustomEvent("user_profile_updated", { detail: finalUser }));
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("govserve_realtime_event"));
+        alert(t("profileUpdatedSuccess") || "Profile updated successfully in database!");
+      } else {
+        alert(data.message || "Failed to update profile.");
+      }
+    } catch (err) {
+      console.error("Profile update error:", err);
+      const fullCombinedName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix]
+        .filter((part) => part && part.trim().length > 0)
+        .join(" ");
+
+      const localUpdated = {
+        ...(currentUser || {}),
+        firstName: formData.firstName,
+        first_name: formData.firstName,
+        middleName: formData.middleName,
+        middle_name: formData.middleName,
+        lastName: formData.lastName,
+        last_name: formData.lastName,
+        suffix: formData.suffix,
+        fullName: fullCombinedName,
+        name: fullCombinedName,
+        birthMonth: formData.birthMonth,
+        birth_month: formData.birthMonth,
+        birthDay: formData.birthDay,
+        birth_day: formData.birthDay,
+        birthYear: formData.birthYear,
+        birth_year: formData.birthYear,
+        birthDate: `${formData.birthMonth} ${formData.birthDay}, ${formData.birthYear}`,
+        birthDateDisplay: `${formData.birthMonth} ${formData.birthDay}, ${formData.birthYear}`,
+        city: formData.city,
+        addressCity: formData.city,
+        addressCityMunicipality: formData.city,
+        houseNo: formData.houseNo,
+        addressHouseNo: formData.houseNo,
+        house_no: formData.houseNo,
+        street: formData.street,
+        addressStreet: formData.street,
+        barangay: formData.barangay,
+        addressBarangay: formData.barangay,
+        workingInQC: formData.workingInCity ? "Yes" : "No",
+        working_in_qc: formData.workingInCity ? "Yes" : "No",
+        workingInCity: formData.workingInCity,
         occupation: formData.occupation,
         sex: formData.sex,
         gender: formData.sex,
@@ -562,43 +678,18 @@ export function ProfileModal({
         profilePhotoUrl: photoUrl,
       };
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setSavedFormData(formData);
-        setIsEditing(false);
-        localStorage.setItem("currentUser", JSON.stringify(data.user || localUpdated));
-        window.dispatchEvent(new Event("user_profile_updated"));
-        window.dispatchEvent(new Event("storage"));
-        alert(t("profileUpdatedSuccess") || "Profile updated successfully in database!");
-      } else {
-        alert(data.message || "Failed to update profile.");
-      }
-    } catch (err) {
-      console.error("Profile update error:", err);
-      const localUpdated = {
-        ...(currentUser || {}),
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        suffix: formData.suffix,
-        birthMonth: formData.birthMonth,
-        birthDay: formData.birthDay,
-        birthYear: formData.birthYear,
-        city: formData.city,
-        houseNo: formData.houseNo,
-        street: formData.street,
-        barangay: formData.barangay,
-        workingInQC: formData.workingInCity ? "Yes" : "No",
-        occupation: formData.occupation,
-        sex: formData.sex,
-        gender: formData.sex,
-        mobileNumber: formData.mobileNumber,
-        contactNo: formData.mobileNumber,
-        profilePhotoUrl: photoUrl,
-      };
-      localStorage.setItem("currentUser", JSON.stringify(localUpdated));
+      try {
+        localStorage.setItem("currentUser", JSON.stringify(localUpdated));
+        sessionStorage.setItem("currentUser", JSON.stringify(localUpdated));
+        localStorage.setItem("user_profile", JSON.stringify(localUpdated));
+        sessionStorage.setItem("user_profile", JSON.stringify(localUpdated));
+        localStorage.setItem("user", JSON.stringify(localUpdated));
+      } catch {}
+
       window.dispatchEvent(new Event("user_profile_updated"));
+      window.dispatchEvent(new CustomEvent("user_profile_updated", { detail: localUpdated }));
       window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("govserve_realtime_event"));
       setSavedFormData(formData);
       setIsEditing(false);
       alert("Profile updated locally.");

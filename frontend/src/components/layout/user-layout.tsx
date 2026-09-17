@@ -613,8 +613,21 @@ function ResidentHeader({
   const [notifications, setNotifications] = useState<AicsNotification[]>([])
   const [selectedNotif, setSelectedNotif] = useState<AicsNotification | null>(null)
   const [now, setNow] = useState(new Date())
+  const [, setProfileVersion] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleProfileSync = () => {
+      setProfileVersion((v) => v + 1)
+    }
+    window.addEventListener("user_profile_updated", handleProfileSync)
+    window.addEventListener("storage", handleProfileSync)
+    return () => {
+      window.removeEventListener("user_profile_updated", handleProfileSync)
+      window.removeEventListener("storage", handleProfileSync)
+    }
+  }, [])
 
   const handleLogout = () => {
     sessionStorage.removeItem("isAuthenticated")
@@ -626,7 +639,7 @@ function ResidentHeader({
     window.location.href = "/login"
   }
 
-    useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false)

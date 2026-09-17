@@ -150,7 +150,7 @@ const translations: Record<string, { en: string; tl: string; bis: string }> = {
   year: { en: "Year", tl: "Taon", bis: "Tuig" },
   addressHeading: { en: "Address", tl: "Tirahan / Address", bis: "Pinuy-anan / Address" },
   city: { en: "City", tl: "Lungsod / Siyudad", bis: "Dakbayan / Siyudad" },
-  houseNoOptional: { en: "House No. (Optional)", tl: "Numero ng Bahay (Opsyonal)", bis: "Numero sa Balay (Opsyonal)" },
+  houseNoOptional: { en: "House No.", tl: "Numero ng Bahay", bis: "Numero sa Balay" },
   street: { en: "Street", tl: "Kalye", bis: "Dalan" },
   barangay: { en: "Barangay", tl: "Barangay", bis: "Barangay" },
   employmentDetails: { en: "Employment Details", tl: "Detalye ng Trabaho", bis: "Detalye sa Trabaho" },

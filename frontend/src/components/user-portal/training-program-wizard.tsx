@@ -355,10 +355,10 @@ export default function TrainingProgramWizard({ onBack }: TrainingProgramWizardP
         const address = [prof.addressHouseNo, prof.addressStreet, prof.addressBarangay, prof.addressCityMunicipality].filter(Boolean).join(", ")
         setFormData((prev) => ({
           ...prev,
-          fullName: prev.fullName || fullName,
-          address: prev.address || address,
-          contactNumber: prev.contactNumber || String(prof.contactNo || prof.mobileNumber || "").replace(/\s+/g, ""),
-          email: prev.email || prof.email || "",
+          fullName: fullName || prev.fullName,
+          address: address || prev.address,
+          contactNumber: String(prof.contactNo || prof.mobileNumber || "").replace(/\s+/g, "") || prev.contactNumber,
+          email: prof.email || prev.email,
         }))
       }
     }
