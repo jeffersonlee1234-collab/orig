@@ -73,15 +73,6 @@ interface FormData {
   email: string
 }
 
-const EMPTY_FORM: FormData = {
-  desiredCourse: "",
-  desiredCourseOther: "",
-  fullName: "",
-  yearsResident: "",
-  address: "",
-  contactNumber: "",
-  email: "",
-}
 
 function Field({
   label,
@@ -285,13 +276,25 @@ function DocumentUploadRow({
           e.target.value = ""
         }}
       />
-      <label
-        htmlFor={inputId}
-        className="inline-flex items-center gap-2 px-4 h-9 rounded-lg bg-blue-600 text-white text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity"
-      >
-        <Upload className="h-3.5 w-3.5" />
-        UPLOAD PHOTO
-      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label
+          htmlFor={inputId}
+          className="inline-flex items-center gap-2 px-4 h-9 rounded-lg bg-blue-600 text-white text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          UPLOAD PHOTO
+        </label>
+        {Boolean(doc.images?.length || doc.downloadUrl) && (
+          <button
+            type="button"
+            onClick={() => onSampleClick(doc)}
+            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <FileText className="h-3.5 w-3.5 text-blue-600" />
+            TINGNAN ANG SAMPLE
+          </button>
+        )}
+      </div>
 
       {uploaded && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
@@ -644,6 +647,15 @@ export default function TrainingProgramWizard({ onBack }: TrainingProgramWizardP
       >
         SUBMIT APPLICATION
       </button>
+
+      <DocumentSampleModal
+        doc={selectedSampleDoc}
+        isOpen={showSampleModal}
+        onClose={() => {
+          setShowSampleModal(false)
+          setSelectedSampleDoc(null)
+        }}
+      />
     </div>
   )
 }

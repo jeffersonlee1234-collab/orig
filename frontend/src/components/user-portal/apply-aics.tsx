@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react"
-import { X, Loader2, Info, FileText, Pencil, ChevronUp, Check, Upload, Camera, AlertCircle, RotateCcw, Clock } from "lucide-react"
+import { X, Info, FileText, Pencil, ChevronUp, Check, Upload, Camera, AlertCircle, RotateCcw, Clock } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
 import RequirementsModal, { AICS_REQUIREMENTS } from "./Requirements-modal"
 import DocumentCameraModal from "../ui/document-camera-modal"
@@ -62,64 +62,7 @@ export default function ApplyAICS({ initialType, initialTypeKey }: ApplyAICSProp
 
   const ALLOWED_UPLOAD_FILE_TYPES = "JPG, JPEG, PNG, WEBP"
 
-  const SAMPLE_DOCUMENT_INFO: Record<string, { images: string[]; downloadUrl?: string }> = {
-    "MEDICAL CERTIFICATE / CLINICAL ABSTRACT": {
-      images: ["/samples/MEDICAL CERTIFICATE.jpg"],
-      downloadUrl: "/samples/MEDICAL CERTIFICATE.jpg",
-    },
-    "RESETA NG GAMOT": {
-      images: ["/samples/RESETA NG GAMOT.jpg"],
-      downloadUrl: "/samples/RESETA NG GAMOT.jpg",
-    },
-    "BARANGAY CERTIFICATE OF INDIGENCY": {
-      images: ["/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg"],
-      downloadUrl: "/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg",
-    },
-    "QC ID NG PASYENTE": {
-      images: ["/samples/QC ID NG PASYENTE.jpg"],
-      downloadUrl: "/samples/QC ID NG PASYENTE.jpg",
-    },
-    "AUTHORIZATION / PERSONAL LETTER": {
-      images: ["/samples/AUTHORIZATION  PERSONAL LETTER.jpg"],
-      downloadUrl: "/samples/AUTHORIZATION  PERSONAL LETTER.jpg",
-    },
-    "REFERRAL FORM MULA SA BARANGAY, HOSPITAL O FUNERAL": {
-      images: ["/samples/sample_referral_form.png"],
-      downloadUrl: "/samples/sample_referral_form.png",
-    },
-    "CERTIFIED TRUE COPY NG DEATH CERTIFICATE": {
-      images: ["/samples/sample_death_certificate.png"],
-      downloadUrl: "/samples/sample_death_certificate.png",
-    },
-     "NOTARIZED FUNERAL CONTRACT (ORIHINAL NA KOPYA; NAKATALA ANG MGA SERBISYO AT HALAGA)": {
-      images: ["/samples/sample_burial_contract.png"],
-      downloadUrl: "/samples/sample_burial_contract.png",
-    },
-    "CERTIFICATE OF INDIGENCY (ORIHINAL NA KOPYA; PARA SA FUNERAL/BURIAL ASSISTANCE)": {
-      images: ["/samples/sample_certificate_of_indigency.png"],
-      downloadUrl: "/samples/sample_certificate_of_indigency.png",
-    },
-    "ANUMANG BALIDONG GOVERNMENT ID (MAS MAINAM KUNG QC ID)": { 
-      images: ["/samples/sample_valid_id.png"],
-      downloadUrl: "/samples/sample_valid_id.png",
-    },
-    "PHOTOCOPY NG BALIDONG ID NG NAMATAY, MAS MAINAM KUNG QCID": {
-      images: ["/samples/sample_valid_id.png"],
-      downloadUrl: "/samples/sample_valid_id.png",
-    },
-    "KOPYA NG PINAKABAGONG SCHOOL ID O PINAKABAGONG CERTIFICATE OF ENROLLMENT NG BENEPISYARYO": {
-      images: ["/samples/sample_school_id_or_cert_of_enrollment.png"],
-      downloadUrl: "/samples/sample_school_id_or_cert_of_enrollment.png",
-    },
-    "BARANGAY ISSUED CERTIFICATE OF INDIGENCY NA NAGPAPAHIWATIG NG LAYUNIN PARA SA PAG-AVAIL NG SSDD EDUCATIONAL ASSISTANCE": {
-      images: ["/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg"],
-      downloadUrl: "/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg",
-    },
-    "QC ID NG PERSON WITH DISABILITY": {
-      images: ["/samples/QC ID NG PASYENTE.jpg"],
-      downloadUrl: "/samples/QC ID NG PASYENTE.jpg",
-    },
-  }
+
 
   const assistanceTypes = [
     t("assistMedical"),
