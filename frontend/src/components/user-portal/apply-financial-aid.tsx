@@ -404,16 +404,10 @@ export default function ApplyFinancialAid() {
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* ── HEADER ── */}
-      <div className="space-y-1">
-        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-          Financial Aid & Cash Assistance
-        </span>
+      <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
           {t("financialAidOverviewTitle") || "Financial Aid Overview"}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-slate-400">
-          {t("financialAidSubtitle") || "Awtomatikong nakatala rito ang inyong naaprubahang ayuda, itinakdang halaga, at iskedyul ng payout appointment sa City Hall."}
-        </p>
       </div>
 
       {/* ── AUTOMATIC INTEGRATION NOTICE BANNER ── */}
