@@ -21,7 +21,6 @@ import {
   BookOpen,
   Send,
   Bot,
-  MessageSquare,
   Loader2,
   Scale,
   BadgeCheck,
@@ -548,6 +547,65 @@ export default function AIAssistanceFinderModal({
   const [chatInput, setChatInput] = useState("")
   const [isChatSending, setIsChatSending] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; text: string }>>([])
+
+  const handleSendChatMessage = async (promptOverride?: string) => {
+    const query = (promptOverride || chatInput).trim()
+    if (!query || isChatSending) return
+
+    const userMsg = { role: "user" as const, text: query }
+    setChatMessages((prev) => [...prev, userMsg])
+    if (!promptOverride) {
+      setChatInput("")
+    }
+    setIsChatSending(true)
+
+    try {
+      const response = await fetch(`${API_BASE}/api/ai/assistant-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: query,
+          language: selectedLang,
+          history: chatMessages.slice(-6),
+          applicantContext: {
+            applicantType,
+            incomeLevel,
+            dependentsCount,
+            employmentStatus,
+            residencyType,
+            barangay,
+            socialRegistry,
+            healthInsurance,
+            urgency,
+            narrativeText,
+            rationale: analysisResult?.rationale,
+          },
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.reply) {
+          setChatMessages((prev) => [...prev, { role: "assistant", text: data.reply }])
+          setIsChatSending(false)
+          return
+        }
+      }
+    } catch (err) {
+      console.warn("[Gemini Chat] Switching to client fallback:", err)
+    }
+
+    const fallbackReply =
+      selectedLang === "tl"
+        ? "Salamat po sa inyong tanong. Para sa inyong katanungan, mangyaring dalhin ang inyong Barangay Certificate of Indigency, Valid Government ID, at kaukulang dokumento sa tanggapan ng MSWDO para sa beripikasyon."
+        : selectedLang === "bis"
+        ? "Salamat sa imong pangutana. Palihog i-andam ang imong Barangay Indigency, Valid ID, ug uban pang gikinahanglan nga dokumento alang sa pormal nga validation sa opisina sa MSWDO."
+        : "Thank you for your inquiry. To proceed with verification, please bring your Barangay Certificate of Indigency, a valid government-issued ID, and supporting documents to the MSWDO Help Desk."
+    setChatMessages((prev) => [...prev, { role: "assistant", text: fallbackReply }])
+    setIsChatSending(false)
+  }
 
   const toggleHardship = (key: string) => {
     setSelectedHardships((prev) => ({
