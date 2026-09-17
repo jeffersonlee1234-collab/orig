@@ -5,8 +5,6 @@ import {
   Wallet,
   FileCheck2,
   Download,
-  Printer,
-  ShieldCheck,
 } from "lucide-react"
 import {
   ResponsiveContainer,
@@ -422,34 +420,15 @@ export default function Reports() {
     document.body.removeChild(link)
   }
 
-  const handlePrint = () => {
-    window.print()
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Reports &amp; Analytics</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Official social services delivery statistics, disbursement trends, and program volume analytics.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Data Privacy Act Compliance Checkbox */}
-          <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-300 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={maskPiiExport}
-              onChange={(e) => setMaskPiiExport(e.target.checked)}
-              className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-            />
-            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Mask PII (Recommended for Data Privacy Act RA 10173)</span>
-          </label>
-
           <select
             value={range}
             onChange={(e) => handleRangeChange(e.target.value as RangeOption)}
@@ -460,16 +439,6 @@ export default function Reports() {
             <option>Last 6 Months</option>
             <option>Year to Date</option>
           </select>
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-gray-50 transition-colors cursor-pointer shadow-2xs"
-            title="Print Official Report Summary"
-          >
-            <Printer className="h-4 w-4 text-slate-600" />
-            <span>Print Report</span>
-          </button>
 
           <button
             type="button"

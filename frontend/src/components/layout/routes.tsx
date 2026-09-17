@@ -35,6 +35,7 @@ export type ModuleRoute = {
 }
 
 export const moduleRoutes: ModuleRoute[] = [
+  { path: "/reports", label: "Reports & Analytics", icon: BarChart3, Component: Reports },
   { path: "/aics", label: "Assistance to Individual In Crisis", icon: ShieldAlert, Component: AICS },
   { path: "/pwd-senior", label: "PWD & Senior Citizen Services", icon: Users, Component: PWDSeniorCitizen },
   { path: "/solo-parent", label: "Solo Parent & Child Welfare", icon: Baby, Component: SoloParentChildWelfare },
@@ -44,7 +45,6 @@ export const moduleRoutes: ModuleRoute[] = [
   { path: "/case-management", label: "Case Management", icon: FolderKanban, Component: CaseManagement },
   { path: "/appointments", label: "Appointments", icon: Calendar, Component: Appointments },
   { path: "/activity-log", label: "Activity Log", icon: History, Component: ActivityLog },
-  { path: "/reports", label: "Reports & Analytics", icon: BarChart3, Component: Reports },
   { path: "/users", label: "User Management", icon: UserCog, Component: UserManagement },
 ]
 
