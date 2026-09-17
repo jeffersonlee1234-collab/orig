@@ -843,11 +843,11 @@ exports.verifySession = async (req, res) => {
     const email = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
     const sessionToken = (req.query.token || req.headers['x-session-token'] || '').trim();
 
-    if (!email) {
+    if (!email || !sessionToken) {
       return res.status(200).json({ success: true, active: true });
     }
 
-    // Check account status in DB
+    // Check account status and active session in DB
     try {
       const userRes = await db.query('SELECT id, status, active_session_token FROM users WHERE LOWER(email) = $1', [email]);
       if (userRes.rows.length > 0) {
@@ -861,10 +861,36 @@ exports.verifySession = async (req, res) => {
           });
         }
 
-        // Sync session token if empty in database
-        if (!dbUser.active_session_token && sessionToken) {
-          db.query('UPDATE users SET active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
+        // If the token matches the active session token in DB, it is active and valid
+        if (dbUser.active_session_token === sessionToken) {
+          return res.status(200).json({ success: true, active: true });
         }
+
+        // If active_session_token is not set in DB, set it now
+        if (!dbUser.active_session_token) {
+          db.query('UPDATE users SET active_session_token = $1 WHERE id = $2', [sessionToken, dbUser.id]).catch(() => {});
+          return res.status(200).json({ success: true, active: true });
+        }
+
+        // If active_session_token in DB is DIFFERENT from this client's token,
+        // it means another device (e.g. CP / Cellphone or other PC) has logged into this account!
+        const sessRes = await db.query(
+          `SELECT device_name, device_type, browser, os, ip_address, login_at 
+           FROM user_login_sessions 
+           WHERE LOWER(email) = $1 AND is_active = true 
+           ORDER BY id DESC LIMIT 1`,
+          [email]
+        );
+
+        const newDevice = sessRes.rows.length > 0 ? sessRes.rows[0] : null;
+        const devName = newDevice?.device_name || (newDevice?.device_type ? `${newDevice.device_type}` : 'Another Device');
+
+        return res.status(200).json({
+          success: false,
+          isSessionTerminated: true,
+          newDevice: newDevice || { device_name: devName, device_type: 'Device' },
+          message: `Your account was accessed from a new device: ${devName}. You have been logged out from this session for your security.`,
+        });
       }
     } catch (dbErr) {
       console.warn('[DB Warning] verifySession check fallback:', dbErr.message);

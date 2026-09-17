@@ -36,7 +36,7 @@ export function SessionInactivityWatcher() {
   }, []);
 
   const getSessionToken = useCallback(() => {
-    return sessionStorage.getItem("sessionToken") || localStorage.getItem("sessionToken") || "";
+    return localStorage.getItem("sessionToken") || sessionStorage.getItem("sessionToken") || "";
   }, []);
 
   const clearAuthSession = useCallback(() => {
