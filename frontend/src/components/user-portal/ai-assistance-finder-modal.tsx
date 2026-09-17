@@ -588,8 +588,6 @@ export default function AIAssistanceFinderModal({
         narrativeLower.includes("puhunan") ||
         narrativeLower.includes("tindahan")
 
-      const hasDisbursement = selectedServices.disbursement_track
-
       // 1. AICS Medical Card
       if (hasMed) {
         recs.push({
