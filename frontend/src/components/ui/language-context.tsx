@@ -458,11 +458,11 @@ const translations: Record<string, { en: string; tl: string; bis: string }> = {
     bis: "Siguroha nga na-upload ang angay nga mga dokumento para sa matag kategorya ug i-verify nga ang tanang detalye—sama sa imong tibuok ngalan (una, tunga, ug ulahi nga ngalan) ug address—motugma sa impormasyon sa imong QC ID.",
   },
   fileUploadDesc2: {
-    en: "Click the \"Sample Document\" button above each file upload to see a sample file and make sure your upload matches the required format.",
-    tl: "I-click ang \"Sample Document\" button sa itaas ng bawat file upload para makita ang sample file at matiyak na ang iyong upload ay tumutugma sa kinakailangang format.",
-    bis: "I-click ang \"Sample Document\" button sa ibabaw sa matag file upload para makita ang sample file ug siguroha nga ang imong upload motugma sa gikinahanglan nga format.",
+    en: "Upload clear and legible copies of the required documents (JPG, JPEG, PNG, WEBP, or PDF).",
+    tl: "I-upload ang malinaw at nababasang kopya ng mga kinakailangang dokumento.",
+    bis: "I-upload ang klaro ug mabasa nga kopya sa gikinahanglan nga mga dokumento.",
   },
-  sampleDocument: { en: "Sample document", tl: "Sample Document", bis: "Sample Document" },
+  sampleDocument: { en: "Required Document", tl: "Kinakailangang Dokumento", bis: "Gikinahanglan nga Dokumento" },
   allowedFileTypes: { en: "Allowed file types", tl: "Allowed file types", bis: "Allowed nga file types" },
   uploadFiles: { en: "Upload file(s)", tl: "Upload File(s)", bis: "Upload File(s)" },
   removeFile: { en: "Remove {filename}", tl: "Alisin ang {filename}", bis: "Tangtanga ang {filename}" },
@@ -526,7 +526,7 @@ const translations: Record<string, { en: string; tl: string; bis: string }> = {
   // ─────────────────────────────────────────────
   pwdStepChecklist: { en: "Complete checklist", tl: "Kumpletuhin ang Checklist", bis: "Kumpletoha ang Checklist" },
   pwdStepPersonal: { en: "Personal information", tl: "Personal na Impormasyon", bis: "Personal nga Impormasyon" },
-  pwdStepDocuments: { en: "Sample documents", tl: "Mga Sample na Dokumento", bis: "Mga Sample nga Dokumento" },
+  pwdStepDocuments: { en: "Upload documents", tl: "Magsumite ng Dokumento", bis: "Isumite ang Dokumento" },
   pwdStepReview: { en: "Review & submit", tl: "Suriin at Isumite", bis: "Susiha ug Isumite" },
   pwdStepAppointment: { en: "Set an appointment", tl: "Mag-set ng Appointment", bis: "Pag-set og Appointment" },
 
@@ -735,7 +735,7 @@ const translations: Record<string, { en: string; tl: string; bis: string }> = {
   // ─────────────────────────────────────────────
   // Solo Parent Application Wizard (SoloParentApplicationWizard.tsx)
   // ─────────────────────────────────────────────
-  spStepDocuments: { en: "Sample documents", tl: "Mga Sample na Dokumento", bis: "Mga Sample nga Dokumento" },
+  spStepDocuments: { en: "Upload documents", tl: "Magsumite ng Dokumento", bis: "Isumite ang Dokumento" },
 
   spChecklistTitle: { en: "Service and primary requirements", tl: "Mga Kinakailangan sa Serbisyo at sa Pangunahing Kinakailangan", bis: "Mga Kinahanglanon sa Serbisyo ug Panguna nga Kinahanglanon" },
   spResidentQuestion: { en: "Are you a legitimate resident of Quezon City?", tl: "Ikaw ba ay isang lehitimong residente ng Quezon City?", bis: "Ikaw ba usa ka lehitimong residente sa Quezon City?" },
@@ -822,16 +822,16 @@ const translations: Record<string, { en: string; tl: string; bis: string }> = {
     bis: "Gipamatud-an nako nga ang impormasyon nga gihatag sa taas tinuod ug husto. Nasabtan usab nako nga ang bisan unsang sayop nga pagpahayag mahimong magpasangil kanako sa kriminal ug sibil nga pananagutan sumala sa umaabot nga balaod.",
   },
 
-  spDocIntroTitle: { en: "Sample of documents to submit.", tl: "Mga sample ng dokumentong ipapasa.", bis: "Mga sample sa dokumento nga isumite." },
+  spDocIntroTitle: { en: "Required documents to submit.", tl: "Mga dokumentong ipapasa.", bis: "Mga dokumento nga isumite." },
   spDocIntroDesc1: {
     en: "If any requirements are still missing or incorrect, make sure to bring the complete documents on the day of your interview.",
     tl: "Kung kulang pa o may mali sa mga requirements, siguraduhin na kumpletong madadala ang mga ito sa araw ng interview.",
     bis: "Kung naa pay kulang o sayop sa mga requirements, siguroha nga kompleto nga madala kini sa adlaw sa interview.",
   },
   spDocIntroDesc2: {
-    en: "Click \"SAMPLE DOCUMENT\" above each file upload to see a sample and make sure your upload matches the required format. You may upload multiple files per document.",
-    tl: "I-click ang \"SAMPLE DOCUMENT\" sa itaas ng bawat file upload para makita ang sample file at matiyak na ang iyong upload ay tumutugma sa kinakailangang format. Pwede kang mag-upload ng maraming file kada dokumento.",
-    bis: "I-click ang \"SAMPLE DOCUMENT\" sa ibabaw sa matag file upload para makita ang sample file ug siguroha nga ang imong upload motugma sa gikinahanglan nga format. Mahimo kang mag-upload og daghang file matag dokumento.",
+    en: "Upload clear and legible copies of the required documents. You may upload multiple files per requirement.",
+    tl: "I-upload ang malinaw na kopya ng mga kinakailangang dokumento. Maaaring mag-upload ng maraming file kada dokumento.",
+    bis: "I-upload ang klaro nga kopya sa gikinahanglan nga mga dokumento.",
   },
   spDocForNewLabel: { en: "FOR NEW APPLICATION", tl: "PARA SA BAGONG APLIKASYON", bis: "PARA SA BAG-ONG APLIKASYON" },
   spDocForRenewalLabel: { en: "FOR RENEWAL", tl: "PARA SA RENEWAL", bis: "PARA SA RENEWAL" },

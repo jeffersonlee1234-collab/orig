@@ -1551,16 +1551,13 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
             <div className="space-y-4">
               <h3 className="text-base font-bold text-foreground">{t("fileUploadHeader") || "File upload"}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc1") || "Siguraduhing i-upload ang angkop na mga dokumento para sa bawat kategorya at tiyaking tugma ang lahat ng detalye—gaya ng inyong buong pangalan at tirahan—sa impormasyon sa inyong QC ID."}
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc2") || 'Pindutin ang "Sample Document" na button sa itaas ng bawat pag-upload ng file upang makita ang halimbawa ng file at masigurong tugma ang inyong ia-upload.'}
+                {t("fileUploadDesc1") || "Make sure to upload the appropriate documents for each category and verify that all details match the information on your QC ID."}
               </p>
 
               {attemptedNext && !isStep3Valid && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 flex items-center gap-2.5 text-xs text-red-700">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Kailangang i-upload ang lahat ng required na dokumento bago magpatuloy.</span>
+                  <span>All required documents must be uploaded before continuing.</span>
                 </div>
               )}
 

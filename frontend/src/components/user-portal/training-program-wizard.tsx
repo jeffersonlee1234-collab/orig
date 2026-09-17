@@ -253,18 +253,7 @@ function DocumentUploadRow({
 
   return (
     <div className="space-y-2">
-      {doc.images && doc.images.length > 0 && (
-        <button
-          type="button"
-          onClick={() => onSampleClick(doc)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-none border-none p-0 cursor-pointer"
-        >
-          <FileText className="h-3.5 w-3.5" />
-          SAMPLE DOCUMENT
-        </button>
-      )}
-
-    <div
+      <div
       className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
         invalid
           ? "border-red-400 border-dashed bg-red-50"
@@ -652,20 +641,10 @@ export default function TrainingProgramWizard({ onBack }: TrainingProgramWizardP
         </div>
       </div>
 
-      <DocumentSampleModal
-        doc={selectedSampleDoc}
-        isOpen={showSampleModal}
-        onClose={() => {
-          setShowSampleModal(false)
-          setSelectedSampleDoc(null)
-        }}
-      />
-
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
         <AlertCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
         <p className="text-xs text-blue-700">
-          Sa pag-click ng "SUBMIT", ipapadala ang iyong application sa SSDD. Makakatanggap ka ng notification kapag
-          na-review na ito ng social worker.
+          By clicking "SUBMIT", your application will be forwarded to the SSDD office. You will receive a notification once reviewed by a social worker.
         </p>
       </div>
 

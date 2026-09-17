@@ -3056,15 +3056,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                   const isImage = entry?.file.type.startsWith("image/")
                   return (
                     <div key={doc.title}>
-                      <button
-                        type="button"
-                        onClick={() => setSampleDoc(doc.title)}
-                        className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline mb-2"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        {t("sampleDocument").toUpperCase()}
-                      </button>
-
                       {/* Hidden real file input */}
                       <input
                         ref={(el) => {
@@ -3443,7 +3434,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
         </div>
       )}
 
-      {sampleDoc && <SampleDocumentModal title={sampleDoc} onClose={() => setSampleDoc(null)} />}
       {previewDoc && uploaded[previewDoc] && (
         <UploadedDocPreviewModal
           title={previewDoc}

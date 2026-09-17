@@ -800,7 +800,7 @@ export default function AICSServiceWizard({
   const WIZARD_TABS = [
     "COMPLETE CHECKLIST",
     "PERSONAL INFORMATION",
-    "SAMPLE DOCUMENTS",
+    "UPLOAD DOCUMENTS",
     "REVIEW & SUBMIT",
   ]
 
@@ -1750,21 +1750,10 @@ export default function AICSServiceWizard({
                   <p className="text-sm text-muted-foreground leading-relaxed mt-1">
                     {t("fileUploadDesc1") || "Make sure to upload the appropriate documents for each category and verify that all details—such as your full name (first, middle, and last name) and address—match the information on your QC ID."}
                   </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-1">
-                    {t("fileUploadDesc2") || 'Click the "Sample Document" button above each file upload to see a sample file and make sure your upload matches the required format.'}
-                  </p>
                 </div>
 
                 {/* Document 1: Barangay Certificate */}
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setSampleDocOpen("BARANGAY CERTIFICATE OF INDIGENCY / RESIDENCY")}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3b82f6] hover:underline cursor-pointer"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    SAMPLE DOCUMENT
-                  </button>
 
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
@@ -1842,14 +1831,6 @@ export default function AICSServiceWizard({
 
                 {/* Document 2: QCitizen ID / Valid Government-Issued ID */}
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setSampleDocOpen("QCITIZEN ID O VALID GOVERNMENT-ISSUED ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3b82f6] hover:underline cursor-pointer"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    SAMPLE DOCUMENT
-                  </button>
 
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
@@ -1927,14 +1908,6 @@ export default function AICSServiceWizard({
 
                 {/* Document 3: Supporting Document (Kung Applicable) */}
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setSampleDocOpen("SUPPORTING DOCUMENT")}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3b82f6] hover:underline cursor-pointer"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    SAMPLE DOCUMENT
-                  </button>
 
                   <div
                     className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
@@ -2353,48 +2326,6 @@ export default function AICSServiceWizard({
                   className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#3b82f6] hover:opacity-90 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-2"
                 >
                   <span>YES, SUBMIT APPLICATION</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sample Document Modal */}
-        {sampleDocOpen && (
-          <div
-            onClick={() => setSampleDocOpen(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 cursor-pointer"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-xl flex flex-col overflow-hidden cursor-default"
-            >
-              <div className="p-6 pb-4 border-b border-gray-200 shrink-0 flex items-center justify-between">
-                <h2 className="text-lg font-heading font-semibold text-gray-900">
-                  Sample Document: {sampleDocOpen}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setSampleDocOpen(null)}
-                  className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto flex items-center justify-center bg-gray-50">
-                <img
-                  src={SAMPLE_DOC_IMAGES[sampleDocOpen] || "/samples/BARANGAY CERTIFICATE OF INDIGENCY.jpg"}
-                  alt={sampleDocOpen}
-                  className="max-h-[60vh] rounded-lg border border-gray-200 object-contain shadow-xs"
-                />
-              </div>
-              <div className="p-4 border-t border-gray-200 flex justify-end shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setSampleDocOpen(null)}
-                  className="px-6 h-10 rounded-xl bg-[#3b82f6] text-white text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  CLOSE
                 </button>
               </div>
             </div>

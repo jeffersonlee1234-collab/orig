@@ -127,7 +127,7 @@ export default function SeniorBookletWizard({
   const STEPS = [
     { id: 1, label: t("wizardChecklist") || "COMPLETE CHECKLIST" },
     { id: 2, label: t("wizardPersonal") || "PERSONAL INFORMATION" },
-    { id: 3, label: t("pwdStepDocuments")?.toUpperCase() || "SAMPLE DOCUMENTS" },
+    { id: 3, label: t("pwdStepDocuments")?.toUpperCase() || "UPLOAD DOCUMENTS" },
     { id: 4, label: t("wizardReview") || "REVIEW & SUBMIT" },
   ]
 

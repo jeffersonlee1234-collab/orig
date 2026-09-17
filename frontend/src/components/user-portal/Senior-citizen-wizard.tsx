@@ -286,7 +286,7 @@ export default function SeniorCitizenApplicationWizard({
   const WIZARD_TABS = [
     t("wizardChecklist") || "COMPLETE CHECKLIST",
     t("wizardPersonal") || "PERSONAL INFORMATION",
-    t("pwdStepDocuments")?.toUpperCase() || "SAMPLE DOCUMENTS",
+    t("pwdStepDocuments")?.toUpperCase() || "UPLOAD DOCUMENTS",
     t("wizardReview") || "REVIEW & SUBMIT",
   ]
 
@@ -2000,10 +2000,7 @@ export default function SeniorCitizenApplicationWizard({
             <div className="space-y-4">
               <h3 className="text-base font-bold text-foreground">{t("fileUploadHeader") || "File upload"}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc1") || "Siguraduhing i-upload ang angkop na mga dokumento para sa bawat kategorya at tiyaking tugma ang lahat ng detalye—gaya ng inyong buong pangalan at tirahan—sa impormasyon sa inyong QC ID."}
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc2") || 'Pindutin ang "Sample Document" na button sa itaas ng bawat pag-upload ng file upang makita ang halimbawa ng file at masigurong tugma ang inyong ia-upload.'}
+                {t("fileUploadDesc1") || "Make sure to upload the appropriate documents for each category and verify that all details match the information on your QC ID."}
               </p>
 
               <div className="space-y-6 pt-2">
@@ -2015,16 +2012,6 @@ export default function SeniorCitizenApplicationWizard({
 
                   return (
                     <div key={doc.id}>
-                      {doc.sampleImage && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSampleDoc(doc)}
-                          className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline mb-2 cursor-pointer"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {(t("sampleDocument") || "Sample Document").toUpperCase()}
-                        </button>
-                      )}
 
                       <div
                         className={`border rounded-xl p-5 transition-colors ${
@@ -2441,13 +2428,6 @@ export default function SeniorCitizenApplicationWizard({
         />
       )}
 
-      {/* ── SAMPLE DOCUMENT MODAL ── */}
-      <SampleDocModal
-        doc={selectedSampleDoc}
-        isOpen={Boolean(selectedSampleDoc)}
-        onClose={() => setSelectedSampleDoc(null)}
-      />
-
       {/* ── UPLOADED DOCUMENT FULL PREVIEW MODAL ── */}
       {previewDocModal && (
         <UploadedDocPreviewModal
@@ -2456,66 +2436,6 @@ export default function SeniorCitizenApplicationWizard({
           onClose={() => setPreviewDocModal(null)}
         />
       )}
-    </div>
-  )
-}
-
-function SampleDocModal({
-  doc,
-  isOpen,
-  onClose,
-}: {
-  doc: DocumentItem | null
-  isOpen: boolean
-  onClose: () => void
-}) {
-  const { t } = useLanguage()
-  if (!isOpen || !doc) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        <div className="p-5 border-b flex items-center justify-between">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-4 w-4 text-blue-600" />
-            {t("sampleLabel", { name: doc.label }) || `SAMPLE: ${doc.label}`}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-800 cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="p-5 overflow-y-auto space-y-4">
-          <p className="text-sm text-muted-foreground">{doc.description}</p>
-          {doc.sampleImage ? (
-            <div className="border border-border rounded-xl overflow-hidden bg-gray-50 p-2 flex items-center justify-center">
-              <img
-                src={doc.sampleImage}
-                alt={doc.label}
-                className="max-h-80 w-auto object-contain rounded-lg shadow-xs"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = "none"
-                }}
-              />
-            </div>
-          ) : (
-            <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-muted-foreground text-sm">
-              {t("noSampleImageAvailable") || "Walang sample image na available."}
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-t bg-gray-50 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold bg-gray-800 text-white rounded-lg hover:bg-gray-900 cursor-pointer"
-          >
-            {t("close") ? t("close").toUpperCase() : "CLOSE"}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

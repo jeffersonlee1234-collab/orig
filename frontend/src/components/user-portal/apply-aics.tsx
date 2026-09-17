@@ -34,7 +34,7 @@ export default function ApplyAICS({ initialType, initialTypeKey }: ApplyAICSProp
   const WIZARD_TABS = [
     t("wizardChecklist")?.toUpperCase() || "COMPLETE CHECKLIST",
     t("wizardPersonal")?.toUpperCase() || "PERSONAL INFORMATION",
-    t("pwdStepDocuments")?.toUpperCase() || "SAMPLE DOCUMENTS",
+    t("pwdStepDocuments")?.toUpperCase() || "UPLOAD DOCUMENTS",
     t("wizardReview")?.toUpperCase() || "REVIEW & SUBMIT",
   ]
 
@@ -2031,21 +2031,10 @@ const handleFinalSubmit = async () => {
                 {requiredDocuments.map((doc, docIndex) => {
                   const files = uploadedDocs[doc] || []
                   const inputId = `upload-doc-${docIndex}`
-                  const hasSample = Boolean(SAMPLE_DOCUMENT_INFO[doc])
                   const uploaded = files.length > 0
 
                   return (
                     <div key={doc} className="space-y-2">
-                      {hasSample && (
-                        <button
-                          type="button"
-                          onClick={() => setSampleDocOpen(doc)}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {t("sampleDocument").toUpperCase()}
-                        </button>
-                      )}
                       <div
                         className={`border rounded-lg px-4 py-4 space-y-3 transition-colors ${
                           uploaded ? "border-emerald-500/40 bg-emerald-500/5" : "border-dashed border-border"
@@ -2125,48 +2114,6 @@ const handleFinalSubmit = async () => {
               </div>
             </div>
           </div>
-      {sampleDocOpen && SAMPLE_DOCUMENT_INFO[sampleDocOpen] && (
-        <div
-          onClick={() => setSampleDocOpen(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 cursor-pointer"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-card w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-xl flex flex-col overflow-hidden cursor-default"
-          >
-            <div className="p-6 pb-4 border-b border-border shrink-0">
-              <h2 className="text-lg font-heading font-semibold text-foreground">
-                {t("sampleLabel", { name: sampleDocOpen })}
-              </h2>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <div className="flex flex-wrap gap-4 justify-center">
-                {SAMPLE_DOCUMENT_INFO[sampleDocOpen].images.map((img, i) => (
-                  <img
-                    key={i}
-                    src={img}
-                    alt={`${sampleDocOpen} sample ${i + 1}`}
-                    className="max-h-96 rounded-lg border border-border object-contain"
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="p-6 pt-4 border-t border-border flex items-center justify-between gap-4 shrink-0">
-             {SAMPLE_DOCUMENT_INFO[sampleDocOpen].downloadUrl && (
-                <a href={SAMPLE_DOCUMENT_INFO[sampleDocOpen].downloadUrl} download className="px-6 h-10 flex items-center rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/70 transition-colors">
-                  {t("download").toUpperCase()}
-                </a>
-              )}
-              <button
-                onClick={() => setSampleDocOpen(null)}
-                className="px-6 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                {t("close").toUpperCase()}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
           <div className="px-6 pb-6 flex justify-between">
             <button
               onClick={() => setStep("personal")}

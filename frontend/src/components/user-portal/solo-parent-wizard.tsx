@@ -648,14 +648,6 @@ function DocumentUploadRow({
 
   return (
     <div key={doc.id}>
-      <button
-        type="button"
-        onClick={() => onSampleClick(doc)}
-        className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline mb-2 cursor-pointer"
-      >
-        <FileText className="h-3.5 w-3.5" />
-        {(t("sampleDocument") || "Sample Document").toUpperCase()}
-      </button>
 
       <div
         className={`border rounded-xl p-5 transition-colors ${
@@ -889,10 +881,10 @@ export default function SoloParentApplicationWizard({
   }, [initialType])
 
   const STEPS = [
-    { id: 1, label: language === "en" ? "COMPLETE CHECKLIST" : language === "bis" ? "KOMPLETOHA ANG CHECKLIST" : "KUMPLETOHING CHECKLIST" },
-    { id: 2, label: language === "en" ? "PERSONAL INFORMATION" : language === "bis" ? "PERSONAL NGA IMPORMASYON" : "IMPORMASYONG PERSONAL" },
-    { id: 3, label: language === "en" ? "SAMPLE DOCUMENTS" : language === "bis" ? "MGA SAMPOL NGA DOKUMENTO" : "MGA SAMPOL NA DOKUMENTO" },
-    { id: 4, label: language === "en" ? "REVIEW & SUBMIT" : language === "bis" ? "REBYU UG ISUMITE" : "REBYUHIN AT ISUMITE" },
+    { id: 1, label: "COMPLETE CHECKLIST" },
+    { id: 2, label: "PERSONAL INFORMATION" },
+    { id: 3, label: "UPLOAD DOCUMENTS" },
+    { id: 4, label: "REVIEW & SUBMIT" },
   ]
 
   const [step, setStep] = useState(1)
@@ -3349,10 +3341,7 @@ export default function SoloParentApplicationWizard({
             <div className="space-y-4">
               <h3 className="text-base font-bold text-foreground">{t("fileUploadHeader") || "File upload"}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc1") || "Siguraduhing i-upload ang angkop na mga dokumento para sa bawat kategorya at tiyaking tugma ang lahat ng detalye—gaya ng inyong buong pangalan at tirahan—sa impormasyon sa inyong QC ID."}
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc2") || 'Pindutin ang "Sample Document" na button sa itaas ng bawat pag-upload ng file upang makita ang halimbawa ng file at masigurong tugma ang inyong ia-upload.'}
+                {t("fileUploadDesc1") || "Make sure to upload the appropriate documents for each category and verify that all details match the information on your QC ID."}
               </p>
 
               <div className="space-y-6 pt-2">

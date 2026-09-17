@@ -1544,10 +1544,7 @@ export default function PWDSocialAssistanceWizard({
             <div className="space-y-4">
               <h3 className="text-base font-bold text-foreground">{t("fileUploadHeader") || "File upload"}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc1") || "Siguraduhing i-upload ang angkop na mga dokumento para sa bawat kategorya at tiyaking tugma ang lahat ng detalye—gaya ng inyong buong pangalan at tirahan—sa impormasyon sa inyong QC ID."}
-              </p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("fileUploadDesc2") || 'Pindutin ang "Sample Document" na button sa itaas ng bawat pag-upload ng file upang makita ang halimbawa ng file at masigurong tugma ang inyong ia-upload.'}
+                {t("fileUploadDesc1") || "Make sure to upload the appropriate documents for each category and verify that all details match the information on your QC ID."}
               </p>
 
               <div className="space-y-6 pt-2">
@@ -1559,19 +1556,6 @@ export default function PWDSocialAssistanceWizard({
 
                   return (
                     <div key={doc.id}>
-                      {doc.images && doc.images.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSampleDoc(doc)
-                            setShowSampleModal(true)
-                          }}
-                          className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline mb-2 cursor-pointer"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {(t("sampleDocument") || "Sample Document").toUpperCase()}
-                        </button>
-                      )}
 
                       <div
                         className={`border rounded-xl p-5 transition-colors ${
@@ -1871,13 +1855,6 @@ export default function PWDSocialAssistanceWizard({
           </div>
         </div>
       )}
-
-      {/* Sample Document Modal */}
-      <SampleDocModal
-        doc={selectedSampleDoc}
-        isOpen={showSampleModal}
-        onClose={() => setShowSampleModal(false)}
-      />
 
       {/* 📸 Document Camera Capture Modal */}
       <DocumentCameraModal

@@ -717,10 +717,10 @@ export default function ChildWelfareApplicationWizard({
   const userProfile = propUserProfile || profile || (getCurrentUserProfile() as any)
 
   const STEPS = [
-    { id: 1, label: t("cwStepChecklist") || (language === "tl" ? "KUMPLETUHIN ANG CHECKLIST" : language === "bis" ? "KUMPLETOHA ANG CHECKLIST" : "COMPLETE CHECKLIST") },
-    { id: 2, label: t("cwStepPersonal") || (language === "tl" ? "PERSONAL NA IMPORMASYON" : language === "bis" ? "PERSONAL NGA IMPORMASYON" : "PERSONAL INFORMATION") },
-    { id: 3, label: t("pwdStepDocuments") ? t("pwdStepDocuments").toUpperCase() : "SAMPLE DOCUMENTS" },
-    { id: 4, label: t("cwStepReview") || (language === "tl" ? "SURIIN AT ISUMITE" : language === "bis" ? "SUSIHA UG ISUMITE" : "REVIEW & SUBMIT") },
+    { id: 1, label: "COMPLETE CHECKLIST" },
+    { id: 2, label: "PERSONAL INFORMATION" },
+    { id: 3, label: "UPLOAD DOCUMENTS" },
+    { id: 4, label: "REVIEW & SUBMIT" },
   ]
 
   const [step, setStep] = useState(1)
@@ -2278,25 +2278,30 @@ export default function ChildWelfareApplicationWizard({
             <div className="space-y-5">
               <div className="border-b border-gray-200 pb-3">
                 <h3 className="text-base font-bold text-gray-900 uppercase">
-                  {t("cwStepDocuments") || (language === "tl" ? "MAGSUMITE NG DOKUMENTO" : language === "bis" ? "ISUMITE ANG MGA DOKUMENTO" : "SAMPLE DOCUMENTS")}
+                  {t("cwStepDocuments") || "UPLOAD DOCUMENTS"}
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {language === "tl"
-                    ? `I-upload ang mga kaukulang dokumento para sa ${selectedProgram.title}. Ang may markang (*) ay kinakailangan.`
-                    : language === "bis"
-                    ? `I-upload ang mga angay nga dokumento para sa ${selectedProgram.title}. Ang may marka nga (*) gikinahanglan.`
-                    : `Upload the required documents for ${selectedProgram.title}. Fields marked with (*) are required.`}
+                  Upload the required documents for {selectedProgram.title}. Fields marked with (*) are required.
                 </p>
               </div>
 
               <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl p-3.5">
                 <AlertCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-700">
-                  {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP, PDF (o kumuha gamit ang Camera). Siguraduhing malinaw ang kopya."}
+                  {t("allowedFileTypesCameraNote") || "Allowed file types: JPG, JPEG, PNG, WEBP, PDF (or capture using Camera). Make sure documents are clear and legible."}
                 </p>
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    UPLOAD DOCUMENTS
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Please upload the required verification documents. Make sure files are clear and legible.
+                  </p>
+                </div>
+
                 {selectedProgram.documents.map((doc, docIdx) => {
                   const files = uploadedFiles[doc.id] || []
                   const uploaded = files.length > 0
@@ -2305,18 +2310,6 @@ export default function ChildWelfareApplicationWizard({
 
                   return (
                     <div key={doc.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedSampleDoc(doc)
-                          setShowSampleModal(true)
-                        }}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline mb-1.5 cursor-pointer"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        {(t("sampleDocument") || (language === "tl" ? "Sample na Dokumento" : language === "bis" ? "Sample nga Dokumento" : "Sample Document")).toUpperCase()}
-                      </button>
-
                       <div
                         className={`border rounded-xl p-4 sm:p-5 transition-colors ${
                           uploaded
@@ -2639,46 +2632,6 @@ export default function ChildWelfareApplicationWizard({
           file={previewDocModal.file}
           onClose={() => setPreviewDocModal(null)}
         />
-      )}
-
-      {/* 📄 SAMPLE DOCUMENT MODAL */}
-      {showSampleModal && selectedSampleDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide truncate pr-2">
-                {selectedSampleDoc.label}
-              </h4>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSampleModal(false)
-                  setSelectedSampleDoc(null)
-                }}
-                className="text-gray-400 hover:text-gray-600 cursor-pointer shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="p-6 max-h-[65vh] overflow-y-auto bg-gray-50 flex items-center justify-center">
-              {selectedSampleDoc.sampleImage ? (
-                <img
-                  src={selectedSampleDoc.sampleImage}
-                  alt={selectedSampleDoc.label}
-                  className="max-w-full max-h-[55vh] rounded-lg border border-gray-200 object-contain shadow-xs"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 py-10 text-gray-500">
-                  <FileText className="h-12 w-12 text-blue-500" />
-                  <p className="text-sm font-medium">{selectedSampleDoc.label}</p>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-3 border-t border-gray-200 text-xs text-gray-500 bg-white">
-              {selectedSampleDoc.description || "Official Sample Document Reference"}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Confirmation Modal */}
