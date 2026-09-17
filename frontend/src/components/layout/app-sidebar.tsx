@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom"
-import { ChevronLeft, ChevronsRight, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronsRight } from "lucide-react"
 import { moduleRoutes } from "./routes"
 import { Tooltip } from "../ui/tooltip"
 
@@ -80,10 +80,7 @@ export function AppSidebar({
                           }`}
                         />
                         {open && (
-                          <>
-                            <span className="flex-1 text-left truncate">{label}</span>
-                            {isActive && <ChevronRight className="h-4 w-4 text-sidebar-primary" />}
-                          </>
+                          <span className="flex-1 text-left truncate">{label}</span>
                         )}
                       </>
                     )}
