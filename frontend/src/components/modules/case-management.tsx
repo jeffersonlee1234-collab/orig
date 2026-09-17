@@ -1101,64 +1101,57 @@ export default function CaseManagement() {
                 onClick={() => setActiveCase(c)}
                 className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md hover:bg-slate-50/40 rounded-2xl p-4 md:p-5 transition-all cursor-pointer group select-none"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-4">
-                  {/* Left Section: Beneficiary & Case Info (Full display, no clipping) */}
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    <div className="h-11 w-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-xs group-hover:bg-blue-600 transition-colors mt-0.5">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 md:gap-4">
+                  {/* Left Section: Beneficiary & Case Info (Strictly clean 3 horizontal lines like Card 2) */}
+                  <div className="flex items-center gap-3.5 min-w-0 shrink-0">
+                    <div className="h-11 w-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-xs">
                       {c.beneficiaryName.charAt(0)}
                     </div>
-                    <div className="min-w-0">
-                      {/* Top Badges Row */}
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
+                    <div className="min-w-0 space-y-0.5">
+                      {/* Top Badges Row (Strictly 1 line) */}
+                      <div className="flex items-center gap-2 flex-nowrap">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shrink-0 whitespace-nowrap">
                           {c.caseNumber}
                         </span>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${progColor}`}>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 whitespace-nowrap ${progColor}`}>
                           {c.linkedProgram}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${pm.chip}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 whitespace-nowrap ${pm.chip}`}>
                           {pm.label}
                         </span>
                       </div>
 
-                      {/* Beneficiary Name (Full name, never cut off) */}
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {/* Beneficiary Name (Strictly 1 line) */}
+                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-500 transition-colors whitespace-nowrap">
                         {c.beneficiaryName}
                       </h3>
 
-                      {/* Metadata row (Full details, wraps naturally) */}
-                      <p className="text-xs text-slate-500 font-mono mt-0.5 flex flex-wrap items-center gap-x-1.5">
-                        <span>QCID: {c.beneficiaryId}</span>
-                        <span>•</span>
-                        <span>REF: {c.applicationId}</span>
+                      {/* Metadata row (Strictly 1 line) */}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">
+                        QCID: {c.beneficiaryId} • REF: {c.applicationId}
                         {[
                           c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
                           c.sex && c.sex !== "—" ? c.sex : "",
-                        ].filter(Boolean).length > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>
-                              {[
-                                c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
-                                c.sex && c.sex !== "—" ? c.sex : "",
-                              ].filter(Boolean).join(" • ")}
-                            </span>
-                          </>
-                        )}
+                        ].filter(Boolean).length > 0
+                          ? ` • ${[
+                              c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
+                              c.sex && c.sex !== "—" ? c.sex : "",
+                            ].filter(Boolean).join(" • ")}`
+                          : ""}
                       </p>
                     </div>
                   </div>
 
                   {/* Right Section: Connected Module Badges & Status */}
-                  <div className="flex items-center gap-2 flex-wrap justify-start lg:justify-end text-xs pt-1 lg:pt-0">
+                  <div className="flex items-center gap-2 flex-wrap justify-start xl:justify-end text-xs pt-1 xl:pt-0">
                     {/* Appointment badge */}
                     {c.linkedAppointment ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium text-xs whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium text-xs whitespace-nowrap">
                         <Calendar className="h-3.5 w-3.5 text-indigo-500" />
                         Appt: {c.linkedAppointment.status.toUpperCase()}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-[11px] whitespace-nowrap">
                         No Appt
                       </span>
                     )}
@@ -1168,8 +1161,8 @@ export default function CaseManagement() {
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold text-xs border whitespace-nowrap ${
                           c.linkedFinancialAid.status === "RELEASED"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                            : "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                         }`}
                       >
                         <Wallet className="h-3.5 w-3.5" />
@@ -1179,7 +1172,7 @@ export default function CaseManagement() {
 
                     {/* Referral count badge */}
                     {referrals.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-semibold whitespace-nowrap">
                         <Send className="h-3 w-3" />
                         {referrals.length} Ref
                       </span>
@@ -1187,7 +1180,7 @@ export default function CaseManagement() {
 
                     {/* Monitoring count badge */}
                     {monitoringLogs.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold whitespace-nowrap">
                         <Activity className="h-3 w-3" />
                         {monitoringLogs.length} Mon
                       </span>
