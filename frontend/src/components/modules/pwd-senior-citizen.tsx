@@ -2700,8 +2700,10 @@ export default function PWDSeniorCitizen() {
               localStorage.setItem("pwd_senior_applications", JSON.stringify(combined))
             } catch { }
           }
-        } catch (err) {
-          console.warn("Could not fetch PWD/Senior applications from backend:", err)
+        } catch (err: any) {
+          if (err?.name !== "AbortError") {
+            console.warn("Could not fetch PWD/Senior applications from backend:", err)
+          }
         }
 
         // Only check localStorage if backend was offline / unreachable

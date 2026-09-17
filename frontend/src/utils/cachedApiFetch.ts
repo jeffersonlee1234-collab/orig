@@ -77,8 +77,10 @@ export async function fetchPwdSeniorApplications(): Promise<any[]> {
   try {
     const data = await deduplicatedFetch(`${API_BASE}/api/pwd-senior/applications`, 15000)
     return Array.isArray(data) ? data : []
-  } catch (err) {
-    console.warn("Could not fetch PWD/Senior applications:", err)
+  } catch (err: any) {
+    if (err?.name !== "AbortError") {
+      console.warn("Could not fetch PWD/Senior applications:", err)
+    }
     return []
   }
 }
