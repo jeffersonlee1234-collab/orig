@@ -2635,15 +2635,6 @@ const handleFinalSubmit = async () => {
               </button>
             </div>
           </div>
-
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="w-full h-11 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/70 transition-colors"
-            >
-              {t("back")}
-            </button>
-          )}
         </div>
       )
     }
@@ -2734,15 +2725,6 @@ const handleFinalSubmit = async () => {
               </button>
             </div>
           </div>
-
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="w-full h-11 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/70 transition-colors"
-            >
-              {t("back")}
-            </button>
-          )}
         </div>
       )
     }
