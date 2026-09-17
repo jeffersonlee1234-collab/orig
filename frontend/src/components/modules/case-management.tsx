@@ -934,10 +934,10 @@ export default function CaseManagement() {
       {/* KPI Stats Cards - Perfectly balanced and symmetrical */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Cases", value: stats.total, text: "text-foreground", icon: <FolderKanban className="h-4 w-4 text-blue-500" /> },
-          { label: "Open Cases", value: stats.open, text: "text-blue-500", icon: <Clock className="h-4 w-4 text-blue-500" /> },
-          { label: "Monitoring & Referred", value: stats.monitoringOrReferred, text: "text-amber-500", icon: <Activity className="h-4 w-4 text-amber-500" /> },
-          { label: "Closed Cases", value: stats.closed, text: "text-emerald-500", icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
+          { label: "Total Cases", value: stats.total, icon: <FolderKanban className="h-4 w-4 text-blue-500" /> },
+          { label: "Open Cases", value: stats.open, icon: <Clock className="h-4 w-4 text-blue-500" /> },
+          { label: "Monitoring & Referred", value: stats.monitoringOrReferred, icon: <Activity className="h-4 w-4 text-amber-500" /> },
+          { label: "Closed Cases", value: stats.closed, icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
         ].map((stat) => (
           <div key={stat.label} className="p-4 md:p-5 rounded-xl border bg-card border-border shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between gap-2">
@@ -946,7 +946,7 @@ export default function CaseManagement() {
               </span>
               <span className="shrink-0">{stat.icon}</span>
             </div>
-            <p className={`text-2xl md:text-3xl font-bold mt-2 ${stat.text}`}>{stat.value}</p>
+            <p className="text-2xl md:text-3xl font-bold mt-2 text-foreground dark:text-white">{stat.value}</p>
           </div>
         ))}
       </div>
