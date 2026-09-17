@@ -321,7 +321,7 @@ export const Login = () => {
           window.dispatchEvent(new Event('user_profile_updated'));
 
           const target = (detectedRole === 'super_admin' || detectedRole === 'admin' || detectedRole === 'staff')
-            ? '/aics'
+            ? '/reports'
             : '/portal/overview';
 
           // Immediate seamless navigation
@@ -344,7 +344,7 @@ export const Login = () => {
         // If already authenticated in storage, avoid showing error
         if (sessionStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('isAuthenticated') === 'true') {
           const role = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || 'user').toLowerCase();
-          const target = (role === 'super_admin' || role === 'admin' || role === 'staff') ? '/aics' : '/portal/overview';
+          const target = (role === 'super_admin' || role === 'admin' || role === 'staff') ? '/reports' : '/portal/overview';
           window.location.replace(target);
           return;
         }

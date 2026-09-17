@@ -188,7 +188,7 @@ export function LandingPage() {
               const role = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || '').toLowerCase();
               if (isAuth) {
                 const isStaff = role === 'staff' || role === 'admin' || role === 'super_admin';
-                window.location.href = isStaff ? '/aics' : '/portal/overview';
+                window.location.href = isStaff ? '/reports' : '/portal/overview';
               } else {
                 window.location.href = '/login';
               }
