@@ -1101,27 +1101,32 @@ export default function CaseManagement() {
                 onClick={() => setActiveCase(c)}
                 className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md hover:bg-slate-50/40 rounded-2xl p-4 md:p-5 transition-all cursor-pointer group select-none"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Left Column: Beneficiary & Case Info */}
-                  <div className="flex items-start gap-3.5 min-w-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-4">
+                  {/* Left Section: Beneficiary & Case Info */}
+                  <div className="flex items-start gap-3.5 min-w-0 flex-1">
                     <div className="h-11 w-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-xs group-hover:bg-blue-600 transition-colors">
                       {c.beneficiaryName.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+                      {/* Top Badges Row (Strictly horizontal row) */}
+                      <div className="flex flex-row items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 shrink-0 whitespace-nowrap">
                           {c.caseNumber}
                         </span>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${progColor}`}>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 whitespace-nowrap ${progColor}`}>
                           {c.linkedProgram}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${pm.chip}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 whitespace-nowrap ${pm.chip}`}>
                           {pm.label}
                         </span>
                       </div>
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+
+                      {/* Beneficiary Name */}
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors break-words">
                         {c.beneficiaryName}
                       </h3>
+
+                      {/* Metadata row */}
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
                         QCID: {c.beneficiaryId} • REF: {c.applicationId}
                         {[
@@ -1137,16 +1142,16 @@ export default function CaseManagement() {
                     </div>
                   </div>
 
-                  {/* Middle Column: Connected Module Statuses */}
-                  <div className="flex items-center gap-2.5 flex-wrap text-xs">
+                  {/* Right Section: Connected Module Badges & Status */}
+                  <div className="flex items-center gap-2 flex-wrap justify-start lg:justify-end shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                     {/* Appointment badge */}
                     {c.linkedAppointment ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium text-xs shrink-0 whitespace-nowrap">
                         <Calendar className="h-3.5 w-3.5 text-indigo-500" />
                         Appt: {c.linkedAppointment.status.toUpperCase()}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px]">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] shrink-0 whitespace-nowrap">
                         No Appt
                       </span>
                     )}
@@ -1154,7 +1159,7 @@ export default function CaseManagement() {
                     {/* Financial Aid badge */}
                     {c.linkedFinancialAid ? (
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold border ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold text-xs border shrink-0 whitespace-nowrap ${
                           c.linkedFinancialAid.status === "RELEASED"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
@@ -1167,7 +1172,7 @@ export default function CaseManagement() {
 
                     {/* Referral count badge */}
                     {referrals.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold shrink-0 whitespace-nowrap">
                         <Send className="h-3 w-3" />
                         {referrals.length} Ref
                       </span>
@@ -1175,22 +1180,20 @@ export default function CaseManagement() {
 
                     {/* Monitoring count badge */}
                     {monitoringLogs.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold shrink-0 whitespace-nowrap">
                         <Activity className="h-3 w-3" />
                         {monitoringLogs.length} Mon
                       </span>
                     )}
-                  </div>
 
-                  {/* Right Column: Case Status (if not open) */}
-                  {c.status !== "open" && (
-                    <div className="flex items-center gap-3 shrink-0 self-end lg:self-center">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${sm.chip}`}>
+                    {/* Case Status Badge */}
+                    {c.status !== "open" && (
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border shrink-0 whitespace-nowrap ${sm.chip}`}>
                         <span className={`h-2 w-2 rounded-full ${sm.dot}`} />
                         {sm.label}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             )
