@@ -954,7 +954,7 @@ export default function SoloParentApplicationWizard({
         cachedApiFetch(
           `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(fn)}&lastName=${encodeURIComponent(ln)}`,
           { headers: getAuthHeaders() },
-          4000
+          15000
         ).catch(() => null),
       ]
 
@@ -963,7 +963,7 @@ export default function SoloParentApplicationWizard({
           cachedApiFetch(
             `${API_BASE}/api/solo-parent/reference/${encodeURIComponent(activeRef)}`,
             { headers: getAuthHeaders() },
-            4000
+            15000
           ).catch(() => null)
         )
       }
@@ -1352,7 +1352,7 @@ export default function SoloParentApplicationWizard({
           const data = await cachedApiFetch(
             `${API_BASE}/api/solo-parent/eligibility/${uid || "0"}?applicationType=${typeToCheck}&qcid=${encodeURIComponent(qcid)}&email=${encodeURIComponent(email)}&reapply=${isReapply ? "true" : "false"}`,
             { headers: getAuthHeaders() },
-            2000
+            15000
           ).catch(() => null)
           if (data && data.blocked) {
             isBlockedFound = true
@@ -1539,9 +1539,15 @@ export default function SoloParentApplicationWizard({
       checkEligibility(false)
     })
 
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.includes("solo_parent") || e.key === "applications") {
+        checkEligibility(false)
+      }
+    }
+
     window.addEventListener("solo_parent_applications_updated", handleUpdate)
     window.addEventListener("applications_updated", handleUpdate)
-    window.addEventListener("storage", handleUpdate)
+    window.addEventListener("storage", handleStorage)
 
     return () => {
       isMounted = false
@@ -1549,7 +1555,7 @@ export default function SoloParentApplicationWizard({
       unsubscribe()
       window.removeEventListener("solo_parent_applications_updated", handleUpdate)
       window.removeEventListener("applications_updated", handleUpdate)
-      window.removeEventListener("storage", handleUpdate)
+      window.removeEventListener("storage", handleStorage)
     }
   }, [userId, idStatus])
 

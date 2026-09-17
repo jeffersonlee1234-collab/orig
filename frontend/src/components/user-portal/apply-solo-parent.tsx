@@ -276,7 +276,7 @@ export default function ApplySoloParent() {
     }
   })
 
-  const [isBlocked, setIsBlocked] = useState<boolean>(false)
+  const [isBlocked, setIsBlocked] = useState<boolean>(() => Boolean(blockedApp))
   const [selectedCategoryId] = useState<number | null>(null)
   const [understood, setUnderstood] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
@@ -307,30 +307,10 @@ export default function ApplySoloParent() {
       }
 
       try {
-        let backendApps: any[] = []
-        let backendFetched = false
-
         const currentQcid = getLoggedInUserQcid() || ""
         const userProf = getCurrentUserProfile()
         const currentEmail = (userProf?.email || "").toLowerCase().trim()
         const uid = userProf?.id || (userProf as any)?.userId || ""
-
-        try {
-          const data = await cachedApiFetch(
-            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}`,
-            { headers: getAuthHeaders() },
-            2000
-          ).catch(() => null)
-          if (data) {
-            const raw = Array.isArray(data) ? data : data.applications || []
-            if (Array.isArray(raw)) {
-              backendApps = raw
-              backendFetched = true
-            }
-          }
-        } catch {
-          // silent fallback
-        }
 
         const isMatchForSoloParent = (a: any) => {
           if (!a) return false
@@ -356,7 +336,45 @@ export default function ApplySoloParent() {
           return Boolean(matchUser)
         }
 
-        const allApps = backendFetched ? backendApps : []
+        // 1. Fast evaluation from local storage (0ms)
+        let localApps: any[] = []
+        try {
+          const raw = localStorage.getItem("solo_parent_applications")
+          if (raw) localApps = JSON.parse(raw)
+          if (!Array.isArray(localApps)) localApps = []
+        } catch {}
+
+        const localMatch = localApps.find(isMatchForSoloParent)
+        if (isMounted && localMatch && !bypassedBlockRef.current) {
+          setIsBlocked(true)
+          setBlockedApp(localMatch)
+        }
+
+        // 2. Fetch fresh backend applications with 15s cache
+        let backendApps: any[] = []
+        try {
+          const data = await cachedApiFetch(
+            `${API_BASE}/api/solo-parent/user/${uid || "0"}?qcid=${encodeURIComponent(currentQcid)}&email=${encodeURIComponent(currentEmail)}`,
+            { headers: getAuthHeaders() },
+            15000
+          ).catch(() => null)
+          if (data) {
+            const raw = Array.isArray(data) ? data : data.applications || []
+            if (Array.isArray(raw)) {
+              backendApps = raw
+            }
+          }
+        } catch {
+          // silent fallback
+        }
+
+        let allApps = [...backendApps]
+        for (const la of localApps) {
+          if (la && !allApps.some((ba) => (ba.id && ba.id === la.id) || (ba.reference_number && ba.reference_number === la.reference_number))) {
+            allApps.push(la)
+          }
+        }
+
         const userMatchingApps = allApps.filter(isMatchForSoloParent)
         const matchedApproved = userMatchingApps.find((a) => {
           const s = String(a.application_status || a.status || "").toLowerCase()
@@ -399,9 +417,14 @@ export default function ApplySoloParent() {
     })
 
     const handleUpdated = () => checkActiveApp()
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.includes("solo_parent") || e.key === "applications") {
+        checkActiveApp()
+      }
+    }
     window.addEventListener("solo_parent_applications_updated", handleUpdated)
     window.addEventListener("applications_updated", handleUpdated)
-    window.addEventListener("storage", handleUpdated)
+    window.addEventListener("storage", handleStorage)
 
     return () => {
       isMounted = false
@@ -409,7 +432,7 @@ export default function ApplySoloParent() {
       unsubscribe()
       window.removeEventListener("solo_parent_applications_updated", handleUpdated)
       window.removeEventListener("applications_updated", handleUpdated)
-      window.removeEventListener("storage", handleUpdated)
+      window.removeEventListener("storage", handleStorage)
     }
   }, [categoryParam, typeParam, programParam, isChildWelfare])
 
