@@ -133,15 +133,23 @@ async function recordNewSession(userId, email, sessionToken, req) {
   let deviceName = parsed.deviceName;
   let browser = clientInfo.browser || parsed.browser;
 
-  // Never accept Android if incoming User-Agent is Windows/PC
-  if (parsed.os === 'Windows') {
+  if (clientInfo.deviceName) {
+    deviceName = clientInfo.deviceName;
+    deviceType = clientInfo.deviceType || (clientInfo.deviceName.includes('CP') ? 'CP (Cellphone)' : parsed.deviceType);
+    os = clientInfo.os || parsed.os;
+    browser = clientInfo.browser || parsed.browser;
+  } else if (parsed.os === 'Android' || parsed.deviceType === 'CP (Cellphone)') {
+    deviceType = 'CP (Cellphone)';
+    os = 'Android';
+    deviceName = `Android CP • ${browser}`;
+  } else if (parsed.os === 'iOS') {
+    deviceType = 'CP (Cellphone)';
+    os = 'iOS';
+    deviceName = `iPhone (CP) • ${browser}`;
+  } else if (parsed.os === 'Windows') {
     os = 'Windows';
     deviceType = 'PC';
     deviceName = `Windows PC • ${browser}`;
-  } else if (clientInfo.deviceName) {
-    os = clientInfo.os || parsed.os;
-    deviceType = clientInfo.deviceType || parsed.deviceType;
-    deviceName = clientInfo.deviceName;
   }
 
   const devInfo = {
@@ -978,14 +986,26 @@ exports.getUserDevices = async (req, res) => {
       }];
     }
 
-    // Auto-correct any active session that was incorrectly marked as Android Tablet when user is on Windows PC
+    // Real-time sync for current device based on incoming client User-Agent
     const incomingDev = parseDeviceInfo(req);
     sessions = sessions.map(s => {
-      if (s.isCurrentDevice && incomingDev.os === 'Windows') {
-        s.os = 'Windows';
-        s.deviceType = 'PC';
-        s.deviceName = incomingDev.deviceName;
-        s.browser = incomingDev.browser;
+      if (s.isCurrentDevice) {
+        if (incomingDev.os === 'Windows') {
+          s.os = 'Windows';
+          s.deviceType = 'PC';
+          s.deviceName = incomingDev.deviceName;
+          s.browser = incomingDev.browser;
+        } else if (incomingDev.os === 'Android') {
+          s.os = 'Android';
+          s.deviceType = incomingDev.deviceType || 'CP (Cellphone)';
+          s.deviceName = incomingDev.deviceName || `Android CP • ${incomingDev.browser}`;
+          s.browser = incomingDev.browser;
+        } else if (incomingDev.os === 'iOS') {
+          s.os = 'iOS';
+          s.deviceType = incomingDev.deviceType || 'CP (Cellphone)';
+          s.deviceName = incomingDev.deviceName || `iPhone (CP) • ${incomingDev.browser}`;
+          s.browser = incomingDev.browser;
+        }
         try {
           db.query(
             `UPDATE user_login_sessions 

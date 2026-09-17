@@ -1502,20 +1502,49 @@ export function ProfileModal({
 
                 // Real-time client verification for current device
                 const ua = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
-                const plat = typeof navigator !== "undefined" ? ((navigator as any).userAgentData?.platform || navigator.platform || "") : "";
-                const isRealWindows = /windows|win32|win64/i.test(ua) || /win/i.test(plat);
-                const isRealMac = /macintosh|mac os|macos/i.test(ua) || /mac/i.test(plat);
+                const lowerUa = ua.toLowerCase();
+                const isAndroid = /android/i.test(lowerUa);
+                const isIOS = /iphone|ipad|ipod/i.test(lowerUa);
+                const isRealWindows = (/windows|win32|win64/i.test(lowerUa)) && !isAndroid;
+                const isRealMac = (/macintosh|mac os|macos/i.test(lowerUa)) && !isIOS;
 
-                if (isRealWindows) {
+                let clientBrowser = "Google Chrome";
+                if (/edg/i.test(lowerUa)) clientBrowser = "Microsoft Edge";
+                else if (/opr|opera/i.test(lowerUa)) clientBrowser = "Opera";
+                else if (/firefox/i.test(lowerUa)) clientBrowser = "Mozilla Firefox";
+                else if (/safari/i.test(lowerUa) && !/chrome/i.test(lowerUa)) clientBrowser = "Apple Safari";
+
+                if (isAndroid) {
+                  currentDev.os = "Android";
+                  if (/tablet/i.test(lowerUa)) {
+                    currentDev.deviceType = "Tablet";
+                    currentDev.deviceName = `Android Tablet • ${clientBrowser}`;
+                  } else {
+                    currentDev.deviceType = "CP (Cellphone)";
+                    currentDev.deviceName = `Android CP • ${clientBrowser}`;
+                  }
+                  currentDev.browser = clientBrowser;
+                } else if (isIOS) {
+                  if (/ipad/i.test(lowerUa)) {
+                    currentDev.os = "iPadOS";
+                    currentDev.deviceType = "Tablet";
+                    currentDev.deviceName = `iPadOS Tablet • ${clientBrowser}`;
+                  } else {
+                    currentDev.os = "iOS";
+                    currentDev.deviceType = "CP (Cellphone)";
+                    currentDev.deviceName = `iPhone (CP) • ${clientBrowser}`;
+                  }
+                  currentDev.browser = clientBrowser;
+                } else if (isRealWindows) {
                   currentDev.os = "Windows";
                   currentDev.deviceType = "PC";
-                  const browserName = currentDev.browser && currentDev.browser !== "Unknown" ? currentDev.browser : (/edg/i.test(ua) ? "Microsoft Edge" : "Google Chrome");
-                  currentDev.browser = browserName;
-                  currentDev.deviceName = `Windows PC • ${browserName}`;
+                  currentDev.deviceName = `Windows PC • ${clientBrowser}`;
+                  currentDev.browser = clientBrowser;
                 } else if (isRealMac) {
                   currentDev.os = "macOS";
                   currentDev.deviceType = "PC";
-                  currentDev.deviceName = `Mac PC • ${currentDev.browser || "Safari"}`;
+                  currentDev.deviceName = `Mac PC • ${clientBrowser}`;
+                  currentDev.browser = clientBrowser;
                 }
 
                 const isCP =
