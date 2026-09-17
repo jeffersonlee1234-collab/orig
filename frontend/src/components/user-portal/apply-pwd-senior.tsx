@@ -613,12 +613,10 @@ export default function ApplyPWDSenior() {
               </span>
               <span className="font-mono font-bold text-blue-600">{displayRef}</span>
             </div>
-            {assignedBookletNo && (
+            {(isSeniorMedicine || isSeniorMovie) && assignedBookletNo && (
               <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                 <span className="text-gray-500 font-medium">
-                  {isSeniorMedicine || isSeniorMovie
-                    ? (language === "en" ? "Official Booklet Number:" : language === "bis" ? "Numero sa Booklet:" : "Numero ng Booklet:")
-                    : (language === "en" ? "Official ID Number:" : language === "bis" ? "Numero sa ID:" : "Opisyal na Numero ng ID:")}
+                  {language === "en" ? "Official Booklet Number:" : language === "bis" ? "Numero sa Booklet:" : "Numero ng Booklet:"}
                 </span>
                 <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                   {assignedBookletNo}

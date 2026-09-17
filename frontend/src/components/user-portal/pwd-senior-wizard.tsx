@@ -1699,11 +1699,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       formData.existingPwdIdNumber ||
       "110000572516915"
 
-    const assignedIdNo =
-      targetApp?.assignedIdNumber ||
-      targetApp?.assigned_id_number ||
-      targetApp?.existingIdNumber
-
     const rawDate2 = targetApp?.submittedAt || targetApp?.submitted_at || targetApp?.created_at || targetApp?.dateSubmitted
     const displayDate = formatAppDate(rawDate2, targetApp)
 
@@ -1753,16 +1748,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
                 {displayRef}
               </span>
             </div>
-            {assignedIdNo && (
-              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                <span className="text-gray-500 font-medium">
-                  Official ID Number:
-                </span>
-                <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  {assignedIdNo}
-                </span>
-              </div>
-            )}
             <div className="flex justify-between items-center border-b border-slate-200 pb-2">
               <span className="text-gray-500 font-medium">Status:</span>
               {isAppApproved ? (
