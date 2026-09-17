@@ -888,9 +888,9 @@ export default function PWDSocialAssistanceWizard({
   }
 
   const handleFinalSubmit = async () => {
-    setSubmissionStage("matching")
     const qcid = getLoggedInUserQcid() || (userProfile as any)?.qcidNo || "110000116932100"
     setReference(qcid)
+    setSubmissionStage("pending")
 
     const docItems = await Promise.all(
       Object.keys(uploadedDocs).flatMap((docId) =>
@@ -975,29 +975,11 @@ export default function PWDSocialAssistanceWizard({
     } catch {
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", qcid)
     }
-
-    setTimeout(() => {
-      setSubmissionStage("pending")
-    }, 1200)
   }
 
   const fullApplicantName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix]
     .filter(Boolean)
     .join(" ")
-
-  if (submissionStage === "matching") {
-    return (
-      <div className="p-4 md:p-6 max-w-xl mx-auto">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-soft flex flex-col items-center text-center gap-3">
-          <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-            <Loader2 className="h-7 w-7 text-blue-600 animate-spin" />
-          </div>
-          <h2 className="text-lg font-bold text-foreground">Submitting Your Application</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">This will only take a few seconds...</p>
-        </div>
-      </div>
-    )
-  }
 
   if (submissionStage === "pending") {
     const isAppApproved = String(latestSubmittedApp?.status || "").toLowerCase() === "approved" || String(latestSubmittedApp?.status || "").toLowerCase() === "completed" || String(latestSubmittedApp?.status || "").toLowerCase() === "for_release"

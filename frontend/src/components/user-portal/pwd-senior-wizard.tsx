@@ -1370,8 +1370,9 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
   }
 
   const handleConfirmSubmit = async () => {
-    setSubmitStatus("submitting")
     const refNum = generateReferenceNumber(userProfile?.qcidNo)
+    setReferenceNumber(refNum)
+    setSubmitStatus("submitted")
 
     try {
       const docItems = await Promise.all(
@@ -1504,11 +1505,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
       console.error("Failed submitting application:", e)
       notifyApplicationChange("APPLICATION_SUBMITTED", "pwd_senior", refNum)
     }
-
-    window.setTimeout(() => {
-      setReferenceNumber(refNum)
-      setSubmitStatus("submitted")
-    }, 1000)
   }
 
   // ---- BLOCKED / ACTIVE / PENDING APPLICATION STATES ----
@@ -1734,21 +1730,6 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
               </>
             )}
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ---- SUBMITTING state ----
-  if (submitStatus === "submitting") {
-    return (
-      <div className="p-4 md:p-6 max-w-xl mx-auto">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-soft flex flex-col items-center text-center gap-3">
-          <div className="h-14 w-14 rounded-2xl bg-blue-100 flex items-center justify-center">
-            <div className="h-7 w-7 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
-          </div>
-          <h2 className="text-lg font-bold text-foreground">{t("pwdSubmittingTitle")}</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">{t("submittingApplicationDesc")}</p>
         </div>
       </div>
     )
