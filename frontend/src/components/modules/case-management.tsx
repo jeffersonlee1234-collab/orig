@@ -1101,49 +1101,56 @@ export default function CaseManagement() {
                 onClick={() => setActiveCase(c)}
                 className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md hover:bg-slate-50/40 rounded-2xl p-4 md:p-5 transition-all cursor-pointer group select-none"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
-                  {/* Left Section: Beneficiary & Case Info (Strictly horizontal, protected width) */}
-                  <div className="flex items-center gap-3.5 min-w-[220px] max-w-full">
-                    <div className="h-11 w-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-xs group-hover:bg-blue-600 transition-colors">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-4">
+                  {/* Left Section: Beneficiary & Case Info (Full display, no clipping) */}
+                  <div className="flex items-start gap-3.5 min-w-0">
+                    <div className="h-11 w-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-xs group-hover:bg-blue-600 transition-colors mt-0.5">
                       {c.beneficiaryName.charAt(0)}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                       {/* Top Badges Row */}
-                      <div className="flex items-center gap-2 mb-1 flex-nowrap overflow-hidden">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 shrink-0 whitespace-nowrap">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
                           {c.caseNumber}
                         </span>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 whitespace-nowrap ${progColor}`}>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${progColor}`}>
                           {c.linkedProgram}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 whitespace-nowrap ${pm.chip}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${pm.chip}`}>
                           {pm.label}
                         </span>
                       </div>
 
-                      {/* Beneficiary Name */}
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors whitespace-nowrap truncate">
+                      {/* Beneficiary Name (Full name, never cut off) */}
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                         {c.beneficiaryName}
                       </h3>
 
-                      {/* Metadata row */}
-                      <p className="text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap truncate">
-                        QCID: {c.beneficiaryId} • REF: {c.applicationId}
+                      {/* Metadata row (Full details, wraps naturally) */}
+                      <p className="text-xs text-slate-500 font-mono mt-0.5 flex flex-wrap items-center gap-x-1.5">
+                        <span>QCID: {c.beneficiaryId}</span>
+                        <span>•</span>
+                        <span>REF: {c.applicationId}</span>
                         {[
                           c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
                           c.sex && c.sex !== "—" ? c.sex : "",
-                        ].filter(Boolean).length > 0
-                          ? ` • ${[
-                              c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
-                              c.sex && c.sex !== "—" ? c.sex : "",
-                            ].filter(Boolean).join(" • ")}`
-                          : ""}
+                        ].filter(Boolean).length > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>
+                              {[
+                                c.age && c.age !== "—" && !isNaN(Number(c.age)) ? `${c.age} yrs old` : (c.age && c.age !== "—" ? c.age : ""),
+                                c.sex && c.sex !== "—" ? c.sex : "",
+                              ].filter(Boolean).join(" • ")}
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
 
                   {/* Right Section: Connected Module Badges & Status */}
-                  <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end text-xs">
+                  <div className="flex items-center gap-2 flex-wrap justify-start lg:justify-end text-xs pt-1 lg:pt-0">
                     {/* Appointment badge */}
                     {c.linkedAppointment ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium text-xs whitespace-nowrap">
