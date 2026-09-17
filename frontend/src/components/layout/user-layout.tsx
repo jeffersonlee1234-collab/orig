@@ -10,7 +10,6 @@ import {
   Sun,
   Bell,
   LogOut,
-  ChevronRight,
   ChevronLeft,
   ChevronsRight,
   ChevronDown,
@@ -506,10 +505,7 @@ function ResidentSidebar({ open, onToggle }: { open: boolean; onToggle: () => vo
                           }`}
                         />
                         {open && (
-                          <>
-                            <span className="flex-1 text-left">{item.label}</span>
-                            {isActive && <ChevronRight className="h-4 w-4 text-sidebar-primary" />}
-                          </>
+                          <span className="flex-1 text-left">{item.label}</span>
                         )}
                       </>
                     )}
