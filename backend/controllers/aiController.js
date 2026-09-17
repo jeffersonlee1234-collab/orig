@@ -73,7 +73,7 @@ async function callGeminiApi(payload) {
 }
 
 /**
- * High-accuracy fallback MSWDO diagnostic engine when external API is unreachable or rate-limited
+ * High-accuracy fallback MSWDO diagnostic engine with full Eligibility Criteria & Legal Basis
  */
 function generateLocalMswdoDiagnostic({
   language = 'en',
@@ -158,19 +158,26 @@ function generateLocalMswdoDiagnostic({
     narrativeLower.includes('puhunan') ||
     narrativeLower.includes('tindahan');
 
-  // Populate programs
+  // Populate programs with deep eligibility criteria
   if (hasMed) {
     recs.push({
       id: 'aics_medical',
       category: language === 'en' ? 'AICS Crisis Assistance' : language === 'tl' ? 'Tulong Medikal ng AICS' : 'Tabang Medikal sa AICS',
       title: language === 'en' ? 'AICS Medical & Hospitalization Guarantee Letter' : language === 'tl' ? 'AICS Medical Assistance & Hospital Guarantee Letter' : 'AICS Tabang Medikal ug Guarantee Letter',
       priority: language === 'en' ? 'Immediate Crisis Relief' : language === 'tl' ? 'Kagyat na Tulong sa Krisis' : 'Dinalian nga Tabang',
+      eligibilityBadge: language === 'en' ? 'Verified Eligible (Crisis Need)' : language === 'tl' ? 'Kwalipikado (Kagyat na Pangangailangan)' : 'Kwalipikado (Dinaliang Panginahanglan)',
+      legalBasis: language === 'en' ? 'DSWD CIU Guidelines & Municipal AICS Ordinance' : language === 'tl' ? 'DSWD Crisis Intervention Unit (CIU) & Municipal AICS Guidelines' : 'DSWD CIU Guidelines ug Municipal AICS Ordinansa',
       estBenefit: '₱3,000 – ₱25,000 (Based on Hospital Bill / Prescription)',
       desc: language === 'en'
         ? 'Direct financial aid or hospital guarantee letter covering medicine costs, dialysis sessions, laboratory fees, and hospital bills.'
         : language === 'tl'
         ? 'Tulong pinansyal o guarantee letter para sa pambili ng gamot, dialysis sessions, chemotherapy, laboratory tests, at billing sa ospital.'
         : 'Tabang pinansyal o guarantee letter para sa tambal, dialysis, chemotherapy, laboratory tests, ug bayronon sa ospital.',
+      criteriaMatched: [
+        language === 'en' ? 'Incurred urgent healthcare or hospital confinement expenses beyond household budget.' : language === 'tl' ? 'May kinakaharap na gastusin sa ospital, dialysis, o gamot na hindi kayang bayaran.' : 'May bayranon sa ospital o tambal nga dili masarangan sa kita.',
+        language === 'en' ? 'Household income falls within low-income or indigent threshold.' : language === 'tl' ? 'Ang kita ng pamilya ay pasok sa mababang antas o indigent threshold.' : 'Ang kita sa pamilya nasulod sa ubos nga limitasyon o indigent tier.',
+        language === 'en' ? 'Valid identification and medical abstract/prescription documentation available.' : language === 'tl' ? 'May kaukulang medical abstract o reseta mula sa lisensyadong doktor.' : 'Adunay medical abstract o reseta gikan sa lisensyadong doktor.',
+      ],
       docs: [
         language === 'en' ? 'Medical Abstract / Medical Certificate' : language === 'tl' ? 'Medical Abstract o Sertipiko ng Doktor' : 'Medical Abstract o Sertipiko sa Doktor',
         language === 'en' ? 'Hospital Billing Statement / Pharmacy Prescription' : language === 'tl' ? 'Hospital Billing Statement / Reseta ng Gamot' : 'Hospital Billing Statement / Reseta sa Tambal',
@@ -195,12 +202,18 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'AICS Crisis Assistance' : language === 'tl' ? 'Tulong sa Libing ng AICS' : 'Tabang sa Lubong sa AICS',
       title: language === 'en' ? 'AICS Funeral & Burial Cash Grant' : language === 'tl' ? 'AICS Funeral & Burial Cash Assistance' : 'AICS Tabang Pinansyal sa Lubong',
       priority: language === 'en' ? 'Immediate Crisis Relief' : language === 'tl' ? 'Kagyat na Tulong sa Krisis' : 'Dinalian nga Tabang',
+      eligibilityBadge: language === 'en' ? 'Verified Eligible (Bereavement Aid)' : language === 'tl' ? 'Kwalipikado (Tulong sa Burol)' : 'Kwalipikado (Tabang sa Lubong)',
+      legalBasis: language === 'en' ? 'DSWD CIU Memorandum Circular on Bereavement Relief' : language === 'tl' ? 'DSWD CIU Guidelines sa Tulong sa Namatayan' : 'DSWD CIU Guidelines sa Tabang sa Namatyan',
       estBenefit: '₱5,000 – ₱10,000 Cash Grant',
       desc: language === 'en'
         ? 'Emergency cash support for funeral home services, casket, and burial plot fees for deceased family members.'
         : language === 'tl'
         ? 'Tulong-pinansyal sa serbisyo ng punerarya, kabaong, at pagpapalibing para sa namatayang pamilya.'
         : 'Tabang pinansyal sa serbisyo sa punerarya, lungon, ug paglubong para sa namatyan nga pamilya.',
+      criteriaMatched: [
+        language === 'en' ? 'Direct immediate family member of the deceased seeking funeral financial relief.' : language === 'tl' ? 'Direktang kamag-anak ng namatayang pamilya na nangangailangan ng ayuda.' : 'Direktang kapamilya sa namatyan nga nagkinahanglan og tabang.',
+        language === 'en' ? 'Lack of adequate liquid cash reserves for embalming and casket expenses.' : language === 'tl' ? 'Kakulangan sa pambayad ng punerarya, kabaong, o bayarin sa sementeryo.' : 'Kulang ang kwarta para sa punerarya, lungon, ug paglubong.',
+      ],
       docs: [
         language === 'en' ? 'Registered Death Certificate' : language === 'tl' ? 'Rehistradong Death Certificate' : 'Rehistradong Death Certificate',
         language === 'en' ? 'Funeral Contract / Official Receipt' : language === 'tl' ? 'Kontrata sa Punerarya o Resibo' : 'Kontrata sa Punerarya o Resibo',
@@ -225,18 +238,25 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'Solo Parent Welfare' : language === 'tl' ? 'Kapakanan ng Solong Magulang' : 'Kaayuhan sa Solo Parent',
       title: language === 'en' ? 'RA 11861 Expanded Solo Parent ID & ₱1,000/mo Subsidy' : language === 'tl' ? 'RA 11861 Solo Parent ID & ₱1,000 Buwanang Ayuda' : 'RA 11861 Solo Parent ID & ₱1,000 Buwanang Tabang',
       priority: language === 'en' ? 'High Priority Statutory Benefit' : language === 'tl' ? 'Mataas na Prayoridad (Batas)' : 'Taas nga Prayoridad (Balaod)',
+      eligibilityBadge: language === 'en' ? 'Eligible under RA 11861' : language === 'tl' ? 'Kwalipikado sa ilalim ng RA 11861' : 'Kwalipikado ubos sa RA 11861',
+      legalBasis: 'Republic Act No. 11861 (Expanded Solo Parents Welfare Act)',
       estBenefit: '₱1,000 Monthly Cash Subsidy + 10% Discount & 7-Day Parental Leave',
       desc: language === 'en'
         ? 'Full privileges under the Expanded Solo Parents Welfare Act, including monthly municipal cash grants, 10% discounts on milk and school supplies, and tertiary scholarship prioritization.'
         : language === 'tl'
         ? 'Kumpletong benepisyo sa ilalim ng RA 11861: ₱1,000 buwanang ayuda sa low-income solo parents, 10% diskwento sa gatas at gamot, at 7-araw na parental leave.'
         : 'Kompletong benepisyo ubos sa RA 11861: ₱1,000 matag-buwan nga ayuda para sa low-income solo parents, 10% diskwento sa gatas ug tambal, ug 7 ka adlaw nga parental leave.',
+      criteriaMatched: [
+        language === 'en' ? 'Single-handedly raising minor dependent children without co-parent support.' : language === 'tl' ? 'Mag-isang nagtataguyod at nagpapakain sa mga anak nang walang katuwang.' : 'Nag-inusarang nag-atiman sa mga menor de edad nga anak.',
+        language === 'en' ? 'Monthly income is at or below minimum wage/low-income threshold for ₱1,000 subsidy.' : language === 'tl' ? 'Mababang kita na pasok sa pamantayan para sa ₱1,000 buwanang ayuda.' : 'Ubos nga kita nga kwalipikado sa ₱1,000 binuwan nga ayuda.',
+        language === 'en' ? 'Meets residency duration in the municipality.' : language === 'tl' ? 'Residente ng munisipyo alinsunod sa barangay validation.' : 'Residente sa munisipyo ubos sa barangay validation.',
+      ],
       docs: [
         language === 'en' ? 'Barangay Certificate of Solo Parent Residency' : language === 'tl' ? 'Barangay Certificate of Solo Parent Residency (6+ mos)' : 'Barangay Certificate of Solo Parent Residency',
         language === 'en' ? 'Birth Certificate(s) of Minor Children (PSA)' : language === 'tl' ? 'PSA Birth Certificate ng mga Anak' : 'PSA Birth Certificate sa mga Anak',
         language === 'en' ? 'Income Tax Return / Certificate of Non-Filing' : language === 'tl' ? 'ITR o Certificate of Low Income' : 'ITR o Certificate of Low Income',
       ],
-      actionUrl: '/portal/solo-parent',
+      actionUrl: '/portal/apply-solo-parent',
       actionLabel: language === 'en' ? 'Apply for Solo Parent ID' : language === 'tl' ? 'Mag-apply sa Solo Parent ID' : 'Mag-apply sa Solo Parent ID',
     });
     justifications.push(
@@ -254,18 +274,24 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'Persons with Disabilities' : language === 'tl' ? 'Kapansanan (PWD)' : 'May Kakulian (PWD)',
       title: language === 'en' ? 'National PWD ID & Assistive Mobility Support (RA 7277)' : language === 'tl' ? 'National PWD ID & Libreng Wheelchair/Saklay (RA 7277)' : 'National PWD ID & Libreng Wheelchair/Assistive Device (RA 7277)',
       priority: language === 'en' ? 'Statutory Welfare Entitlement' : language === 'tl' ? 'Karapatan sa Ilalim ng Batas' : 'Katungod Ubos sa Balaod',
+      eligibilityBadge: language === 'en' ? 'Eligible under RA 7277 / RA 10754' : language === 'tl' ? 'Kwalipikado sa RA 7277 / RA 10754' : 'Kwalipikado sa RA 7277 / RA 10754',
+      legalBasis: 'Republic Act No. 7277 & RA 10754 (Magna Carta for PWDs)',
       estBenefit: '20% Discount + VAT Exemption + Free Assistive Devices',
       desc: language === 'en'
         ? 'Issuance of the official National PWD ID Card giving 20% discount on medicine, food, transport, plus free endorsement for assistive mobility devices.'
         : language === 'tl'
         ? 'Pag-isyu ng opisyal na PWD ID para sa 20% diskwento at VAT exemption sa gamot, pagkain, pamasahe, at libreng saklay o wheelchair mula sa MSWDO.'
         : 'Pag-isyu sa opisyal nga PWD ID alang sa 20% diskwento ug VAT exemption sa tambal, pagkaon, plete, ug libreng saklay o wheelchair gikan sa MSWDO.',
+      criteriaMatched: [
+        language === 'en' ? 'Has a long-term physical, mental, intellectual, visual, or hearing impairment.' : language === 'tl' ? 'May pangmatagalang kapansanan sa katawan, isip, pandinig, o paningin.' : 'Adunay kapansanan sa lawas, pangisip, pandungog, o panan-aw.',
+        language === 'en' ? 'Entitled to 20% discount & VAT exemption under national law.' : language === 'tl' ? 'May karapatan sa 20% diskwento at VAT exemption alinsunod sa batas.' : 'May katungod sa 20% diskwento ug VAT exemption ubos sa balaod.',
+      ],
       docs: [
         language === 'en' ? 'Medical Certificate / Disability Assessment' : language === 'tl' ? 'Medical Certificate na may pirma ng lisensyadong doktor' : 'Medical Certificate gikan sa lisensyadong doktor',
         language === 'en' ? '2x2 Recent ID Photos' : language === 'tl' ? '2 pirasong 2x2 ID Picture' : '2 ka 2x2 ID Picture',
         language === 'en' ? 'Barangay Certificate of Residency' : language === 'tl' ? 'Barangay Certificate of Residency' : 'Barangay Certificate of Residency',
       ],
-      actionUrl: '/portal/pwd-senior',
+      actionUrl: '/portal/apply-pwd-senior?type=pwd',
       actionLabel: language === 'en' ? 'Apply for PWD Benefits' : language === 'tl' ? 'Mag-apply sa PWD Benefits' : 'Mag-apply sa PWD Benefits',
     });
     justifications.push(
@@ -283,17 +309,24 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'Senior Citizens Welfare' : language === 'tl' ? 'Kapakanan ng Senior Citizen' : 'Kaayuhan sa Senior Citizen',
       title: language === 'en' ? 'OSCA Senior Citizen ID & Indigent Social Pension (RA 11916)' : language === 'tl' ? 'OSCA Senior ID & ₱1,000/buwan Social Pension (RA 11916)' : 'OSCA Senior ID & ₱1,000/buwan Social Pension (RA 11916)',
       priority: language === 'en' ? 'High Priority Statutory Benefit' : language === 'tl' ? 'Mataas na Prayoridad' : 'Taas nga Prayoridad',
+      eligibilityBadge: language === 'en' ? 'Eligible under RA 9994 / RA 11916' : language === 'tl' ? 'Kwalipikado sa RA 9994 / RA 11916' : 'Kwalipikado sa RA 9994 / RA 11916',
+      legalBasis: 'Republic Act No. 9994 & RA 11916 (Social Pension for Indigent Seniors Act)',
       estBenefit: '₱1,000/mo Social Pension Allowance + 20% Discount & Medicine Booklet',
       desc: language === 'en'
         ? 'Monthly social pension grant for indigent seniors without SSS/GSIS pension, plus OSCA discount identification and medicine purchase booklet.'
         : language === 'tl'
         ? 'Buwanang ₱1,000 social pension para sa kapus-palad na nakatatanda na walang regular na pensyon, kasama ang OSCA ID booklet sa gamot.'
         : 'Matag-buwan nga ₱1,000 social pension para sa mga kabus nga tigulang nga walay regular nga pensyon, apil ang OSCA ID booklet sa tambal.',
+      criteriaMatched: [
+        language === 'en' ? 'Applicant or beneficiary is 60 years of age or older.' : language === 'tl' ? 'Ang benepisyaryo ay may edad 60 pataas.' : 'Ang benepisyaryo nag-edad og 60 pataas.',
+        language === 'en' ? 'No active regular pension received from SSS, GSIS, or private providers.' : language === 'tl' ? 'Walang regular na pensyon mula sa SSS o GSIS.' : 'Walay regular nga pension gikan sa SSS o GSIS.',
+        language === 'en' ? 'Identified as indigent or low-income in the municipality.' : language === 'tl' ? 'Kabilang sa kapus-palad o mababang kita na sambahayan.' : 'Nalakip sa kabus nga pamilya.',
+      ],
       docs: [
         language === 'en' ? 'Birth Certificate (PSA) or Valid Government ID proving age 60+' : language === 'tl' ? 'Birth Certificate o ID na nagpapatunay ng edad 60 pataas' : 'Birth Certificate o ID nga nagpamatuod sa edad 60 pataas',
         language === 'en' ? 'Barangay Certificate of Indigency & Non-Pensioner Status' : language === 'tl' ? 'Barangay Indigency (Walang natatanggap na SSS/GSIS)' : 'Barangay Indigency (Walay nadawat nga SSS/GSIS)',
       ],
-      actionUrl: '/portal/pwd-senior',
+      actionUrl: '/portal/apply-pwd-senior?type=senior',
       actionLabel: language === 'en' ? 'Apply for Senior Services' : language === 'tl' ? 'Mag-apply sa Senior Services' : 'Mag-apply sa Senior Services',
     });
     justifications.push(
@@ -311,18 +344,24 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'Livelihood & Skills' : language === 'tl' ? 'Pangkabuhayan at Negosyo' : 'Panginabuhian ug Negosyo',
       title: language === 'en' ? 'Sustainable Livelihood Program (SLP) Seed Capital Grant' : language === 'tl' ? 'Sustainable Livelihood Program (SLP) Seed Capital' : 'Sustainable Livelihood Program (SLP) Puhunan Grant',
       priority: language === 'en' ? 'Economic Empowerment' : language === 'tl' ? 'Pangmatagalang Kaunlaran' : 'Pangmatagalan nga Kaayuhan',
+      eligibilityBadge: language === 'en' ? 'Pre-Qualified for Seed Grant' : language === 'tl' ? 'Kwalipikado sa Puhunan' : 'Kwalipikado sa Puhunan',
+      legalBasis: 'DSWD Sustainable Livelihood Program (SLP) National Guidelines',
       estBenefit: '₱5,000 – ₱15,000 Seed Capital Grant + Free Skills Training',
       desc: language === 'en'
         ? 'Non-collateral seed capital grant and free technical-vocational training for sari-sari stores, street food, tailoring, or agricultural micro-enterprises.'
         : language === 'tl'
         ? 'Libreng puhunan at pagsasanay sa pagnenegosyo para sa tindahan, pagluluto, pagtatahi, at iba pang micro-enterprise nang walang kolateral.'
         : 'Libreng kapital ug pagbansay sa negosyo para sa tindahan, pagluto, pagpanahi, ug uban pang micro-enterprise nga walay prenda.',
+      criteriaMatched: [
+        language === 'en' ? 'Underemployed, unemployed, or daily informal worker seeking livelihood startup.' : language === 'tl' ? 'Walang pirmihang trabaho o manininda na nangangailangan ng dagdag na puhunan.' : 'Walay regular nga trabaho nga nagkinahanglan og puhunan.',
+        language === 'en' ? 'Committed to manage a community micro-enterprise (sari-sari store, street trade, services).' : language === 'tl' ? 'May kahandaang magpatakbo ng sariling maliit na negosyo.' : 'Andam magdumala og ginagmayng negosyo.',
+      ],
       docs: [
         language === 'en' ? 'Barangay Certificate of Indigency' : language === 'tl' ? 'Barangay Certificate of Indigency' : 'Barangay Certificate of Indigency',
         language === 'en' ? 'Livelihood Proposal Form (Assisted by MSWDO)' : language === 'tl' ? 'Simple Business Proposal Form' : 'Simple Business Proposal Form',
         language === 'en' ? 'Valid Government-Issued ID' : language === 'tl' ? 'Valid Government ID' : 'Valid Government ID',
       ],
-      actionUrl: '/portal/livelihood',
+      actionUrl: '/portal/apply-livelihood',
       actionLabel: language === 'en' ? 'Apply for Livelihood Aid' : language === 'tl' ? 'Mag-apply sa Pangkabuhayan' : 'Mag-apply sa Panginabuhian',
     });
     justifications.push(
@@ -340,17 +379,22 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'Child Welfare & ECCD' : language === 'tl' ? 'Kapakanan ng Bata at Daycare' : 'Kaayuhan sa Bata ug Daycare',
       title: language === 'en' ? 'Early Childhood Care & 120-Day Supplemental Nutrition' : language === 'tl' ? 'Libreng Daycare & 120-Araw Supplemental Feeding' : 'Libreng Daycare & 120-Adlaw Supplemental Feeding',
       priority: language === 'en' ? 'Nutrition & Education' : language === 'tl' ? 'Edukasyon at Nutrisyon' : 'Edukasyon ug Nutrisyon',
+      eligibilityBadge: language === 'en' ? 'Qualified for ECCD Support' : language === 'tl' ? 'Kwalipikado sa Daycare & Nutrisyon' : 'Kwalipikado sa Daycare & Nutrisyon',
+      legalBasis: 'Early Childhood Care and Development (ECCD) Act & DSWD Supplementary Feeding',
       estBenefit: 'Free Early Learning + 120-Day Daily Milk & Meal Ration',
       desc: language === 'en'
         ? 'Free admission in the Barangay Child Development Center and daily milk and dietary supplementation for underweight toddlers.'
         : language === 'tl'
         ? 'Libreng pag-aaral sa Barangay Child Development Center at araw-araw na gatas at masustansyang pagkain para sa mga bata.'
         : 'Libreng pag-eskwela sa Barangay Child Development Center ug inadlaw nga gatas ug masustansyang pagkaon alang sa mga bata.',
+      criteriaMatched: [
+        language === 'en' ? 'Household has minor children (0-5 years old) requiring daycare or nutrition assistance.' : language === 'tl' ? 'May mga anak o paslit (0-5 taong gulang) na kailangang suportahan.' : 'Adunay bata (0-5 anyos) nga nagkinahanglan og feeding o daycare.',
+      ],
       docs: [
         language === 'en' ? 'Child PSA Birth Certificate' : language === 'tl' ? 'PSA Birth Certificate ng Bata' : 'PSA Birth Certificate sa Bata',
         language === 'en' ? 'Barangay Child Health & Immunization Card' : language === 'tl' ? 'Bakuna Card o Child Health Record' : 'Bakuna Card o Child Health Record',
       ],
-      actionUrl: '/portal/solo-parent',
+      actionUrl: '/portal/apply-solo-parent',
       actionLabel: language === 'en' ? 'Inquire Child Welfare' : language === 'tl' ? 'Magtanong sa Child Welfare' : 'Magpakisayod sa Child Welfare',
     });
   }
@@ -362,12 +406,17 @@ function generateLocalMswdoDiagnostic({
       category: language === 'en' ? 'AICS Crisis Assistance' : language === 'tl' ? 'Tulong sa Krisis ng AICS' : 'Tabang sa Krisis sa AICS',
       title: language === 'en' ? 'AICS Emergency Crisis Financial Grant' : language === 'tl' ? 'AICS Emergency Crisis Cash Assistance' : 'AICS Emergency Crisis Tabang Pinansyal',
       priority: language === 'en' ? 'Immediate Assessment' : language === 'tl' ? 'Kagyat na Pagsusuri' : 'Dinalian nga Pagsusi',
+      eligibilityBadge: language === 'en' ? 'Eligible for Crisis Intake' : language === 'tl' ? 'Kwalipikado sa AICS' : 'Kwalipikado sa AICS',
+      legalBasis: 'DSWD Crisis Intervention Unit Guidelines',
       estBenefit: '₱2,000 – ₱5,000 Crisis Relief',
       desc: language === 'en'
         ? 'Immediate financial assistance for families in difficult and unexpected crisis situations.'
         : language === 'tl'
         ? 'Kagyat na tulong pinansyal para sa mga pamilyang nahaharap sa biglaang krisis o kakapusan.'
         : 'Dinalian nga tabang pinansyal para sa pamilyang nag-atubang ug kalit nga krisis.',
+      criteriaMatched: [
+        language === 'en' ? 'Resident household currently experiencing unexpected economic hardship.' : language === 'tl' ? 'Pamilyang nakakaranas ng biglaang kakapusan o suliranin.' : 'Pamilya nga nag-atubang og kalit nga kalisud.',
+      ],
       docs: [
         language === 'en' ? 'Barangay Certificate of Indigency' : language === 'tl' ? 'Barangay Certificate of Indigency' : 'Barangay Certificate of Indigency',
         language === 'en' ? 'Valid Government ID' : language === 'tl' ? 'Valid Government ID' : 'Valid Government ID',
@@ -381,7 +430,7 @@ function generateLocalMswdoDiagnostic({
 
   const summaryRationale =
     language === 'tl'
-      ? `Batay sa masusing pagsusuri sa inyong profile (${dependentsCount} dependents, ${incomeLevel === 'none' ? 'walang pirmihang kita' : 'mababang kita'}), natukoy ng MSWDO AI ang ${recs.length} programang nararapat sa inyong sitwasyon alinsunod sa umiiral na mga batas tulad ng RA 11861, RA 7277, at DSWD AICS guidelines.`
+      ? `Batay sa komprehensibong pagsusuri sa inyong profile (${dependentsCount} dependents, ${incomeLevel === 'none' ? 'walang pirmihang kita' : 'mababang kita'}), natukoy ng MSWDO AI ang ${recs.length} programang nararapat sa inyong sitwasyon alinsunod sa umiiral na mga batas tulad ng RA 11861, RA 7277, at DSWD AICS guidelines.`
       : language === 'bis'
       ? `Base sa pagsusi sa inyong kahimtang (${dependentsCount} dependents, gamay nga kita), nakita sa MSWDO AI ang ${recs.length} ka mga programa nga kwalipikado kamo ubos sa mga balaod sama sa RA 11861, RA 7277, ug DSWD AICS guidelines.`
       : `Based on your household demographic profile (${dependentsCount} dependents, vulnerable income tier), the MSWDO AI diagnosed ${recs.length} assistance programs under Philippine welfare statutes (RA 11861, RA 7277, RA 9994, and DSWD CIU guidelines).`;
@@ -480,7 +529,7 @@ exports.analyzeEligibility = async (req, res) => {
         : 'Respond in professional English.';
 
     const systemPrompt = `You are the lead Municipal Social Welfare and Development Officer (MSWDO) AI Eligibility Diagnostic Assessor in the Philippines.
-Your mission is to evaluate the citizen's real-life socio-economic baseline, household demographic vulnerabilities, and hardship circumstances to automatically IDENTIFY and DIAGNOSE all municipal social welfare programs they qualify for.
+Your mission is to evaluate the citizen's real-life socio-economic baseline, household demographic vulnerabilities, and hardship circumstances to automatically IDENTIFY, DIAGNOSE, and EVALUATE ELIGIBILITY for all municipal social welfare programs they qualify for.
 
 Philippine Statutory & Social Welfare Frameworks to Match Against:
 1. AICS Crisis Assistance (DSWD CIU / MSWDO):
@@ -520,8 +569,8 @@ APPLICANT REAL-LIFE PROFILE & INTAKE:
 LANGUAGE REQUIREMENT: ${languageInstruction}
 
 IMPORTANT INSTRUCTIONS:
-- You are NOT simply repeating what was selected. You are performing an INTELLIGENT SOCIAL WORK DIAGNOSTIC that connects their real-world hardships and income status to the exact municipal aid programs available.
-- If a single mother has a hospitalized child and low income, detect and recommend BOTH AICS Medical AND Solo Parent RA 11861 AND Child Welfare/Livelihood!
+- You are performing an INTELLIGENT SOCIAL WORK DIAGNOSTIC that connects their real-world hardships and income status to the exact municipal aid programs available.
+- For EVERY recommended program, include "eligibilityBadge" (e.g. "Pre-Qualified & Eligible"), "legalBasis" (e.g. "Republic Act No. 11861"), and "criteriaMatched" (an array of 2-3 specific bullet points describing why this citizen meets the qualification criteria).
 - Provide realistic benefit amounts in Philippine Pesos (₱).
 
 You MUST output ONLY a valid JSON object strictly matching this schema:
@@ -538,8 +587,14 @@ You MUST output ONLY a valid JSON object strictly matching this schema:
       "category": "AICS Crisis Assistance",
       "title": "AICS Medical & Hospitalization Guarantee Letter",
       "priority": "Immediate Crisis Relief",
+      "eligibilityBadge": "Pre-Qualified & Eligible",
+      "legalBasis": "DSWD CIU Guidelines & Municipal AICS Ordinance",
       "estBenefit": "₱3,000 – ₱25,000",
       "desc": "Explanation of the benefit in the target language.",
+      "criteriaMatched": [
+        "Incurred urgent healthcare or hospital confinement expenses beyond household budget.",
+        "Household income falls within low-income or indigent threshold."
+      ],
       "docs": [
         "Medical Abstract / Certificate",
         "Hospital Billing Statement / Prescription",

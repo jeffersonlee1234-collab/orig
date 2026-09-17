@@ -23,6 +23,8 @@ import {
   Bot,
   MessageSquare,
   Loader2,
+  Scale,
+  BadgeCheck,
 } from "lucide-react"
 import { useLanguage, type Language } from "../ui/language-context"
 import { API_BASE } from "../../config/api"
@@ -135,6 +137,12 @@ const I18N = {
     rationaleTitle: "AI Policy Justification & Legal Basis (Transparency):",
     actionAdviceTitle: "Recommended Action Plan & Next Steps:",
     geminiBadge: "Verified by Google Gemini AI Engine",
+    legalBasisLabel: "Statutory Legal Basis:",
+    criteriaMatchedLabel: "Why You Qualify (Matched Eligibility Criteria):",
+    householdMatrixTitle: "Citizen Household Eligibility Profile",
+    incomeTierBadge: "Income Bracket Verified:",
+    dependencyBadge: "Household Vulnerability:",
+    statusPrescreened: "MSWDO Pre-Screened & Qualified",
     askGeminiTitle: "Ask MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "Have questions regarding documentary requirements, processing days, or appeal procedures? Ask below:",
     askGeminiPlaceholder: "Example: How many days will it take for medical assistance to be released?",
@@ -247,6 +255,12 @@ const I18N = {
     rationaleTitle: "Paliwanag at Batayan sa Batas (AI Transparency):",
     actionAdviceTitle: "Mga Inirerekomendang Hakbang at Plano:",
     geminiBadge: "Sinuri at Pinatotohanan ng Google Gemini AI",
+    legalBasisLabel: "Batayan sa Batas:",
+    criteriaMatchedLabel: "Bakit Ka Kwalipikado (Tugmang Pamantayan):",
+    householdMatrixTitle: "Profile ng Kwalipikasyon ng Sambahayan",
+    incomeTierBadge: "Antas ng Kita:",
+    dependencyBadge: "Kalagayan ng Pamilya:",
+    statusPrescreened: "Pre-Screened ng MSWDO",
     askGeminiTitle: "Magtanong sa MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "May mga katanungan tungkol sa mga dokumento, araw ng pag-release, o proseso? Magtanong dito:",
     askGeminiPlaceholder: "Halimbawa: Ilang araw bago makuha ang guarantee letter para sa ospital?",
@@ -359,6 +373,12 @@ const I18N = {
     rationaleTitle: "Katin-awan ug Basehanan sa Balaod (AI Transparency):",
     actionAdviceTitle: "Girekomendar nga Plano ug Sunod nga Lakang:",
     geminiBadge: "Gipamatud-an sa Google Gemini AI Engine",
+    legalBasisLabel: "Balaodnon nga Sumbanan:",
+    criteriaMatchedLabel: "Nganong Kwalipikado Ka (Nakatuman nga Sumbanan):",
+    householdMatrixTitle: "Profile sa Kwalipikasyon sa Panimalay",
+    incomeTierBadge: "Ang-ang sa Kita:",
+    dependencyBadge: "Kahimtang sa Panimalay:",
+    statusPrescreened: "Pre-Screened sa MSWDO",
     askGeminiTitle: "Pangutana sa MSWDO AI Social Worker Assistant",
     askGeminiSubtitle: "Naay mga pangutana bahin sa mga rekisitos, gidugayon sa pagpagawas, o proseso? Pangutana dinhi:",
     askGeminiPlaceholder: "Pananglitan: Pila ka adlaw una makuha ang tabang pinansyal sa ospital?",
@@ -597,12 +617,19 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
           title: selectedLang === "en" ? "AICS Medical & Hospitalization Guarantee Letter" : selectedLang === "tl" ? "AICS Medical Assistance & Hospital Guarantee Letter" : "AICS Tabang Medikal ug Guarantee Letter",
           priority: selectedLang === "en" ? "Immediate Crisis Relief" : selectedLang === "tl" ? "Kagyat na Tulong sa Krisis" : "Dinalian nga Tabang",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Urgent Healthcare Need)" : selectedLang === "tl" ? "Kwalipikado (Kagyat na Gastusing Medikal)" : "Kwalipikado (Dinaliang Gasto sa Ospital)",
+          legalBasis: selectedLang === "en" ? "DSWD Crisis Intervention Unit (CIU) Guidelines & Municipal AICS Ordinance" : selectedLang === "tl" ? "DSWD Crisis Intervention Unit (CIU) at Municipal AICS Ordinance" : "DSWD CIU Guidelines ug Municipal AICS Ordinansa",
           estBenefit: "₱3,000 – ₱25,000 (Based on Hospital Bill / Prescription)",
           desc: selectedLang === "en"
             ? "Direct financial aid or hospital guarantee letter covering medicine costs, dialysis sessions, laboratory fees, and hospital bills."
             : selectedLang === "tl"
             ? "Tulong pinansyal o guarantee letter para sa pambili ng gamot, dialysis sessions, chemotherapy, laboratory tests, at billing sa ospital."
             : "Tabang pinansyal o guarantee letter para sa tambal, dialysis, chemotherapy, laboratory tests, ug bayronon sa ospital.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Documented urgent medical condition, hospital confinement, dialysis, or costly maintenance prescription." : selectedLang === "tl" ? "May kagyat na gastusin sa ospital, dialysis, chemotherapy, o reseta ng gamot." : "Adunay bayronon sa ospital, dialysis, o mahal nga tambal.",
+            selectedLang === "en" ? "Household monthly income falls within indigent/low-income threshold." : selectedLang === "tl" ? "Pasok ang kita ng pamilya sa indigent o low-income threshold." : "Ang kita sa pamilya nasulod sa indigent o ubos nga kita.",
+            selectedLang === "en" ? "Eligible for local MSWDO Guarantee Letter issuance." : selectedLang === "tl" ? "Kwalipikado sa pag-isyu ng Guarantee Letter sa partner hospitals." : "Kwalipikado sa pag-isyu og Guarantee Letter sa ospital.",
+          ],
           docs: [
             selectedLang === "en" ? "Medical Abstract / Medical Certificate" : selectedLang === "tl" ? "Medical Abstract o Sertipiko ng Doktor" : "Medical Abstract o Sertipiko sa Doktor",
             selectedLang === "en" ? "Hospital Billing Statement / Pharmacy Prescription" : selectedLang === "tl" ? "Hospital Billing Statement / Reseta ng Gamot" : "Hospital Billing Statement / Reseta sa Tambal",
@@ -630,12 +657,18 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
           title: selectedLang === "en" ? "AICS Funeral & Burial Cash Grant" : selectedLang === "tl" ? "AICS Funeral & Burial Cash Assistance" : "AICS Tabang Pinansyal sa Lubong",
           priority: selectedLang === "en" ? "Immediate Crisis Relief" : selectedLang === "tl" ? "Kagyat na Tulong sa Krisis" : "Dinalian nga Tabang",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Bereavement Grant)" : selectedLang === "tl" ? "Kwalipikado (Tulong sa Burol)" : "Kwalipikado (Tabang sa Lubong)",
+          legalBasis: selectedLang === "en" ? "DSWD CIU Guidelines on Bereavement Financial Assistance" : selectedLang === "tl" ? "DSWD CIU Guidelines sa Tulong sa Namatayan" : "DSWD CIU Guidelines sa Tabang sa Namatyan",
           estBenefit: "₱5,000 – ₱10,000 Cash Grant",
           desc: selectedLang === "en"
             ? "Emergency cash support for funeral home services, casket, and burial plot fees for deceased family members."
             : selectedLang === "tl"
             ? "Tulong-pinansyal sa serbisyo ng punerarya, kabaong, at pagpapalibing para sa namatayang pamilya."
             : "Tabang pinansyal sa serbisyo sa punerarya, lungon, ug paglubong para sa namatyan nga pamilya.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Direct family member claiming for deceased relative." : selectedLang === "tl" ? "Direktang kaanak ng namatayang pamilya na nagpoproseso ng tulong." : "Direktang kabanay sa namatyan nga nagproseso sa tabang.",
+            selectedLang === "en" ? "Financial distress for funeral, casket, or burial expenses." : selectedLang === "tl" ? "Kakulangan sa pambayad sa punerarya, kabaong, at sementeryo." : "Kulang ang pundo para sa haya, lungon, ug lubong.",
+          ],
           docs: [
             selectedLang === "en" ? "Death Certificate (Certified True Copy)" : selectedLang === "tl" ? "Death Certificate (Certified True Copy)" : "Death Certificate (Certified True Copy)",
             selectedLang === "en" ? "Funeral Service Contract / Official Receipt" : selectedLang === "tl" ? "Funeral Service Contract / Resibo" : "Funeral Service Contract / Resibo",
@@ -662,12 +695,17 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
           title: selectedLang === "en" ? "AICS Food Assistance & Crisis Cash Relief" : selectedLang === "tl" ? "AICS Food Assistance & Emergency Cash Relief" : "AICS Tabang sa Pagkaon ug Cash Relief",
           priority: selectedLang === "en" ? "Immediate Survival Aid" : selectedLang === "tl" ? "Kagyat na Ayuda sa Pagkain" : "Dinalian nga Ayuda sa Pagkaon",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified (Emergency Subsidy)" : selectedLang === "tl" ? "Kwalipikado sa Ayuda" : "Kwalipikado sa Ayuda",
+          legalBasis: "DSWD Crisis Intervention Unit Guidelines",
           estBenefit: "₱2,000 – ₱5,000 Cash / Food Voucher",
           desc: selectedLang === "en"
             ? "Emergency food assistance and cash relief for families in extreme hunger, disaster distress, or acute loss of income."
             : selectedLang === "tl"
             ? "Tulong sa agarang pagkain at ayuda para sa mga pamilyang walang makain, nasalanta, o biglaang nawalan ng kita."
             : "Tabang sa pagkaon ug ayuda para sa mga pamilya nga walay makaon o dinaliang nawad-an og panginabuhian.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Severe income loss or food shortage in the household." : selectedLang === "tl" ? "Kakulangan sa pambili ng pagkain o biglaang nawalan ng kita." : "Kulang sa pagkaon o kalit nga nawad-an og kita.",
+          ],
           docs: [
             selectedLang === "en" ? "Barangay Certificate of Indigency / Calamity" : selectedLang === "tl" ? "Barangay Certificate of Indigency" : "Barangay Certificate of Indigency",
             selectedLang === "en" ? "Valid Government ID" : selectedLang === "tl" ? "Valid ID" : "Valid ID",
@@ -686,12 +724,18 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800",
           title: selectedLang === "en" ? "Solo Parent ID & Monthly Subsidy (RA 11861)" : selectedLang === "tl" ? "Solo Parent ID & ₱1,000 Buwanang Ayuda (RA 11861)" : "Solo Parent ID ug ₱1,000 Binuwan nga Ayuda",
           priority: selectedLang === "en" ? "Statutory Special Sector Benefit" : selectedLang === "tl" ? "Batas Panlipunan (RA 11861)" : "Balaod Sosyal (RA 11861)",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 11861" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 11861" : "Kwalipikado ubos sa RA 11861",
+          legalBasis: "Republic Act No. 11861 (Expanded Solo Parents Welfare Act)",
           estBenefit: selectedLang === "en" ? "₱1,000 Monthly Cash Subsidy + 10% Essentials Discount" : selectedLang === "tl" ? "₱1,000 Buwanang Ayuda + 10% Diskwento sa Gatas/Pagkain" : "₱1,000 Binuwan nga Ayuda + 10% Diskwento sa Gatas",
           desc: selectedLang === "en"
             ? "Comprehensive package under the Expanded Solo Parents Welfare Act granting monthly local cash allowance, 7-day parental leave, and educational scholarship priorities."
             : selectedLang === "tl"
             ? "Komprehensibong benepisyo sa ilalim ng RA 11861 kabilang ang buwanang tulong, 7-araw na parental leave, at subsidiya sa gatas at edukasyon."
             : "Komprehensibong benepisyo ubos sa RA 11861 lakip ang binuwan nga ayuda, 7-adlaw nga parental leave, ug diskwento sa gatas ug pagkaon.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Solely providing parental care and financial support for minor children." : selectedLang === "tl" ? "Mag-isang nagtataguyod at nagpapakain sa mga anak nang walang suporta mula sa dating asawa." : "Nag-inusarang nag-atiman ug nagbuhi sa mga anak.",
+            selectedLang === "en" ? "Income fits statutory bracket for local government monthly cash assistance." : selectedLang === "tl" ? "Pasok sa antas ng kita para sa ₱1,000 buwanang ayuda." : "Pasok sa kita alang sa ₱1,000 binuwan nga ayuda.",
+          ],
           docs: [
             selectedLang === "en" ? "Barangay Certificate of Solo Parent" : selectedLang === "tl" ? "Barangay Certificate of Solo Parent" : "Barangay Certificate of Solo Parent",
             selectedLang === "en" ? "PSA Birth Certificate of Minor Children" : selectedLang === "tl" ? "PSA Birth Certificate ng mga Anak" : "PSA Birth Certificate sa mga Anak",
@@ -718,12 +762,18 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
           title: selectedLang === "en" ? "PWD Identification Card & Assistive Device Support" : selectedLang === "tl" ? "PWD ID & Pamamahagi ng Wheelchair/Kagamitan (RA 7277)" : "PWD ID ug Tabang sa Wheelchair/Gamit (RA 7277)",
           priority: selectedLang === "en" ? "Persons with Disability Sector" : selectedLang === "tl" ? "Sektor ng may Kapansanan (PWD)" : "Sektor sa may Kapansanan (PWD)",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 7277" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 7277" : "Kwalipikado ubos sa RA 7277",
+          legalBasis: "Republic Act No. 7277 & RA 10754 (Magna Carta for Persons with Disabilities)",
           estBenefit: selectedLang === "en" ? "20% Discount + VAT Exemption + Free Assistive Devices" : selectedLang === "tl" ? "20% Diskwento + VAT Exemption + Libreng Wheelchair/Gamit" : "20% Diskwento + VAT Exemption + Libreng Wheelchair",
           desc: selectedLang === "en"
             ? "Official municipal PWD registry benefits including 20% discount on medicines, grocery essentials, transport, plus priority distribution of wheelchairs, canes, and hearing aids."
             : selectedLang === "tl"
             ? "Opisyal na PWD ID na may 20% diskwento sa gamot, bilihin, pamasahe, at libreng alokasyon ng wheelchair o hearing aid."
             : "Opisyal nga PWD ID nga may 20% diskwento sa tambal, pagkaon, plete, ug libreng alokasyon sa wheelchair o tungkod.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Documented physical, mental, orthopedic, or sensory disability." : selectedLang === "tl" ? "May kapansanan sa katawan, pagkilos, paningin, o pandinig." : "Adunay kapansanan sa lawas, panan-aw, o pandungog.",
+            selectedLang === "en" ? "Entitled to statutory 20% discount + VAT exemption and MSWDO assistive tools." : selectedLang === "tl" ? "May karapatan sa 20% diskwento at libreng kagamitan mula sa MSWDO." : "May katungod sa 20% diskwento ug libreng gamit sa MSWDO.",
+          ],
           docs: [
             selectedLang === "en" ? "Medical Certificate with Disability Assessment" : selectedLang === "tl" ? "Medical Certificate na may pirma ng Doktor ukol sa kapansanan" : "Medical Certificate gikan sa Doktor bahin sa kapansanan",
             selectedLang === "en" ? "Barangay Certificate of Residency" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
@@ -750,12 +800,18 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
           title: selectedLang === "en" ? "Senior Citizen ID & Indigent Social Pension (RA 11916)" : selectedLang === "tl" ? "Senior Citizen ID at Social Pension Allowance (RA 11916)" : "Senior Citizen ID ug Social Pension Allowance (RA 11916)",
           priority: selectedLang === "en" ? "Senior Citizen Sector (60+)" : selectedLang === "tl" ? "Sektor ng Nakatatanda (60+ Anyos)" : "Sektor sa mga Tigulang (60+)",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified under RA 9994 / RA 11916" : selectedLang === "tl" ? "Kwalipikado sa ilalim ng RA 9994 / RA 11916" : "Kwalipikado ubos sa RA 9994 / RA 11916",
+          legalBasis: "Republic Act No. 9994 & RA 11916 (Social Pension for Indigent Seniors Act)",
           estBenefit: selectedLang === "en" ? "₱1,000/Month Social Pension + 20% Senior Discount" : selectedLang === "tl" ? "₱1,000 Buwanang Social Pension + 20% Senior Diskwento" : "₱1,000 Binuwan nga Social Pension + 20% Diskwento",
           desc: selectedLang === "en"
             ? "Municipal OSCA ID issuance, medicine booklet, 20% discount on groceries/dining/fare, and quarterly ₱1,000/month social pension for indigent seniors."
             : selectedLang === "tl"
             ? "Pagkakaroon ng OSCA ID, medicine discount booklet, 20% diskwento, at buwanang ₱1,000 social pension para sa kapus-palad na senior."
             : "Paghatag og OSCA ID, medicine booklet, 20% diskwento, ug ₱1,000 binuwan nga social pension para sa kabus nga senior.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Beneficiary is 60 years old and above." : selectedLang === "tl" ? "Ang benepisyaryo ay may edad 60 taong gulang pataas." : "Ang benepisyaryo 60 anyos pataas.",
+            selectedLang === "en" ? "No existing pension from SSS, GSIS, or military/private providers." : selectedLang === "tl" ? "Walang natatanggap na regular na pensyon sa SSS o GSIS." : "Walay regular nga pension sa SSS o GSIS.",
+          ],
           docs: [
             selectedLang === "en" ? "PSA Birth Certificate / Valid ID showing Date of Birth (60+)" : selectedLang === "tl" ? "PSA Birth Certificate o Valid ID na nagpapatunay ng edad (60+)" : "PSA Birth Certificate o Valid ID nga nagpamatuod sa edad (60+)",
             selectedLang === "en" ? "Barangay Certificate of Residency (at least 6 months)" : selectedLang === "tl" ? "Barangay Certificate of Residency" : "Barangay Certificate of Residency",
@@ -782,12 +838,17 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800",
           title: selectedLang === "en" ? "Child Daycare Enrollment & Supplemental Nutrition Program" : selectedLang === "tl" ? "Daycare Enrollment at Supplemental Nutrition Feeding" : "Daycare Enrollment ug Supplemental Feeding Program",
           priority: selectedLang === "en" ? "Child Protection & Nutrition" : selectedLang === "tl" ? "Nutrisyon at Edukasyon ng Bata" : "Nutrisyon ug Edukasyon sa Bata",
+          eligibilityBadge: selectedLang === "en" ? "Qualified for ECCD Enrollment" : selectedLang === "tl" ? "Kwalipikado sa Daycare & Feeding" : "Kwalipikado sa Daycare & Feeding",
+          legalBasis: "Early Childhood Care and Development (ECCD) Act & DSWD Guidelines",
           estBenefit: selectedLang === "en" ? "Free Early Education + 120-day Supplemental Milk & Meals" : selectedLang === "tl" ? "Libreng Daycare + 120-araw na Feeding Program at Gatas" : "Libreng Daycare + 120-adlaw nga Feeding Program",
           desc: selectedLang === "en"
             ? "Early childhood development center admission and targeted nutritional rehabilitation for malnourished or underweight toddlers."
             : selectedLang === "tl"
             ? "Libreng pagpasok sa Child Development Center (Daycare) at 120-day dietary feeding para sa mga batang kulang sa timbang."
             : "Libreng pag-eskwela sa Child Development Center (Daycare) ug feeding program para sa mga bata nga kulang sa timbang.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Dependent child (0–5 years old) requiring early learning or dietary supplementation." : selectedLang === "tl" ? "May batang 0-5 taong gulang na kailangan ng maagang edukasyon o nutrisyon." : "Adunay bata (0-5 anyos) nga nagkinahanglan og edukasyon o feeding.",
+          ],
           docs: [
             selectedLang === "en" ? "Child Birth Certificate (PSA/Local Civil Registry)" : selectedLang === "tl" ? "Birth Certificate ng Bata" : "Birth Certificate sa Bata",
             selectedLang === "en" ? "Immunization / Health Card from Barangay Health Center" : selectedLang === "tl" ? "Immunization Card mula sa Health Center" : "Immunization Card gikan sa Health Center",
@@ -814,12 +875,18 @@ export default function AIAssistanceFinderModal({
           badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
           title: selectedLang === "en" ? "Sustainable Livelihood Seed Grant & Skills Training" : selectedLang === "tl" ? "Puhunan sa Negosyo (Livelihood Seed Grant) at TESDA Training" : "Puhunan sa Negosyo ug Libreng Pagbansay sa TESDA",
           priority: selectedLang === "en" ? "Long-Term Socioeconomic Recovery" : selectedLang === "tl" ? "Pangmatagalang Pangkabuhayan" : "Malungtarong Panginabuhi",
+          eligibilityBadge: selectedLang === "en" ? "Pre-Qualified for SLP Seed Capital" : selectedLang === "tl" ? "Kwalipikado sa SLP Puhunan" : "Kwalipikado sa SLP Puhunan",
+          legalBasis: "DSWD Sustainable Livelihood Program (SLP) Guidelines",
           estBenefit: selectedLang === "en" ? "₱5,000 – ₱15,000 Seed Capital + Free NC-II Course" : selectedLang === "tl" ? "₱5,000 – ₱15,000 Panimulang Puhunan + Libreng Sertipikasyon" : "₱5,000 – ₱15,000 Puhunan + Libreng Kurso sa TESDA",
           desc: selectedLang === "en"
             ? "Micro-enterprise capital grants for sari-sari stores, street food, small trading, plus free vocational training in baking, culinary, driving, and tailoring."
             : selectedLang === "tl"
             ? "Tulong-puhunan para sa sari-sari store, carinderia, o paninda, kalakip ang libreng pagsasanay sa pagluluto, pagmamaneho, at pananahi."
             : "Tabang-puhunan para sa sari-sari store o negosyo, uban ang libreng pagbansay sa pagluto, pagmaneho, ug panahi.",
+          criteriaMatched: [
+            selectedLang === "en" ? "Unemployed or informal daily worker intending to manage a micro-enterprise." : selectedLang === "tl" ? "Walang pirmihang trabaho na nais magsimula ng sariling tindahan o paninda." : "Walay regular nga trabaho nga gusto magtukod og negosyo.",
+            selectedLang === "en" ? "Low household income bracket qualifies for non-collateral capital grants." : selectedLang === "tl" ? "Kwalipikado sa libreng puhunan nang walang kolateral." : "Kwalipikado sa libreng puhunan nga walay prenda.",
+          ],
           docs: [
             selectedLang === "en" ? "Simple Business Proposal Plan" : selectedLang === "tl" ? "Simpleng Livelihood Proposal Form" : "Simpleng Livelihood Proposal Form",
             selectedLang === "en" ? "Barangay Clearance & Indigency" : selectedLang === "tl" ? "Barangay Clearance at Indigency" : "Barangay Clearance ug Indigency",
@@ -835,30 +902,6 @@ export default function AIAssistanceFinderModal({
             ? "Inirerekomenda sa ilalim ng DSWD Sustainable Livelihood Program (SLP) upang magkaroon ng sariling kakayahan sa kita."
             : "Girekomenda ubos sa DSWD Sustainable Livelihood Program (SLP) aron makaangkon og kaugalingong kita."
         )
-      }
-
-      // 8. Financial Aid Payout & Tracking
-      if (hasDisbursement) {
-        recs.push({
-          id: "disbursement_tracker",
-          category: selectedLang === "en" ? "Financial Aid Disbursement" : selectedLang === "tl" ? "Paglabas ng Ayuda (Disbursement)" : "Pagpagawas sa Ayuda (Disbursement)",
-          icon: Wallet,
-          badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800",
-          title: selectedLang === "en" ? "Official Cash Aid Payout Tracker & Claim Voucher" : selectedLang === "tl" ? "Financial Aid Payout Tracker at QR Claim Voucher" : "Financial Aid Payout Tracker ug QR Claim Voucher",
-          priority: selectedLang === "en" ? "Payout Release & Claiming" : selectedLang === "tl" ? "Pagkuha ng Naaprubahang Pera" : "Pagkuha sa Naaprubahang Kwarta",
-          estBenefit: selectedLang === "en" ? "Direct Cash / Bank Transfer Releasing" : selectedLang === "tl" ? "Direktang Payout sa City Hall o Bank" : "Direktang Payout sa City Hall o Bangko",
-          desc: selectedLang === "en"
-            ? "Track real-time approval status, release schedule, appointment venue, and view official QR code claim voucher for payout collection."
-            : selectedLang === "tl"
-            ? "Subaybayan ang estado ng release, iskedyul ng payout sa City Hall, at kunin ang iyong opisyal na QR claim voucher."
-            : "Subaya ang status sa release, schedule sa payout sa City Hall, ug kuhaa ang imong opisyal nga QR voucher.",
-          docs: [
-            selectedLang === "en" ? "Valid ID matching application name" : selectedLang === "tl" ? "Valid ID na tugma sa pangalan ng aplikante" : "Valid ID nga parehas sa ngalan sa aplikante",
-            selectedLang === "en" ? "Official QR Claim Voucher / SMS Notification" : selectedLang === "tl" ? "Opisyal na QR Claim Voucher / SMS text ng MSWDO" : "Opisyal nga QR Claim Voucher / Text sa MSWDO",
-          ],
-          actionUrl: "/portal/financial-aid",
-          actionLabel: selectedLang === "en" ? "Open Payout Tracker" : selectedLang === "tl" ? "Buksan ang Payout Tracker" : "Ablihi ang Payout Tracker",
-        })
       }
 
       // Economic Indigency scoring
@@ -1577,38 +1620,81 @@ export default function AIAssistanceFinderModal({
                 </div>
               ) : analysisResult ? (
                 <div className="space-y-6">
-                  {/* Overall Confidence Score Card */}
-                  <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-blue-500/15 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center font-black shadow-md shrink-0">
-                        <span className="text-lg leading-none">{analysisResult.score}%</span>
-                        <span className="text-[9px] uppercase tracking-wider opacity-85">Match</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
-                            {t.statusEligible}
-                          </span>
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-xs text-gray-500">{t.matchConfidence}</span>
+                  {/* Overall Confidence Score Card with Household Qualification Profile */}
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-blue-500/15 border border-emerald-500/20 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center font-black shadow-md shrink-0">
+                          <span className="text-lg leading-none">{analysisResult.score}%</span>
+                          <span className="text-[9px] uppercase tracking-wider opacity-85">Match</span>
                         </div>
-                        <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">
-                          {t.resTitle}
-                        </h4>
-                        <p className="text-xs text-gray-600 dark:text-slate-300">
-                          {t.resSubtitle}
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1">
+                              <BadgeCheck className="h-3.5 w-3.5" />
+                              {t.statusEligible}
+                            </span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-xs text-gray-500">{t.matchConfidence}</span>
+                          </div>
+                          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                            {t.resTitle}
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-slate-300">
+                            {t.resSubtitle}
+                          </p>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-200 text-xs font-bold shadow-xs hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Printer className="h-3.5 w-3.5 text-gray-500" />
+                        <span>{t.btnPrint}</span>
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-200 text-xs font-bold shadow-xs hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Printer className="h-3.5 w-3.5 text-gray-500" />
-                      <span>{t.btnPrint}</span>
-                    </button>
+                    {/* Household Qualification Snapshot Matrix */}
+                    <div className="pt-2 border-t border-emerald-500/20 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
+                        <Wallet className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <div>
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
+                            {t.incomeTierBadge}
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                            {incomeLevel === "none" ? "No Regular Income" : incomeLevel === "low" ? "Low Income (<₱10,000)" : incomeLevel === "mid" ? "₱10,000 – ₱18,000" : ">₱18,000"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-600 shrink-0" />
+                        <div>
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
+                            {t.dependencyBadge}
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                            {dependentsCount} Dependents ({applicantType === "self" ? "Individual" : applicantType === "child" ? "Minor Guardian" : applicantType === "senior" ? "Senior Citizen" : applicantType === "pwd" ? "PWD Member" : "Family"})
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-indigo-600 shrink-0" />
+                        <div>
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400 block font-medium">
+                            {t.statusPrescreened}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            {analysisResult.recommendations.length} Programs Qualified
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Recommendation Cards Stack */}
@@ -1620,6 +1706,7 @@ export default function AIAssistanceFinderModal({
                           key={rec.id}
                           className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xs hover:border-blue-400 dark:hover:border-blue-600 transition-all space-y-4"
                         >
+                          {/* Program Header */}
                           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
                               <div className="h-10 w-10 rounded-2xl bg-blue-50 dark:bg-slate-700/80 flex items-center justify-center text-blue-600 dark:text-blue-300 shrink-0">
@@ -1630,6 +1717,12 @@ export default function AIAssistanceFinderModal({
                                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${rec.badgeColor}`}>
                                     {rec.priority}
                                   </span>
+                                  {rec.eligibilityBadge && (
+                                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                      <BadgeCheck className="h-3 w-3" />
+                                      {rec.eligibilityBadge}
+                                    </span>
+                                  )}
                                   <span className="text-xs font-extrabold text-gray-900 dark:text-white">
                                     {rec.title}
                                   </span>
@@ -1645,6 +1738,32 @@ export default function AIAssistanceFinderModal({
                               </span>
                             </div>
                           </div>
+
+                          {/* Legal Basis & Statutory Framework */}
+                          {rec.legalBasis && (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-semibold border border-slate-200 dark:border-slate-800">
+                              <Scale className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                              <span><strong>{t.legalBasisLabel}</strong> {rec.legalBasis}</span>
+                            </div>
+                          )}
+
+                          {/* Why You Are Eligible (Matched Criteria) */}
+                          {rec.criteriaMatched && rec.criteriaMatched.length > 0 && (
+                            <div className="bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 p-3.5 rounded-2xl space-y-2">
+                              <div className="text-[11px] font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                                <BadgeCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                <span>{t.criteriaMatchedLabel}</span>
+                              </div>
+                              <div className="space-y-1 pl-1">
+                                {rec.criteriaMatched.map((crit: string, cIdx: number) => (
+                                  <div key={cIdx} className="flex items-start gap-2 text-[11px] text-gray-700 dark:text-slate-300">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                    <span className="leading-snug">{crit}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Requirements & Direct Action Link */}
                           <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
