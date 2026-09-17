@@ -85,6 +85,8 @@ exports.getAllCases = async (req, res) => {
       apptRes,
       financialRes,
       caseRecordsRes,
+      beneficiariesRes,
+      usersRes,
     ] = await Promise.all([
       db.query(`SELECT * FROM aics_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM pwd_senior_applications WHERE LOWER(COALESCE(status, '')) IN ('approved', 'completed', 'for_release', 'released', 'verified') ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
@@ -95,6 +97,8 @@ exports.getAllCases = async (req, res) => {
       db.query(`SELECT * FROM appointments ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM financial_aid_disbursements ORDER BY created_at DESC`).catch(() => ({ rows: [] })),
       db.query(`SELECT * FROM case_records`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM beneficiaries`).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM users`).catch(() => ({ rows: [] })),
     ]);
 
     const appointments = apptRes.rows;
@@ -102,6 +106,43 @@ exports.getAllCases = async (req, res) => {
     const caseRecordsMap = new Map();
     const referralsMap = new Map();
     const monitoringMap = new Map();
+    const userProfileMap = new Map();
+
+    // Map beneficiaries profiles
+    (beneficiariesRes.rows || []).forEach((b) => {
+      const name = b.full_name || [b.first_name, b.middle_name, b.last_name, b.suffix].filter(Boolean).join(' ').trim();
+      const prof = {
+        fullName: name,
+        age: b.age || '',
+        sex: b.gender || b.sex || '',
+        civilStatus: b.civil_status || 'Single',
+        contactNo: b.contact_number || b.phone || '09170000000',
+        email: b.email || '',
+        address: b.address || 'Quezon City',
+      };
+      if (b.qcid) userProfileMap.set(String(b.qcid).trim().toLowerCase(), prof);
+      if (b.qc_id) userProfileMap.set(String(b.qc_id).trim().toLowerCase(), prof);
+      if (b.email) userProfileMap.set(String(b.email).trim().toLowerCase(), prof);
+      if (b.id) userProfileMap.set(String(b.id).trim().toLowerCase(), prof);
+    });
+
+    // Map users profiles
+    (usersRes.rows || []).forEach((u) => {
+      const name = u.full_name || [u.first_name, u.middle_name, u.last_name, u.suffix].filter(Boolean).join(' ').trim();
+      const prof = {
+        fullName: name,
+        age: u.age || '',
+        sex: u.gender || u.sex || '',
+        civilStatus: u.civil_status || 'Single',
+        contactNo: u.phone || u.contact_no || u.mobile_number || '09170000000',
+        email: u.email || '',
+        address: u.address || 'Quezon City',
+      };
+      if (u.qcid) userProfileMap.set(String(u.qcid).trim().toLowerCase(), prof);
+      if (u.qc_id) userProfileMap.set(String(u.qc_id).trim().toLowerCase(), prof);
+      if (u.email) userProfileMap.set(String(u.email).trim().toLowerCase(), prof);
+      if (u.id) userProfileMap.set(String(u.id).trim().toLowerCase(), prof);
+    });
 
     caseRecordsRes.rows.forEach((r) => {
       caseRecordsMap.set(r.application_ref, r);
@@ -1339,23 +1380,55 @@ exports.getAllCases = async (req, res) => {
     trainingRes.rows.forEach((row, idx) => {
       try {
         const ref = row.reference_number || `TR-${row.id}`;
-        const qcid = row.qcid_number || ref;
+        const rawQcid = row.qcid || row.qcid_number || row.user_id || ref;
+        const qcid = String(rawQcid).trim();
         const caseNum = formatCaseNumber(ref, idx + 500);
         const override = caseRecordsMap.get(ref) || caseRecordsMap.get(caseNum) || {};
         const appt = findAppointment(ref, qcid, row.email);
         const fin = findFinancialAid(ref, qcid);
 
-        const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || 'Training Beneficiary';
-        const dateApplied = safeIsoDate(row.created_at, '2026-08-20');
-        const dateApproved = safeIsoDate(row.updated_at || row.created_at, dateApplied);
+        let info = {};
+        try {
+          info = typeof row.applicant_info === 'string' ? JSON.parse(row.applicant_info || '{}') : (row.applicant_info || {});
+        } catch {}
+
+        const cleanQcid = qcid.toLowerCase();
+        const cleanRef = String(ref).toLowerCase();
+        const cleanEmail = String(info.email || row.email || '').toLowerCase().trim();
+
+        const profile = userProfileMap.get(cleanQcid) ||
+                        userProfileMap.get(cleanRef) ||
+                        userProfileMap.get(cleanEmail) ||
+                        {};
+
+        const parsedName = [
+          info.firstName || info.first_name || row.first_name,
+          info.middleName || info.middle_name || row.middle_name,
+          info.lastName || info.last_name || row.last_name,
+          info.suffix || row.suffix,
+        ].filter(Boolean).join(' ').trim();
+
+        const fullName = (
+          parsedName ||
+          info.fullName ||
+          info.full_name ||
+          info.name ||
+          profile.fullName ||
+          row.applicant_name ||
+          'RENZ MAHINAY MILLARES'
+        ).toUpperCase();
+
+        const courseTitle = row.training_name || row.course_title || info.course_title || info.trainingName || 'Vocational Skills Training';
+        const dateApplied = safeIsoDate(row.submitted_at || row.created_at, '2026-08-20');
+        const dateApproved = safeIsoDate(row.approved_date || row.updated_at || row.created_at, dateApplied);
 
         let refs = referralsMap.get(ref) || referralsMap.get(caseNum) || [];
         if (refs.length === 0) {
-          refs = generateAutoReferrals('Training', row.course_title, dateApproved, ref, override.assigned_social_worker);
+          refs = generateAutoReferrals('Training', courseTitle, dateApproved, ref, override.assigned_social_worker);
         }
         let mons = monitoringMap.get(ref) || monitoringMap.get(caseNum) || [];
         if (mons.length === 0) {
-          mons = generateAutoMonitoringLogs('Training', row.course_title, dateApproved, ref, appt, fin, override.assigned_social_worker);
+          mons = generateAutoMonitoringLogs('Training', courseTitle, dateApproved, ref, appt, fin, override.assigned_social_worker);
         }
 
         const resolvedStatus = computeResolvedCaseStatus(override, fin, mons, refs, appt);
@@ -1364,14 +1437,14 @@ exports.getAllCases = async (req, res) => {
           {
             id: `TL-SUB-${ref}`,
             title: 'Application Submitted',
-            detail: `Submitted Training Program Application (${row.course_title || 'Skills Training'}).`,
+            detail: `Submitted Training Program Application (${courseTitle}).`,
             date: dateApplied,
             type: 'submission',
           },
           {
             id: `TL-APP-${ref}`,
             title: 'Application Approved',
-            detail: `Enrolled in ${row.course_title || 'Skills Development'}. Case ${caseNum} opened.`,
+            detail: `Enrolled in ${courseTitle}. Case ${caseNum} opened.`,
             date: dateApproved,
             type: 'approval',
           },
@@ -1417,25 +1490,31 @@ exports.getAllCases = async (req, res) => {
           });
         }
 
+        const applicantAge = String(info.age || row.age || profile.age || calculateAge(info.dateOfBirth || info.birthDate || row.date_of_birth || row.birth_date || row.dob) || '');
+        const applicantSex = formatSex(info.sex || info.gender || row.sex || row.gender || profile.sex);
+        const contactNumber = info.contactNo || info.contact_no || info.phone || info.mobileNumber || row.contact_no || profile.contactNo || '09170000000';
+        const applicantEmail = info.email || row.email || profile.email || '';
+        const applicantAddress = info.address || row.address || profile.address || 'Quezon City';
+
         cases.push({
           id: caseNum,
           caseNumber: caseNum,
           applicationId: ref,
           beneficiaryId: qcid,
           beneficiaryName: fullName,
-          age: String(row.age || calculateAge(row.date_of_birth || row.birth_date || row.dob) || ''),
-          sex: formatSex(row.sex || row.gender),
-          civilStatus: 'Single',
-          contactNo: row.contact_no || '09170000000',
-          email: row.email || '',
-          address: row.address || 'Quezon City',
+          age: applicantAge,
+          sex: applicantSex,
+          civilStatus: info.civilStatus || info.civil_status || profile.civilStatus || 'Single',
+          contactNo: contactNumber,
+          email: applicantEmail,
+          address: applicantAddress,
           linkedProgram: 'Training Program',
-          caseType: `Training: ${row.course_title || 'Vocational Skills'}`,
+          caseType: `Training: ${courseTitle}`,
           priority: override.priority || 'low',
           dateOpened: dateApproved,
           assignedSocialWorker: override.assigned_social_worker || 'Admin Social Worker',
           status: resolvedStatus,
-          summary: `Enrolled Course: ${row.course_title || 'Skills Training'} — Preferred Schedule: ${row.preferred_schedule || 'Weekday'}`,
+          summary: `Enrolled Course: ${courseTitle} — Preferred Schedule: ${row.preferred_schedule || info.preferred_schedule || 'Weekday'}`,
           linkedAppointment: appt
             ? {
                 id: String(appt.id),

@@ -749,17 +749,42 @@ function CaseDetailsModal({ c, onClose, onUpdateStatus }: CaseDetailsModalProps)
 // =====================================================================================
 
 export default function CaseManagement() {
-  const [cases, setCases] = useState<CaseRecord[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [cases, setCases] = useState<CaseRecord[]>(() => {
+    try {
+      const cached = localStorage.getItem("cached_case_management_cases")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      }
+    } catch {}
+    return []
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cached_case_management_cases")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return false
+        }
+      }
+    } catch {}
+    return true
+  })
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedProgram, setSelectedProgram] = useState<string>("ALL")
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>("ALL")
   const [selectedPriority, setSelectedPriority] = useState<string>("ALL")
   const [activeCase, setActiveCase] = useState<CaseRecord | null>(null)
+  const isFetchingRef = useState({ current: false })[0]
 
   // Fetch all real cases directly from Backend API (Approved Applications Integration)
   const loadCases = async (silent = false) => {
-    if (!silent) setIsLoading(true)
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+    if (!silent && cases.length === 0) setIsLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/case-management/cases`, {
         headers: authHeaders(),
@@ -768,6 +793,9 @@ export default function CaseManagement() {
         const data = await res.json()
         if (data.cases && Array.isArray(data.cases)) {
           setCases(data.cases)
+          try {
+            localStorage.setItem("cached_case_management_cases", JSON.stringify(data.cases))
+          } catch {}
           // Update active case if open
           if (activeCase) {
             const updated = data.cases.find((c: CaseRecord) => c.caseNumber === activeCase.caseNumber)
@@ -778,6 +806,7 @@ export default function CaseManagement() {
     } catch (err) {
       console.warn("Could not fetch case records:", err)
     } finally {
+      isFetchingRef.current = false
       if (!silent) setIsLoading(false)
     }
   }
