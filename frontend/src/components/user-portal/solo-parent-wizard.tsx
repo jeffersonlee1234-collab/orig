@@ -3357,10 +3357,6 @@ export default function SoloParentApplicationWizard({
                       invalid={attemptedNext && (uploadedDocs[doc.id]?.length ?? 0) === 0}
                       onUpload={(files) => handleFileUpload(doc.id, files)}
                       onRemove={(fileIndex) => handleRemoveFile(doc.id, fileIndex)}
-                      onSampleClick={(d) => {
-                        setSelectedSampleDoc(d)
-                        setShowSampleModal(true)
-                      }}
                       onCameraClick={(d) => setCameraDoc(d)}
                     />
                   ))}

@@ -215,6 +215,7 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
   const [submitted, setSubmitted] = useState(false)
   const [latestSubmittedApp, setLatestSubmittedApp] = useState<any | null>(null)
   const [referenceNumber, setReferenceNumber] = useState("")
+  const [submissionDate, setSubmissionDate] = useState("")
   const [isEditingInfo] = useState(false)
   const bypassedActiveAppRef = useRef(false)
   const dismissedAppRefCurrent = useRef<string | null>(null)
