@@ -137,23 +137,23 @@ export function SessionInactivityWatcher() {
       }
     }, 10000);
 
-    // Initial check for concurrent session with 3.5s grace period
+    // Quick initial check for concurrent session with 1.5s grace period
     const initialTimer = setTimeout(() => {
+      verifyConcurrentSession();
+    }, 1500);
+
+    // Fast, responsive heartbeat check every 3.5 seconds for instant multi-device takeover detection
+    verifyIntervalRef.current = setInterval(() => {
       verifyConcurrentSession();
     }, 3500);
 
-    // Balanced periodic check every 30 seconds for concurrent device login
-    verifyIntervalRef.current = setInterval(() => {
-      verifyConcurrentSession();
-    }, 30000);
-
-    // Also check when window gains focus or tab becomes visible (debounced)
+    // Instant check when window gains focus or tab becomes visible (300ms)
     let focusTimer: any = null;
     const handleVisibilityOrFocus = () => {
       if (focusTimer) clearTimeout(focusTimer);
       focusTimer = setTimeout(() => {
         verifyConcurrentSession();
-      }, 2000);
+      }, 300);
     };
     window.addEventListener("focus", handleVisibilityOrFocus);
     window.addEventListener("pageshow", handleVisibilityOrFocus);
