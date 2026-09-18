@@ -2739,16 +2739,8 @@ function DetailedView({ app, onClose, onApprove, onReject, onShowCard, allApplic
 import { deduplicatedFetch, clearApiCache } from "../../utils/cachedApiFetch"
 
 export default function PWDSeniorCitizen() {
-  const [applications, setApplications] = useState<ApplicationSubmission[]>(() => {
-    try {
-      const raw = localStorage.getItem("pwd_senior_applications")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) return parsed
-      }
-    } catch {}
-    return []
-  })
+  const [applications, setApplications] = useState<ApplicationSubmission[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [filterCategory, setFilterCategory] = useState<"all" | "PWD" | "Senior Citizen">("all")
   const [filterType, setFilterType] = useState<"all" | "new" | "renewal" | "loss" | "assistance">("all")
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all")
@@ -2829,9 +2821,11 @@ export default function PWDSeniorCitizen() {
 
         if (isMounted) {
           setApplications(combined)
+          setIsLoading(false)
         }
       } catch (err) {
         console.warn("Error syncing applications:", err)
+        if (isMounted) setIsLoading(false)
       } finally {
         isFetchingRef.current = false
       }
@@ -3185,10 +3179,10 @@ export default function PWDSeniorCitizen() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total applications", value: stats.total, color: "var(--ink)" },
-            { label: "Pending review", value: stats.pending, color: "var(--gold)" },
-            { label: "Approved", value: stats.approved, color: "var(--forest)" },
-            { label: "Rejected", value: stats.rejected, color: "var(--redwood)" },
+            { label: "Total applications", value: isLoading ? "—" : stats.total, color: "var(--ink)" },
+            { label: "Pending review", value: isLoading ? "—" : stats.pending, color: "var(--gold)" },
+            { label: "Approved", value: isLoading ? "—" : stats.approved, color: "var(--forest)" },
+            { label: "Rejected", value: isLoading ? "—" : stats.rejected, color: "var(--redwood)" },
           ].map((stat) => (
             <div key={stat.label} className="gw-stat p-4">
               <p className="gw-eyebrow" style={{ color: "var(--ink-faint)" }}>{stat.label}</p>
@@ -3272,7 +3266,20 @@ export default function PWDSeniorCitizen() {
 
           </div>
 
-          {filteredApps.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="gw-card p-5 animate-pulse flex items-start gap-4">
+                  <div className="h-11 w-11 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-48 bg-slate-200 dark:bg-slate-800 rounded" />
+                    <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+                    <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredApps.length === 0 ? (
             <div className="text-center py-16 gw-card">
               <FileText className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--ink-faint)" }} />
               <p className="gw-serif text-base font-semibold" style={{ color: "var(--ink)" }}>No applications found</p>
