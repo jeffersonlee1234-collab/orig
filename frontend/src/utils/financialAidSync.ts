@@ -604,42 +604,38 @@ export function checkAndAutoReleaseScheduledDisbursements(): number {
   return releasedCount
 }
 
-// ── UTILITY: CLEANUP USER TEST DATA (RENZ) ──
-export async function cleanupRenzTestData() {
-  try {
-    // 1. Backend cleanup calls
-    await Promise.allSettled([
-      fetch(`${API_BASE}/api/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/cleanup-user/renz`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/cleanup-user/millares`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/aics/applications/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/aics/applications/cleanup-user/renz`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/aics/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/aics/cleanup-user/renz`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/appointments/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/appointments/cleanup-user/renz`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/financial-aid/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/financial-aid/cleanup-user/renz`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/pwd-senior/applications/cleanup-user/110000572516915`, { method: "DELETE" }),
-      fetch(`${API_BASE}/api/pwd-senior/applications/cleanup-user/renz`, { method: "DELETE" }),
-    ])
-  } catch {}
+// ── UTILITY: CLEANUP USER TEST DATA (RENZ & KRIS) ──
+export const TARGET_TEST_MATCHES = [
+  "kris",
+  "topher",
+  "110000872276939",
+  "110000572516915",
+  "renz",
+  "millares",
+  "renzoe09062",
+  "disb-2026-4213",
+]
 
-  // 2. LocalStorage cleanup
-  const storageKeys = [
-    "all_financial_disbursements",
-    "all_appointments_scheduled",
-    "pwd_senior_applications",
-    "aics_applications",
-    "all_user_applications",
-    "active_applications",
-    "all_user_notifications",
-    "citizen_applications",
-    "user_applications",
-    "dismissed_senior_assistance_ref"
-  ]
+export const ALL_STORAGE_KEYS = [
+  "all_financial_disbursements",
+  "all_appointments_scheduled",
+  "pwd_senior_applications",
+  "aics_applications",
+  "all_user_applications",
+  "active_applications",
+  "all_user_notifications",
+  "citizen_applications",
+  "user_applications",
+  "dismissed_senior_assistance_ref",
+  "child_welfare_submissions",
+  "solo_parent_applications",
+  "livelihood_applications",
+]
 
-  for (const k of storageKeys) {
+export function purgeLegacyLocalTestData() {
+  if (typeof window === "undefined" || !window.localStorage) return
+
+  for (const k of ALL_STORAGE_KEYS) {
     try {
       const raw = localStorage.getItem(k)
       if (raw) {
@@ -647,17 +643,14 @@ export async function cleanupRenzTestData() {
         if (Array.isArray(list)) {
           const filtered = list.filter((item: any) => {
             const str = JSON.stringify(item).toLowerCase()
-            return !str.includes("renz") && !str.includes("110000572516915") && !str.includes("millares")
+            return !TARGET_TEST_MATCHES.some((m) => str.includes(m))
           })
           localStorage.setItem(k, JSON.stringify(filtered))
         } else if (typeof list === "object" && list !== null) {
           const newObj = { ...list }
           Object.keys(newObj).forEach((objKey) => {
-            if (
-              objKey.toLowerCase().includes("renz") ||
-              objKey.includes("110000572516915") ||
-              objKey.toLowerCase().includes("millares")
-            ) {
+            const lowerKey = objKey.toLowerCase()
+            if (TARGET_TEST_MATCHES.some((m) => lowerKey.includes(m))) {
               delete newObj[objKey]
             }
           })
@@ -666,13 +659,46 @@ export async function cleanupRenzTestData() {
       }
     } catch {}
   }
-
-  // 3. Dispatch events
-  window.dispatchEvent(new Event("financial_disbursements_updated"))
-  window.dispatchEvent(new Event("appointments_updated"))
-  window.dispatchEvent(new Event("pwd_senior_applications_updated"))
-  window.dispatchEvent(new Event("aics_applications_updated"))
-  window.dispatchEvent(new Event("applications_updated"))
-  window.dispatchEvent(new Event("storage"))
 }
 
+// Automatically execute purge on module load
+try {
+  purgeLegacyLocalTestData()
+} catch {}
+
+export async function cleanupRenzTestData() {
+  try {
+    // 1. Backend cleanup calls
+    await Promise.allSettled([
+      fetch(`${API_BASE}/api/auth/reset-test-citizen?email=renzoe09062@gmail.com`),
+      fetch(`${API_BASE}/api/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/cleanup-user/110000572516915`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/cleanup-user/kris`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/cleanup-user/renz`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/cleanup-user/millares`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/aics/applications/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/aics/applications/cleanup-user/110000572516915`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/aics/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/aics/cleanup-user/110000572516915`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/appointments/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/appointments/cleanup-user/110000572516915`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/financial-aid/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/financial-aid/cleanup-user/110000572516915`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/pwd-senior/applications/cleanup-user/110000872276939`, { method: "DELETE" }),
+      fetch(`${API_BASE}/api/pwd-senior/applications/cleanup-user/110000572516915`, { method: "DELETE" }),
+    ])
+  } catch {}
+
+  // 2. LocalStorage cleanup
+  purgeLegacyLocalTestData()
+
+  // 3. Dispatch events
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("financial_disbursements_updated"))
+    window.dispatchEvent(new Event("appointments_updated"))
+    window.dispatchEvent(new Event("pwd_senior_applications_updated"))
+    window.dispatchEvent(new Event("aics_applications_updated"))
+    window.dispatchEvent(new Event("applications_updated"))
+    window.dispatchEvent(new Event("storage"))
+  }
+}

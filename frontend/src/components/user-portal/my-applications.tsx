@@ -35,6 +35,7 @@ import {
   checkAndAutoReleaseScheduledDisbursements,
   isIdOrDocumentService,
   isTrainingService,
+  purgeLegacyLocalTestData,
 } from "../../utils/financialAidSync"
 import { useLanguage } from "../ui/language-context"
 import MaskedText from "../ui/masked-text"
@@ -1750,6 +1751,7 @@ export default function MyApplications() {
       isFetchingUserAppsRef.current = true
 
       try {
+        purgeLegacyLocalTestData()
         checkAndAutoReleaseScheduledDisbursements()
 
         const userProfile = getCurrentUserProfile()

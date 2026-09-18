@@ -17,6 +17,7 @@ import {
   checkAndAutoReleaseScheduledDisbursements,
   parseAppointmentDateTime,
   isIdOrDocumentService,
+  purgeLegacyLocalTestData,
 } from "../../utils/financialAidSync"
 import { API_BASE } from "../../config/api"
 import { getLoggedInUserQcid, getCurrentUserProfile } from "../../utils/userProfile"
@@ -25,6 +26,7 @@ import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
 function getInitialDisbursementsForUser(): SyncedDisbursementRecord[] {
   try {
+    purgeLegacyLocalTestData()
     const userProfile = getCurrentUserProfile()
     const qcId = getLoggedInUserQcid() || userProfile.qcidNo
     const userFirst = (userProfile.firstName || "").trim().toLowerCase()

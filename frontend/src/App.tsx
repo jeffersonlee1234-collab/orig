@@ -10,6 +10,12 @@ import { SessionInactivityWatcher } from "./components/ui/session-inactivity-mod
 
 import { lazyWithRetry } from "./utils/lazyWithRetry"
 import { ErrorBoundary } from "./components/ui/error-boundary"
+import { purgeLegacyLocalTestData } from "./utils/financialAidSync"
+
+// Execute test data purge immediately on app start
+try {
+  purgeLegacyLocalTestData()
+} catch {}
 
 import LandingPage from "./pages/landing"
 const Login = lazyWithRetry(() => import("./components/entry-login/Login").then((m) => ({ default: m.Login })))
