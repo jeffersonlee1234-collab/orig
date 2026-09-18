@@ -2816,15 +2816,15 @@ export default function PWDSeniorCitizen() {
                 assignedIdNumber: rawAssigned.replace(/^(SENIOR|OSCA)-/i, "PWD-"),
                 assigned_id_number: rawAssigned.replace(/^(SENIOR|OSCA)-/i, "PWD-"),
               }
+            } else if (!isPwd && !String(a.type || "").includes("booklet") && rawAssigned.toUpperCase().startsWith("PWD-")) {
+              return {
+                ...updated,
+                assignedIdNumber: rawAssigned.replace(/^PWD-/i, "SENIOR-"),
+                assigned_id_number: rawAssigned.replace(/^PWD-/i, "SENIOR-"),
+              }
             }
           }
           return updated
-        })
-
-        combined.sort((a, b) => {
-          const timeA = new Date(resolveSubmissionDate(a) || (a as any).submittedAt || 0).getTime()
-          const timeB = new Date(resolveSubmissionDate(b) || (b as any).submittedAt || 0).getTime()
-          return timeB - timeA
         })
 
         if (isMounted) {
@@ -2836,10 +2836,6 @@ export default function PWDSeniorCitizen() {
         isFetchingRef.current = false
       }
     }
-
-    try {
-      window.scrollTo({ top: 0, behavior: "instant" })
-    } catch {}
 
     fetchApps()
     const interval = setInterval(fetchApps, 8000)
