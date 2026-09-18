@@ -22,6 +22,7 @@ import {
   checkAndAutoReleaseScheduledDisbursements,
   parseAppointmentDateTime,
   getDeletedDisbursementKeys,
+  isIdOrDocumentService,
 } from "../../utils/financialAidSync"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import MaskedText from "../ui/masked-text"
