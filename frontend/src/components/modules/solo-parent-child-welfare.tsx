@@ -401,19 +401,74 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
   return uniqueDocs.length > 0 ? uniqueDocs : docs
 }
 
-function safeDateIso(dateVal: any): string {
+function resolveSubmissionDate(a: any): string {
+  if (!a) return ""
+  if (typeof a === "string" || typeof a === "number") {
+    const d = new Date(a)
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+      return d.toISOString()
+    }
+  }
+  const candidates = [
+    a.submittedAt,
+    a.submitted_at,
+    a.created_at,
+    a.createdAt,
+    a.dateSubmitted,
+    a.date_submitted,
+    a.dateApplied,
+    a.date_applied,
+    a.extra_data?.submittedAt,
+    a.extra_data?.submitted_at,
+    a.extra_data?.created_at,
+    a.extra_data?.createdAt,
+    a.extra_data?.dateSubmitted,
+    a.extra_data?.date_submitted,
+    a.form_data?.submittedAt,
+    a.form_data?.created_at,
+    a.form_data?.dateSubmitted,
+  ]
+  for (const c of candidates) {
+    if (c) {
+      const d = new Date(c)
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+        return d.toISOString()
+      }
+    }
+  }
+  const idStr = String(a.id || "")
+  const match = idStr.match(/(\d{12,13})/)
+  if (match) {
+    const d = new Date(Number(match[1]))
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+      return d.toISOString()
+    }
+  }
+  return ""
+}
+
+function safeDateIso(dateVal: any, fallbackApp?: any): string {
+  if (!dateVal && fallbackApp) {
+    dateVal = resolveSubmissionDate(fallbackApp)
+  }
   if (!dateVal) return ""
   const d = new Date(dateVal)
   return isNaN(d.getTime()) ? "" : d.toISOString()
 }
 
-function formatSafeDate(dateVal: any): string {
+function formatSafeDate(dateVal: any, fallbackApp?: any): string {
+  if (!dateVal && fallbackApp) {
+    dateVal = resolveSubmissionDate(fallbackApp)
+  }
   if (!dateVal) return "—"
   const d = new Date(dateVal)
   return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
 }
 
-function formatSafeTime(dateVal: any): string {
+function formatSafeTime(dateVal: any, fallbackApp?: any): string {
+  if (!dateVal && fallbackApp) {
+    dateVal = resolveSubmissionDate(fallbackApp)
+  }
   if (!dateVal) return ""
   const d = new Date(dateVal)
   return isNaN(d.getTime())
@@ -421,7 +476,10 @@ function formatSafeTime(dateVal: any): string {
     : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
-function formatSafeDateTime(dateVal: any): string {
+function formatSafeDateTime(dateVal: any, fallbackApp?: any): string {
+  if (!dateVal && fallbackApp) {
+    dateVal = resolveSubmissionDate(fallbackApp)
+  }
   if (!dateVal) return "—"
   const d = new Date(dateVal)
   return isNaN(d.getTime()) ? "—" : d.toLocaleString()
@@ -1339,10 +1397,10 @@ function ApplicationCard({ app, onView, onShowCard, allSubmissions }: CardProps)
           </div>
           <p className="gw-mono text-xs mb-1" style={{ color: "var(--ink-faint)" }}>REF {app.referenceNumber}</p>
           <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-            {app.submittedAt && formatSafeDate(app.submittedAt) !== "—" ? (
+            {formatSafeDate(app.submittedAt, app) !== "—" ? (
               <>
-                Submitted {formatSafeDate(app.submittedAt)}
-                {formatSafeTime(app.submittedAt) ? ` · ${formatSafeTime(app.submittedAt)}` : ""}
+                Submitted {formatSafeDate(app.submittedAt, app)}
+                {formatSafeTime(app.submittedAt, app) ? ` · ${formatSafeTime(app.submittedAt, app)}` : ""}
               </>
             ) : (
               <>Submitted —</>

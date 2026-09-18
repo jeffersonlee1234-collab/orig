@@ -70,6 +70,8 @@ async function initPwdSeniorTable() {
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS reason_for_replacement TEXT;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+      ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
     `);
     console.log('[DB] pwd_senior_applications table ready.');
 
@@ -282,16 +284,34 @@ exports.getAllApplications = async (req, res) => {
 
       const cleanPhoto = rawPhoto;
 
+      const rawDateCandidate = row.submitted_at || row.created_at || extra.submittedAt || extra.submitted_at || extra.dateSubmitted || extra.date_submitted || extra.created_at || extra.createdAt || extra.dateApplied || extra.date_applied;
+      let resolvedSubmittedAt = null;
+      if (rawDateCandidate) {
+        const d = new Date(rawDateCandidate);
+        if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+          resolvedSubmittedAt = d.toISOString();
+        }
+      }
+      if (!resolvedSubmittedAt && row.id) {
+        const match = String(row.id).match(/(\d{12,13})/);
+        if (match) {
+          const d = new Date(Number(match[1]));
+          if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+            resolvedSubmittedAt = d.toISOString();
+          }
+        }
+      }
+
       return {
         id: row.id,
         referenceNumber: row.reference_number,
         category: row.category,
         type: row.type,
-        submittedAt: row.submitted_at || row.created_at || extra.submittedAt || extra.created_at || extra.dateSubmitted || (row.id && String(row.id).match(/\b(1\d{11,12})\b/) ? new Date(Number(String(row.id).match(/\b(1\d{11,12})\b/)[1])).toISOString() : null) || null,
-        created_at: row.created_at || row.submitted_at || extra.created_at || extra.createdAt || extra.submittedAt || null,
-        submitted_at: row.submitted_at || row.created_at || extra.submitted_at || extra.submittedAt || null,
-        date_applied: row.submitted_at || row.created_at || extra.dateApplied || extra.date_applied || null,
-        dateApplied: row.submitted_at || row.created_at || extra.dateApplied || extra.date_applied || null,
+        submittedAt: resolvedSubmittedAt || (row.submitted_at ? new Date(row.submitted_at).toISOString() : null) || null,
+        created_at: resolvedSubmittedAt || (row.created_at ? new Date(row.created_at).toISOString() : null) || null,
+        submitted_at: resolvedSubmittedAt || (row.submitted_at ? new Date(row.submitted_at).toISOString() : null) || null,
+        date_applied: resolvedSubmittedAt || (row.submitted_at ? new Date(row.submitted_at).toISOString() : null) || null,
+        dateApplied: resolvedSubmittedAt || (row.submitted_at ? new Date(row.submitted_at).toISOString() : null) || null,
         userId: row.user_id || extra.userId || extra.user_id || '',
         user_id: row.user_id || extra.user_id || extra.userId || '',
         qcid: row.qcid || extra.qcid || extra.qcidNo || extra.qcidNumber || '',
