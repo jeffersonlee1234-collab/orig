@@ -3250,8 +3250,6 @@ export default function MyApplications() {
               (d.applicantName && d.applicantName.toLowerCase().trim() === selectedApp.applicantName.toLowerCase().trim())
           )
 
-          const apptDate = matchDisb?.appointmentDate || new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-          const apptTime = matchDisb?.appointmentTime || "10:00 AM"
           const payoutVenue = matchDisb?.venue || "Quezon City Hall"
 
           return (
@@ -3685,8 +3683,6 @@ export default function MyApplications() {
                       (d.applicantName && d.applicantName.toLowerCase().trim() === app.applicantName.toLowerCase().trim())
                   )
 
-                  const apptDate = matchDisb?.appointmentDate || new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-                  const apptTime = matchDisb?.appointmentTime || "10:00 AM"
                   const payoutVenue = matchDisb?.venue || "Quezon City Hall"
 
                   return (
