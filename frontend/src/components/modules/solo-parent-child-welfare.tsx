@@ -1554,7 +1554,7 @@ function SoloParentCardFront({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
       style={{
         background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #eff6ff 100%)",
         WebkitPrintColorAdjust: "exact",
@@ -1679,7 +1679,7 @@ function SoloParentCardBack({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
         background: "linear-gradient(135deg, #fff5f5 0%, #ffffff 50%, #fef2f2 100%)",
         WebkitPrintColorAdjust: "exact",

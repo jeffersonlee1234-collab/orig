@@ -1130,7 +1130,7 @@ function OfficialFrontCardView({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none text-slate-900 flex flex-col justify-between"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none text-slate-900 flex flex-col justify-between"
       style={{
         background: theme.isPwd
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
@@ -1279,7 +1279,7 @@ function OfficialBackCardView({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
         background: theme.isPwd
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"

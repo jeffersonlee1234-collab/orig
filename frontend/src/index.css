@@ -93,15 +93,15 @@ main {
   color: var(--color-foreground);
 }
 
-.dark .bg-white:not(#official-id-card-print-area):not(#official-id-card-print-area *) {
+.dark .bg-white:not(#official-id-card-print-area):not(#official-id-card-print-area *):not(.official-id-card-render):not(.official-id-card-render *) {
   background-color: var(--color-card) !important;
   color: var(--color-foreground);
 }
 
-.dark .bg-slate-50:not(#official-id-card-print-area):not(#official-id-card-print-area *),
-.dark .bg-gray-50:not(#official-id-card-print-area):not(#official-id-card-print-area *),
-.dark .bg-slate-100:not(#official-id-card-print-area):not(#official-id-card-print-area *),
-.dark .bg-gray-100:not(#official-id-card-print-area):not(#official-id-card-print-area *),
+.dark .bg-slate-50:not(#official-id-card-print-area):not(#official-id-card-print-area *):not(.official-id-card-render):not(.official-id-card-render *),
+.dark .bg-gray-50:not(#official-id-card-print-area):not(#official-id-card-print-area *):not(.official-id-card-render):not(.official-id-card-render *),
+.dark .bg-slate-100:not(#official-id-card-print-area):not(#official-id-card-print-area *):not(.official-id-card-render):not(.official-id-card-render *),
+.dark .bg-gray-100:not(#official-id-card-print-area):not(#official-id-card-print-area *):not(.official-id-card-render):not(.official-id-card-render *),
 .dark .bg-slate-50\/40,
 .dark .bg-slate-50\/50,
 .dark .bg-slate-50\/60,
@@ -459,4 +459,165 @@ body.dark .gw-root {
   }
 }
 
+/* ========================================================================= */
+/* Official ID Card Visual Preservation (Immune to Dark Mode Styles)          */
+/* ========================================================================= */
+.official-id-card-render {
+  color-scheme: light !important;
+}
 
+.official-id-card-render,
+.official-id-card-render * {
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .official-id-card-render {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+}
+
+.dark .official-id-card-render .text-slate-950 {
+  color: #020617 !important;
+}
+.dark .official-id-card-render .text-slate-900 {
+  color: #0f172a !important;
+}
+.dark .official-id-card-render .text-slate-800 {
+  color: #1e293b !important;
+}
+.dark .official-id-card-render .text-slate-700 {
+  color: #334155 !important;
+}
+.dark .official-id-card-render .text-slate-600 {
+  color: #475569 !important;
+}
+.dark .official-id-card-render .text-slate-500 {
+  color: #64748b !important;
+}
+.dark .official-id-card-render .text-slate-400 {
+  color: #94a3b8 !important;
+}
+.dark .official-id-card-render .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.dark .official-id-card-render .text-gray-900 {
+  color: #111827 !important;
+}
+.dark .official-id-card-render .text-gray-800 {
+  color: #1f2937 !important;
+}
+.dark .official-id-card-render .text-gray-700 {
+  color: #374151 !important;
+}
+.dark .official-id-card-render .text-gray-600 {
+  color: #4b5563 !important;
+}
+.dark .official-id-card-render .text-gray-500 {
+  color: #6b7280 !important;
+}
+.dark .official-id-card-render .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.dark .official-id-card-render .text-blue-950 {
+  color: #172554 !important;
+}
+.dark .official-id-card-render .text-blue-900 {
+  color: #1e3a8a !important;
+}
+.dark .official-id-card-render .text-blue-800 {
+  color: #1e40af !important;
+}
+.dark .official-id-card-render .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+.dark .official-id-card-render .text-blue-600 {
+  color: #2563eb !important;
+}
+.dark .official-id-card-render .text-blue-100 {
+  color: #dbeafe !important;
+}
+
+.dark .official-id-card-render .text-amber-950 {
+  color: #451a03 !important;
+}
+.dark .official-id-card-render .text-amber-900 {
+  color: #78350f !important;
+}
+.dark .official-id-card-render .text-amber-800 {
+  color: #92400e !important;
+}
+.dark .official-id-card-render .text-amber-700 {
+  color: #b45309 !important;
+}
+.dark .official-id-card-render .text-amber-600 {
+  color: #d97706 !important;
+}
+.dark .official-id-card-render .text-amber-300 {
+  color: #fcd34d !important;
+}
+
+.dark .official-id-card-render .text-red-700 {
+  color: #b91c1c !important;
+}
+.dark .official-id-card-render .text-emerald-800 {
+  color: #065f46 !important;
+}
+
+.dark .official-id-card-render .bg-white {
+  background-color: #ffffff !important;
+}
+.dark .official-id-card-render .bg-white\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+.dark .official-id-card-render .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+.dark .official-id-card-render .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+.dark .official-id-card-render .bg-slate-50,
+.dark .official-id-card-render .bg-slate-50\/90 {
+  background-color: #f8fafc !important;
+}
+.dark .official-id-card-render .bg-amber-50,
+.dark .official-id-card-render .bg-amber-50\/80 {
+  background-color: #fffbeb !important;
+}
+.dark .official-id-card-render .bg-blue-50,
+.dark .official-id-card-render .bg-blue-50\/80 {
+  background-color: #eff6ff !important;
+}
+.dark .official-id-card-render .bg-amber-400 {
+  background-color: #fbbf24 !important;
+}
+.dark .official-id-card-render .bg-slate-950 {
+  background-color: #020617 !important;
+}
+
+.dark .official-id-card-render .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+.dark .official-id-card-render .border-slate-200,
+.dark .official-id-card-render .border-slate-200\/80 {
+  border-color: #e2e8f0 !important;
+}
+.dark .official-id-card-render .border-slate-400 {
+  border-color: #94a3b8 !important;
+}
+.dark .official-id-card-render .border-amber-200,
+.dark .official-id-card-render .border-amber-200\/80,
+.dark .official-id-card-render .border-amber-200\/60,
+.dark .official-id-card-render .border-amber-200\/70 {
+  border-color: #fde68a !important;
+}
+.dark .official-id-card-render .border-amber-500\/40 {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+.dark .official-id-card-render .border-blue-200,
+.dark .official-id-card-render .border-blue-200\/80,
+.dark .official-id-card-render .border-blue-200\/60,
+.dark .official-id-card-render .border-blue-200\/70 {
+  border-color: #bfdbfe !important;
+}

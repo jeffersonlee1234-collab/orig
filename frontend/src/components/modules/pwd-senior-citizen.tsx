@@ -1290,7 +1290,7 @@ function OfficialIdCardFront({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between"
       style={{
         background: isPwdApp
           ? "linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #eff6ff 100%)"
@@ -1446,7 +1446,7 @@ function OfficialIdCardBack({
   return (
     <div
       ref={cardRef}
-      className="w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
+      className="official-id-card-render w-[500px] h-[315px] rounded-2xl overflow-hidden shadow-xl border border-slate-300 relative bg-white select-none flex flex-col justify-between text-slate-900"
       style={{
         background: isPwdApp
           ? "linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fefce8 100%)"
