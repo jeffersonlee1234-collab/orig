@@ -159,26 +159,25 @@ function saveBase64File(base64Data, filenamePrefix = 'pwd-senior') {
   }
 }
 
-function sanitizeDocumentList(docs) {
+function sanitizeDocumentList(docs, shouldWriteDisk = false) {
   if (!Array.isArray(docs)) return [];
   return docs.map((doc) => {
     if (!doc || typeof doc !== 'object') return doc;
     const cleanDoc = { ...doc };
 
-    // Save base64 image if present to physical disk
+    // Save base64 image if present to physical disk ONLY on creation
     const rawData = cleanDoc.dataUrl || cleanDoc.base64 || cleanDoc.data || 
       (cleanDoc.fileUrl && cleanDoc.fileUrl.startsWith('data:') ? cleanDoc.fileUrl : null) ||
       (cleanDoc.previewUrl && cleanDoc.previewUrl.startsWith('data:') ? cleanDoc.previewUrl : null);
     if (rawData && typeof rawData === 'string' && rawData.startsWith('data:')) {
       cleanDoc.dataUrl = rawData;
       cleanDoc.base64 = rawData;
-      const savedPath = saveBase64File(rawData, cleanDoc.name || cleanDoc.filename || 'document');
-      if (savedPath) {
-        cleanDoc.fileUrl = savedPath;
-        cleanDoc.previewUrl = savedPath;
-      } else {
-        cleanDoc.fileUrl = rawData;
-        cleanDoc.previewUrl = rawData;
+      if (shouldWriteDisk) {
+        const savedPath = saveBase64File(rawData, cleanDoc.name || cleanDoc.filename || 'document');
+        if (savedPath) {
+          cleanDoc.fileUrl = savedPath;
+          cleanDoc.previewUrl = savedPath;
+        }
       }
     }
 
@@ -209,13 +208,12 @@ function sanitizeDocumentList(docs) {
         if (rawF && typeof rawF === 'string' && rawF.startsWith('data:')) {
           cleanF.dataUrl = rawF;
           cleanF.base64 = rawF;
-          const savedF = saveBase64File(rawF, cleanF.name || cleanF.filename || 'file');
-          if (savedF) {
-            cleanF.fileUrl = savedF;
-            cleanF.previewUrl = savedF;
-          } else {
-            cleanF.fileUrl = rawF;
-            cleanF.previewUrl = rawF;
+          if (shouldWriteDisk) {
+            const savedF = saveBase64File(rawF, cleanF.name || cleanF.filename || 'file');
+            if (savedF) {
+              cleanF.fileUrl = savedF;
+              cleanF.previewUrl = savedF;
+            }
           }
         }
         if (!cleanF.fileUrl && cleanF.filename) {
@@ -421,7 +419,7 @@ exports.createApplication = async (req, res) => {
     const emRel = body.emergencyRelationship || body.relationshipToApplicant || '';
     const emAddr = body.emergencyAddress || body.emergencyResidentialAddress || '';
 
-    const cleanDocs = sanitizeDocumentList(body.documents || []);
+    const cleanDocs = sanitizeDocumentList(body.documents || [], true);
 
     const photoDoc = cleanDocs.find((d) => /2x2|photo|picture|id_pic|avatar/i.test(d.name || d.filename || ''));
     let resolvedPhoto = body.applicantPhoto || body.photoUrl || (photoDoc ? (photoDoc.dataUrl || photoDoc.base64 || photoDoc.fileUrl || photoDoc.previewUrl) : '') || '';
