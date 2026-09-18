@@ -390,20 +390,20 @@ export default function ApplyFinancialAid() {
       return {
         bg: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700/80",
         icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
-        label: "RELEASED",
+        label: "APPROVED • RELEASED",
       }
     }
     if (hasAppointment) {
       return {
-        bg: "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700/80",
-        icon: <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />,
-        label: "APPOINTMENT SCHEDULED",
+        bg: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700/80",
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
+        label: "APPROVED • APPOINTMENT SCHEDULED",
       }
     }
     return {
-      bg: "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700/80",
-      icon: <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />,
-      label: "PENDING RELEASE",
+      bg: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700/80",
+      icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
+      label: "APPROVED • READY FOR PAYOUT",
     }
   }
 
@@ -414,189 +414,189 @@ export default function ApplyFinancialAid() {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
           {t("financialAidOverviewTitle") || "Financial Aid Overview"}
         </h1>
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+          {t("financialAidSubtitle") || "Awtomatikong nakatala rito ang inyong naaprubahang ayuda, itinakdang halaga, at iskedyul ng payout appointment sa City Hall."}
+        </p>
       </div>
 
-      {/* ── AUTOMATIC INTEGRATION NOTICE BANNER ── */}
-      <div className="bg-blue-50/80 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+      {/* ── AUTO-SYNC STATUS BANNER ── */}
+      <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl p-4 md:p-5 flex items-start gap-3.5 text-xs text-blue-900 dark:text-blue-200 shadow-2xs">
+        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
           <ShieldCheck className="w-5 h-5" />
         </div>
-        <div className="space-y-1 text-xs">
-          <h3 className="text-sm font-bold text-blue-950 dark:text-white">
-            {t("autoConnectNoticeTitle") || "Awtomatikong Nakakabit ang Appointment at Ayuda"}
-          </h3>
-          <p className="text-blue-900/90 dark:text-slate-300 leading-relaxed">
+        <div className="space-y-1">
+          <span className="font-bold text-sm block text-blue-950 dark:text-blue-100">
+            {t("autoConnectNoticeTitle") || "Awtomatikong Konektado ang Ayuda at Appointment"}
+          </span>
+          <p className="text-blue-800/90 dark:text-blue-300 leading-relaxed">
             {t("autoConnectNoticeDesc") || "Hindi na kailangan mag-set ng halaga o magsumite ulit. Kapag na-aprubahan ng Admin ang inyong aplikasyon, awtomatikong lalabas ang itinakdang Fixed Amount at ang petsa/oras ng inyong Payout Appointment."}
           </p>
         </div>
       </div>
 
-      {/* ───────────────────────────────────────────────────────────────── */}
-      {/* ── ACTIVE DISBURSEMENTS LIST ── */}
-      {/* ───────────────────────────────────────────────────────────────── */}
+      {/* ── DISBURSEMENTS LIST ── */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            {t("myDisbursementsTitle", { count: String(disbursements.length) }) || `Aking mga Ayuda at Payout Record (${disbursements.length})`}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            {t("myFinancialAidRecordsTitle") || "Mga Rekord ng Aking Ayuda at Payout"} ({disbursements.length})
           </h2>
         </div>
 
         {disbursements.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-800 rounded-2xl p-10 text-center space-y-4 shadow-xs">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-xs">
-              <Wallet className="w-7 h-7" />
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <FileText className="w-6 h-6" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-gray-800 dark:text-white">{t("noDisbursementsTitle") || "Walang Kasalukuyang Ayuda Record"}</h3>
-              <p className="text-xs text-gray-500 dark:text-slate-400 max-w-md mx-auto">
-                {t("noDisbursementsDesc") || "Wala ka pang naisusumiteng aplikasyon para sa ayuda. Mag-apply para sa Medical, Transportation, Food, o iba pang AICS serbisyo upang awtomatikong pumasok dito ang iyong disbursement record."}
+            <div className="max-w-md mx-auto space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                {t("noDisbursementRecordsTitle") || "Walang Nakatalang Ayuda sa Kasalukuyan"}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+                {t("noDisbursementRecordsDesc") || "Kapag naaprubahan ng Social Worker ang inyong AICS o PWD/Senior Social Assistance application, awtomatikong lalabas dito ang inyong Payout Appointment at Release Voucher."}
               </p>
             </div>
-            <a
-              href="/portal/aics/medical"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs hover:shadow-sm"
-            >
-              <FileText className="w-4 h-4" />
-              <span>{t("applyForAssistance") || "Mag-apply ng AICS Assistance"}</span>
-            </a>
           </div>
         ) : (
           <div className="space-y-4">
             {disbursements.map((d) => {
+              const isReleased = d.status === "RELEASED"
               const hasAppt = Boolean(d.appointmentDate)
-              const dt = parseAppointmentDateTime(d.appointmentDate, d.appointmentTime)
-              const isTimeReached = Boolean(dt && new Date().getTime() >= dt.getTime())
-              const effectiveStatus: DisbursementStage = (d.status === "RELEASED" || isTimeReached) ? "RELEASED" : "PENDING"
-              const isReleased = effectiveStatus === "RELEASED"
-              const badge = getStageBadge(effectiveStatus, hasAppt)
+              const badge = getStageBadge(d.status, hasAppt)
+              const displayApptDate = d.appointmentDate || d.dateApproved || new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+              const displayApptTime = d.appointmentTime || "10:00 AM"
 
-            return (
-              <div
-                key={d.id || d.disbursementId}
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-5"
-              >
-                {/* Top Voucher Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">
-                        {d.disbursementId}
-                      </span>
-                      <span className="text-[11px] font-medium text-gray-400 dark:text-slate-400">
-                        • Application Ref: <strong className="text-gray-700 dark:text-slate-200">{d.applicationRef}</strong>
-                      </span>
+              return (
+                <div
+                  key={d.id || d.disbursementId}
+                  className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 md:p-6 shadow-xs space-y-5 transition-all hover:border-gray-300 dark:hover:border-slate-700"
+                >
+                  {/* ── TOP BAR: TYPE & AMOUNT ── */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-900/60">
+                          {d.disbursementId}
+                        </span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">•</span>
+                        <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+                          {t("applicationRefLabel") || "Application Ref:"} <strong className="text-gray-700 dark:text-slate-300 font-mono">{d.applicationRef}</strong>
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white">{d.assistanceType}</h3>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">{d.assistanceType}</h3>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold block">
+                          {t("approvedFixedAmount") || "Approved Fixed Amount"}
+                        </span>
+                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                          ₱{d.fixedAmount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold block">
-                        {t("approvedFixedAmount") || "Approved Fixed Amount"}
+                  {/* ── APPOINTMENT & STATUS DETAILS ── */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Appointment Box */}
+                    <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2">
+                      <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {t("payoutApptSchedule") || "Payout Appointment Schedule"}
                       </span>
-                      <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                        ₱{d.fixedAmount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── APPOINTMENT & STATUS DETAILS ── */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Appointment Box */}
-                  <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {t("payoutApptSchedule") || "Payout Appointment Schedule"}
-                    </span>
-                    {d.appointmentDate ? (
                       <div>
                         <p className="text-sm font-extrabold text-gray-900 dark:text-white">
-                          {d.appointmentDate}
+                          {displayApptDate}
                         </p>
                         <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3" />
-                          {d.appointmentTime || "10:00 AM"}
+                          <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                          {displayApptTime}
                         </p>
                       </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                        Inihahanda pa ng Admin ang inyong iskedyul ng appointment.
+                    </div>
+
+                    {/* Payout Location Box */}
+                    <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2">
+                      <span className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-red-500" />
+                        {t("payoutLocationVenue") || "Payout Location / Venue"}
+                      </span>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">
+                        {d.venue || "Quezon City Hall"}
                       </p>
-                    )}
-                  </div>
-
-                  {/* Payout Location Box */}
-                  <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-red-500" />
-                      {t("payoutLocationVenue") || "Payout Location / Venue"}
-                    </span>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                      {d.venue || "Quezon City Hall"}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Social Services Development Department Counter
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status Stepper */}
-                <div className="bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-gray-700 dark:text-slate-200">{t("financialAidStatusLabel") || "Katayuan ng Ayuda:"}</span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badge.bg}`}
-                    >
-                      {badge.icon}
-                      {badge.label}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        !isReleased
-                          ? "bg-amber-500/15 border-amber-500/40 text-amber-900 dark:text-amber-200 font-extrabold shadow-2xs ring-1 ring-amber-500/30"
-                          : "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold"
-                      }`}
-                    >
-                      <span className="text-[10px] block text-slate-500 dark:text-slate-400 uppercase font-semibold">Step 1</span>
-                      <span className="text-xs font-bold text-gray-900 dark:text-white">{t("step1PendingScheduled") || "STEP 1: PENDING / SCHEDULED"}</span>
-                      <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">{t("step1PendingDesc") || "Go to City Hall on the scheduled day"}</p>
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        isReleased
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
-                          : "bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/60 text-slate-400 dark:text-slate-500"
-                      }`}
-                    >
-                      <span className="text-[10px] block text-slate-500 dark:text-slate-400 uppercase font-semibold">Step 2</span>
-                      <span className="text-xs font-bold text-gray-900 dark:text-white">{t("step2Released") || "STEP 2: RELEASED"}</span>
-                      <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">{t("step2ReleasedDesc") || "Financial aid has been disbursed"}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Social Services Development Department Counter
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                {/* Instructions */}
-                <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3 text-xs text-slate-700 dark:text-slate-200 flex items-start gap-2">
-                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                  <div>
-                    {t("payoutReminderNotice") || (
-                      <>
-                        <span className="font-bold text-gray-900 dark:text-white">Appointment Reminder:</span> Please bring your <strong className="text-gray-900 dark:text-white">QCitizen ID</strong> or 1 Valid Government-Issued ID along with original copies of your documents at the designated payout time.
-                      </>
-                    )}
+                  {/* Status Stepper */}
+                  <div className="bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-gray-700 dark:text-slate-200">
+                        {t("financialAidStatusLabel") || "Katayuan ng Ayuda:"}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badge.bg}`}
+                      >
+                        {badge.icon}
+                        {badge.label}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div
+                        className={`p-3 rounded-xl border text-center transition-all ${
+                          !isReleased
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
+                            : "bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 font-semibold"
+                        }`}
+                      >
+                        <span className="text-[10px] block text-emerald-700 dark:text-emerald-400 uppercase font-semibold">Step 1</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">
+                          {t("step1ApprovedScheduled") || "STEP 1: APPROVED / SCHEDULED"}
+                        </span>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">
+                          {t("step1ApprovedDesc") || "Na-aprubahan na. Pumunta sa City Hall sa nakatakdang petsa."}
+                        </p>
+                      </div>
+
+                      <div
+                        className={`p-3 rounded-xl border text-center transition-all ${
+                          isReleased
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
+                            : "bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/60 text-slate-400 dark:text-slate-500"
+                        }`}
+                      >
+                        <span className="text-[10px] block text-slate-500 dark:text-slate-400 uppercase font-semibold">Step 2</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">
+                          {t("step2Released") || "STEP 2: CLAIMED / RELEASED"}
+                        </span>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">
+                          {t("step2ReleasedDesc") || "Naipagkaloob na ang ayuda sa benepisyaryo."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3 text-xs text-slate-700 dark:text-slate-200 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      {t("payoutReminderNotice") || (
+                        <>
+                          <span className="font-bold text-gray-900 dark:text-white">Appointment Reminder:</span> Please bring your <strong className="text-gray-900 dark:text-white">QCitizen ID</strong> or 1 Valid Government-Issued ID along with original copies of your documents at the designated payout time.
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
