@@ -426,6 +426,8 @@ export default function Appointments() {
           setAppointments(finalAppts)
           try {
             localStorage.setItem("cached_appointments_list", JSON.stringify(finalAppts))
+            localStorage.setItem("all_appointments", JSON.stringify(finalAppts))
+            localStorage.setItem("appointments", JSON.stringify(finalAppts))
           } catch {}
         }
       } catch (err) {

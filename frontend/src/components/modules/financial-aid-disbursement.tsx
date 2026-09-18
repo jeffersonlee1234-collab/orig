@@ -39,15 +39,28 @@ function getInitialDisbursementsForAdmin(): SyncedDisbursementRecord[] {
     // Load local appointments cache to map appointment dates/times immediately
     let appointmentsMap: Record<string, any> = {}
     try {
-      const rawAppts = localStorage.getItem("all_appointments") || localStorage.getItem("appointments")
+      const rawAppts =
+        localStorage.getItem("cached_appointments_list") ||
+        localStorage.getItem("all_appointments") ||
+        localStorage.getItem("appointments")
       if (rawAppts) {
         const parsedAppts = JSON.parse(rawAppts)
         if (Array.isArray(parsedAppts)) {
           parsedAppts.forEach((a: any) => {
-            if (a.reference_no) appointmentsMap[a.reference_no] = a
-            if (a.referenceNo) appointmentsMap[a.referenceNo] = a
-            if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
-            if (a.applicantName) appointmentsMap[a.applicantName.toLowerCase().trim()] = a
+            const date = a.date || a.appointment_date || a.appointmentDate || a.scheduledDate
+            const time = a.time || a.appointment_time || a.appointmentTime || a.scheduledTime
+            const status = a.status
+            const location = a.location || a.officeLocation || a.venue
+            const apptObj = { ...a, date, time, status, location }
+            if (a.reference_no) appointmentsMap[a.reference_no] = apptObj
+            if (a.referenceNo) appointmentsMap[a.referenceNo] = apptObj
+            if (a.concern) {
+              const cleanConcern = String(a.concern).toLowerCase().replace(/assistance/g, "").replace(/social/g, "").trim()
+              if (a.reference_no) appointmentsMap[`${a.reference_no}_${cleanConcern}`] = apptObj
+              if (a.referenceNo) appointmentsMap[`${a.referenceNo}_${cleanConcern}`] = apptObj
+            }
+            if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = apptObj
+            if (a.applicantName) appointmentsMap[a.applicantName.toLowerCase().trim()] = apptObj
           })
         }
       }
