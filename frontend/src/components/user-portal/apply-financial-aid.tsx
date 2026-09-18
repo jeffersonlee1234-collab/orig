@@ -21,6 +21,7 @@ import {
 import { API_BASE } from "../../config/api"
 import { getLoggedInUserQcid, getCurrentUserProfile } from "../../utils/userProfile"
 import { useLanguage } from "../ui/language-context"
+import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
 export default function ApplyFinancialAid() {
   const { t } = useLanguage()
@@ -273,7 +274,7 @@ export default function ApplyFinancialAid() {
 
         const processCandidate = (r: SyncedDisbursementRecord) => {
           if (!r || isIdOrDocumentService(r.assistanceType)) return
-          const key = (r.applicationRef || "").trim() || `${r.assistanceType.toLowerCase().trim()}_${r.applicantName.toLowerCase().trim()}`
+          const key = `${(r.applicationRef || "").trim()}_${(r.assistanceType || "").toLowerCase().trim()}` || (r.id || "").trim()
           if (!key) return
 
           if (!recordMap.has(key)) {
@@ -365,6 +366,10 @@ export default function ApplyFinancialAid() {
       }, 300)
     }
 
+    const unsubscribe = subscribeToRealtimeChanges(() => {
+      handleSync()
+    })
+
     window.addEventListener("financial_disbursements_updated", handleSync)
     window.addEventListener("appointments_updated", handleSync)
     window.addEventListener("storage", handleSync)
@@ -373,6 +378,7 @@ export default function ApplyFinancialAid() {
       isMounted = false
       clearTimeout(debounceTimeout)
       clearInterval(liveTimer)
+      unsubscribe()
       window.removeEventListener("financial_disbursements_updated", handleSync)
       window.removeEventListener("appointments_updated", handleSync)
       window.removeEventListener("storage", handleSync)

@@ -204,7 +204,8 @@ async function autoReleaseScheduledDisbursements() {
 // GET /api/financial-aid
 exports.getDisbursements = async (req, res) => {
   try {
-    await autoReleaseScheduledDisbursements();
+    // Run auto-release check asynchronously in background to ensure instant HTTP response
+    autoReleaseScheduledDisbursements().catch(() => {});
 
     // Auto-clean any ID card issuances from disbursements (only financial/social assistance is disbursed)
     try {
@@ -315,7 +316,7 @@ exports.getDisbursements = async (req, res) => {
         `SELECT reference_number, category, type, first_name, middle_name, last_name, suffix, approved_date
          FROM pwd_senior_applications 
          WHERE status IN ('approved', 'completed', 'for_release') 
-           AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR disability_class ILIKE '%assist%' OR service ILIKE '%assist%' OR extra_data ILIKE '%assist%')`
+           AND (type ILIKE '%assist%' OR category ILIKE '%assist%' OR disability_class ILIKE '%assist%')`
       );
       for (const row of approvedPwdAssistance.rows) {
         const disbCheck = await db.query(
@@ -423,7 +424,7 @@ exports.getDisbursements = async (req, res) => {
 // GET /api/financial-aid/user/:refOrQcId
 exports.getUserDisbursements = async (req, res) => {
   try {
-    await autoReleaseScheduledDisbursements();
+    autoReleaseScheduledDisbursements().catch(() => {});
     const { refOrQcId } = req.params;
 
     const result = await db.query(
