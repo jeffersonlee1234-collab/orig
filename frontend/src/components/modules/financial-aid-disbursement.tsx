@@ -574,11 +574,33 @@ export default function FinancialAidDisbursement() {
 
         // Attach schedule from appointments/cache and check real-time auto-release
         merged = merged.map((d) => {
-          const appt = appointmentsMap[d.applicationRef]
+          const baseRef = (d.applicationRef || "").split("-")[0].trim()
+          const cleanAssistance = String(d.assistanceType).toLowerCase().replace(/assistance/g, "").replace(/social/g, "").trim()
+
+          const appt =
+            appointmentsMap[`${d.applicationRef}_${cleanAssistance}`] ||
+            appointmentsMap[`${baseRef}_${cleanAssistance}`] ||
+            appointmentsMap[`${d.applicantName.toLowerCase().trim()}_${cleanAssistance}`] ||
+            appointmentsMap[d.applicationRef] ||
+            appointmentsMap[baseRef] ||
+            appointmentsMap[d.applicantName.toLowerCase().trim()]
+
           const cachedSched =
             localScheduledMap[d.id] ||
+            localScheduledMap[d.disbursementId] ||
             localScheduledMap[`${d.applicationRef}_${d.assistanceType}`] ||
-            (appointmentsMap[d.applicationRef] ? localScheduledMap[d.applicationRef] : null)
+            localScheduledMap[`${baseRef}_${d.assistanceType}`] ||
+            localScheduledMap[`${d.applicantName.toLowerCase().trim()}_${d.assistanceType}`] ||
+            localScheduledMap[d.applicationRef] ||
+            localScheduledMap[baseRef] ||
+            localScheduledMap[d.applicantName.toLowerCase().trim()]
+
+          const existingSaved = localDisbursements.find(
+            (x) =>
+              ((x.applicationRef && (x.applicationRef === d.applicationRef || x.applicationRef === baseRef)) ||
+                (x.applicantName && x.applicantName.toLowerCase().trim() === d.applicantName.toLowerCase().trim())) &&
+              (x.assistanceType === d.assistanceType || x.disbursementId === d.disbursementId)
+          )
 
           const hasValidAppt = Boolean(appt?.scheduled_date && appt?.status !== "pending")
           const hasValidCached = Boolean(cachedSched?.scheduledDate && cachedSched?.status !== "pending")
@@ -587,15 +609,20 @@ export default function FinancialAidDisbursement() {
             ? appt.scheduled_date
             : hasValidCached
             ? cachedSched.scheduledDate
-            : d.appointmentDate || null
+            : existingSaved?.appointmentDate || d.appointmentDate || null
 
           const finalApptTime = hasValidAppt
             ? appt.scheduled_time
             : hasValidCached
             ? cachedSched.scheduledTime
-            : d.appointmentTime || null
+            : existingSaved?.appointmentTime || d.appointmentTime || null
 
-          const finalVenue = appt?.office_location || cachedSched?.officeLocation || d.venue || "Quezon City Hall"
+          const finalVenue =
+            appt?.office_location ||
+            cachedSched?.officeLocation ||
+            existingSaved?.venue ||
+            d.venue ||
+            "Quezon City Hall"
 
           let isTimeReached = false
           if (finalApptDate && finalApptTime) {
@@ -606,7 +633,8 @@ export default function FinancialAidDisbursement() {
           }
 
           const isApptDone = Boolean(finalApptDate) && (appt?.status === "completed" || cachedSched?.status === "completed")
-          const isReleased = d.status === "RELEASED" || isApptDone || (Boolean(finalApptDate) && isTimeReached)
+          const wasAlreadyReleased = existingSaved?.status === "RELEASED" || d.status === "RELEASED"
+          const isReleased = wasAlreadyReleased || isApptDone || (Boolean(finalApptDate) && isTimeReached)
 
           return {
             ...d,
@@ -615,15 +643,16 @@ export default function FinancialAidDisbursement() {
             venue: finalVenue,
             status: isReleased ? ("RELEASED" as DisbursementStage) : ("PENDING" as DisbursementStage),
             releasedDate: isReleased
-              ? d.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
+              ? d.releasedDate || existingSaved?.releasedDate || (finalApptDate && finalApptTime ? `${finalApptDate} ${finalApptTime}` : `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`)
               : undefined,
             releasedBy: isReleased
-              ? d.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
+              ? d.releasedBy || existingSaved?.releasedBy || "Automated Scheduled Payout System / Disbursing Officer"
               : undefined,
           }
         })
 
         setDisbursements(merged)
+        saveDisbursements(merged)
       } finally {
         isSyncing = false
       }
