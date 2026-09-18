@@ -44,6 +44,9 @@ router.delete('/devices/:id', authController.removeDeviceSession);
 
 
 
+// GET & POST /api/auth/reset-test-citizen (Clean test citizen application history)
+router.all('/reset-test-citizen', authController.resetTestCitizenAccount);
+
 // GET /api/auth/migrate-passwords
 router.get('/migrate-passwords', authController.migrateAllPasswords);
 router.post('/migrate-passwords', authController.migrateAllPasswords);

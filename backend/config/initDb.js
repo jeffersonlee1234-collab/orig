@@ -694,6 +694,126 @@ async function initDb() {
       console.warn('[DB] Warning during admin account seed:', adminSeedErr.message);
     }
 
+    // Cleanup application history for test citizen renzoe09062@gmail.com / renzoe test accounts
+    try {
+      const targetEmails = ['renzoe09062@gmail.com', 'renzoe0906@gmail.com'];
+      const userRes = await db.query(
+        `SELECT id, email, qcid_number, first_name, last_name FROM users WHERE LOWER(email) = ANY($1) OR email ILIKE '%renzoe0906%'`,
+        [targetEmails]
+      );
+      
+      const userIds = userRes.rows.map(r => r.id);
+      const userEmails = userRes.rows.map(r => r.email);
+      const qcIds = userRes.rows.map(r => r.qcid_number).filter(Boolean);
+
+      // 1. Clean appointments
+      await db.query(
+        `DELETE FROM appointments 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid = ANY($3::text[])
+            OR reference_no = ANY($3::text[])
+            OR applicant_name ILIKE '%renz%millares%'
+            OR applicant_name ILIKE '%renzoe%'`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 2. Clean disbursements
+      await db.query(
+        `DELETE FROM financial_aid_disbursements 
+         WHERE application_ref = ANY($1::text[]) 
+            OR applicant_name ILIKE '%renz%millares%'
+            OR applicant_name ILIKE '%renzoe%'`,
+        [qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 3. Clean AICS applications & documents
+      const aicsApps = await db.query(
+        `SELECT id FROM aics_applications 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid_number = ANY($3::text[]) 
+            OR qc_id = ANY($3::text[])
+            OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => ({ rows: [] }));
+      if (aicsApps.rows.length > 0) {
+        const aicsIds = aicsApps.rows.map(r => r.id);
+        await db.query(`DELETE FROM aics_documents WHERE application_id = ANY($1::int[])`, [aicsIds]).catch(() => {});
+        await db.query(`DELETE FROM aics_applications WHERE id = ANY($1::int[])`, [aicsIds]).catch(() => {});
+      }
+
+      // 4. Clean PWD / Senior applications
+      await db.query(
+        `DELETE FROM pwd_senior_applications 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid = ANY($3::text[]) 
+            OR reference_number = ANY($3::text[])
+            OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 5. Clean Solo Parent & Child Welfare
+      await db.query(
+        `DELETE FROM solo_parent_child_welfare_applications 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid_number = ANY($3::text[]) 
+            OR reference_number = ANY($3::text[])
+            OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 6. Clean Livelihood
+      const lhApps = await db.query(
+        `SELECT id FROM livelihood_applications 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid = ANY($3::text[]) 
+            OR reference_number = ANY($3::text[])
+            OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => ({ rows: [] }));
+      if (lhApps.rows.length > 0) {
+        const lhIds = lhApps.rows.map(r => r.id);
+        await db.query(`DELETE FROM livelihood_monitoring WHERE application_id = ANY($1::int[])`, [lhIds]).catch(() => {});
+        await db.query(`DELETE FROM livelihood_assistance WHERE application_id = ANY($1::int[])`, [lhIds]).catch(() => {});
+        await db.query(`DELETE FROM livelihood_applications WHERE id = ANY($1::int[])`, [lhIds]).catch(() => {});
+      }
+
+      // 7. Clean Training applications
+      await db.query(
+        `DELETE FROM training_applications 
+         WHERE user_id = ANY($1::int[]) 
+            OR email = ANY($2::text[]) 
+            OR qcid = ANY($3::text[]) 
+            OR reference_number = ANY($3::text[])`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 8. Clean Notifications
+      await db.query(
+        `DELETE FROM user_notifications 
+         WHERE user_id = ANY($1::text[]) 
+            OR qcid_number = ANY($2::text[])`,
+        [userIds.map(String).length ? userIds.map(String) : [''], qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      // 9. Clean Activity Log
+      await db.query(
+        `DELETE FROM activity_log 
+         WHERE actor ILIKE '%renzoe%' 
+            OR actor ILIKE '%renz%millares%' 
+            OR reference_no = ANY($1::text[])`,
+        [qcIds.length ? qcIds : ['']]
+      ).catch(() => {});
+
+      console.log('[DB] Cleaned all application history for renzoe09062@gmail.com - Fresh citizen account ready.');
+    } catch (cleanupErr) {
+      console.warn('[DB] Warning during citizen account reset:', cleanupErr.message);
+    }
+
     console.log('✅ PostgreSQL database tables, indexes, and official admin account verified/initialized successfully.');
   } catch (err) {
     console.warn('⚠️ Note during database auto-init:', err.message);
