@@ -272,10 +272,6 @@ function AppointmentCard({
 // Helper: Robust single-key deduplicator for appointments
 function getAppointmentDeduplicationKey(a: { referenceNo?: string; applicantName?: string; concern?: string; module?: string }): string {
   const cleanRef = String(a.referenceNo || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase().trim()
-  if (cleanRef) {
-    return `ref_${cleanRef}`
-  }
-  const cleanName = String(a.applicantName || "").toLowerCase().replace(/[^a-z0-9]/g, "").trim()
   const cleanConcern = String(a.concern || "")
     .toLowerCase()
     .replace(/assistance/g, "")
@@ -284,6 +280,10 @@ function getAppointmentDeduplicationKey(a: { referenceNo?: string; applicantName
     .replace(/capital/g, "")
     .replace(/[^a-z0-9]/g, "")
     .trim()
+  if (cleanRef) {
+    return `ref_${cleanRef}_${cleanConcern}`
+  }
+  const cleanName = String(a.applicantName || "").toLowerCase().replace(/[^a-z0-9]/g, "").trim()
   return `name_${cleanName}_${cleanConcern}`
 }
 
@@ -333,58 +333,221 @@ export default function Appointments() {
           }
         } catch {}
 
-        // 1. Fetch from PostgreSQL /api/appointments (already aggregates all modules in DB)
-        const resDb = await fetch(`${API_BASE}/api/appointments`)
-        if (resDb.ok) {
-          const dataDb = await resDb.json()
-          if (Array.isArray(dataDb.deletedReferences)) {
-            dataDb.deletedReferences.forEach((r: string) => dismissedSet.add(String(r).trim().toLowerCase()))
-          }
-          if (dataDb.appointments && Array.isArray(dataDb.appointments)) {
-            const mapped = dataDb.appointments
-              .filter((a: any) => {
-                const concern = String(a.concern || '').toLowerCase()
-                const ref = String(a.qc_id || a.qcid || a.reference_no || a.reference_number || '').trim().toLowerCase()
-                const rawId = String(a.id || '').trim().toLowerCase()
-                if (dismissedSet.has(ref) || dismissedSet.has(rawId) || dismissedSet.has(`db-appt-${rawId}`)) {
-                  return false
+        // Fetch all endpoints concurrently in parallel
+        const [
+          resDbSettled,
+          resAicsSettled,
+          resPwdSettled,
+          resLivSettled,
+          resCwSettled,
+        ] = await Promise.allSettled([
+          fetch(`${API_BASE}/api/appointments`),
+          fetch(`${API_BASE}/api/aics/applications`),
+          fetch(`${API_BASE}/api/pwd-senior/applications`),
+          fetch(`${API_BASE}/api/livelihood/applications`),
+          fetch(`${API_BASE}/api/child-welfare/admin/all?limit=100`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+            },
+          }),
+        ])
+
+        // 1. Process DB appointments
+        if (resDbSettled.status === "fulfilled" && resDbSettled.value.ok) {
+          try {
+            const dataDb = await resDbSettled.value.json()
+            if (Array.isArray(dataDb.deletedReferences)) {
+              dataDb.deletedReferences.forEach((r: string) => dismissedSet.add(String(r).trim().toLowerCase()))
+            }
+            if (dataDb.appointments && Array.isArray(dataDb.appointments)) {
+              const mapped = dataDb.appointments
+                .filter((a: any) => {
+                  const concern = String(a.concern || '').toLowerCase()
+                  const ref = String(a.qc_id || a.qcid || a.reference_no || a.reference_number || '').trim().toLowerCase()
+                  const rawId = String(a.id || '').trim().toLowerCase()
+                  if (dismissedSet.has(ref) || dismissedSet.has(rawId) || dismissedSet.has(`db-appt-${rawId}`)) {
+                    return false
+                  }
+                  if (concern.includes('id card') || concern.includes('issuance') || concern.includes('replacement') || concern.includes('renewal')) {
+                    return false
+                  }
+                  return true
+                })
+                .map((a: any) => {
+                  const apptId = `db-appt-${a.id}`
+                  const ref = a.qc_id || a.qcid || a.reference_no || a.reference_number || ""
+                  const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${a.concern}`]
+                  return {
+                    id: apptId,
+                    referenceNo: ref,
+                    module: (a.module || "AICS") as ModuleKey,
+                    applicantName: a.applicant_name,
+                    submittedAt: a.created_at || new Date().toISOString(),
+                    concern: a.concern,
+                    status: (cached?.status || a.status || "pending") as AppointmentStatus,
+                    scheduledDate: cached?.scheduledDate || a.scheduled_date,
+                    scheduledTime: cached?.scheduledTime || a.scheduled_time,
+                    officeLocation: cached?.officeLocation || a.office_location,
+                    notes: cached?.notes || a.notes,
+                  }
+                })
+              appts.push(...mapped)
+            }
+          } catch {}
+        }
+
+        // 2. Process AICS
+        if (resAicsSettled.status === "fulfilled" && resAicsSettled.value.ok) {
+          try {
+            const data = await resAicsSettled.value.json()
+            if (data.applications && Array.isArray(data.applications)) {
+              data.applications.forEach((app: any) => {
+                if (app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released") {
+                  const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
+                  const cleanType = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
+                  const ref = app.qc_id || app.reference_no || app.reference_number || `AICS-2026-${String(app.id || 1).padStart(4, "0")}`
+                  const apptId = `aics-appt-${app.id || ref}`
+                  const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${cleanType}`]
+                  const isDone = app.status === "completed" || app.status === "released" || cached?.status === "completed"
+                  appts.push({
+                    id: apptId,
+                    referenceNo: ref,
+                    module: "AICS",
+                    applicantName: `${app.first_name || ""} ${app.middle_name || ""} ${app.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY APPLICANT",
+                    submittedAt: app.created_at || new Date().toISOString(),
+                    concern: cleanType,
+                    status: isDone ? "completed" : ((cached?.status || "pending") as AppointmentStatus),
+                    scheduledDate: cached?.scheduledDate,
+                    scheduledTime: cached?.scheduledTime,
+                    officeLocation: cached?.officeLocation || "Quezon City Hall",
+                    notes: cached?.notes,
+                  })
                 }
-                if (concern.includes('id card') || concern.includes('issuance') || concern.includes('replacement') || concern.includes('renewal')) {
-                  return false
-                }
-                return true
               })
-              .map((a: any) => {
-                const apptId = `db-appt-${a.id}`
-                const ref = a.qc_id || a.qcid || a.reference_no || a.reference_number || ""
-                const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${a.concern}`]
-                return {
+            }
+          } catch {}
+        }
+
+        // 3. Process PWD / Senior
+        let pwdSeniorApps: any[] = []
+        if (resPwdSettled.status === "fulfilled" && resPwdSettled.value.ok) {
+          try {
+            pwdSeniorApps = await resPwdSettled.value.json()
+          } catch {}
+        }
+        if (!pwdSeniorApps || pwdSeniorApps.length === 0) {
+          try {
+            const local = localStorage.getItem("pwd_senior_applications")
+            if (local) pwdSeniorApps = JSON.parse(local)
+          } catch {}
+        }
+        if (Array.isArray(pwdSeniorApps)) {
+          pwdSeniorApps.forEach((app: any) => {
+            const isAssistance =
+              app.type === "assistance" ||
+              app.type === "social-assistance" ||
+              String(app.category || "").toLowerCase().includes("assistance") ||
+              String(app.service || "").toLowerCase().includes("assistance") ||
+              String(app.assistanceType || "").toLowerCase().includes("assistance")
+            if (isAssistance && (app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released")) {
+              const isPwd = String(app.category || "").toUpperCase().includes("PWD")
+              const mod: ModuleKey = isPwd ? "PWD" : "Senior Citizen"
+              const concern = isPwd ? "PWD Social Assistance" : "Senior Social Assistance"
+              const ref = app.referenceNumber || app.reference_number || "PWD-QC-2026"
+              const apptId = `pwd-senior-appt-${app.id || ref}`
+              const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${concern}`]
+              const fullName = [app.firstName || app.first_name, app.middleName || app.middle_name, app.lastName || app.last_name, app.suffix].filter(Boolean).join(" ").trim().toUpperCase() || "BENEFICIARY"
+              const isDone = app.status === "completed" || app.status === "released" || cached?.status === "completed"
+              appts.push({
+                id: apptId,
+                referenceNo: ref,
+                module: mod,
+                applicantName: fullName,
+                submittedAt: app.submittedAt || app.created_at || new Date().toISOString(),
+                concern,
+                status: isDone ? "completed" : ((cached?.status || "pending") as AppointmentStatus),
+                scheduledDate: cached?.scheduledDate,
+                scheduledTime: cached?.scheduledTime,
+                officeLocation: cached?.officeLocation || "Quezon City Hall",
+                notes: cached?.notes,
+              })
+            }
+          })
+        }
+
+        // 4. Process Livelihood
+        if (resLivSettled.status === "fulfilled" && resLivSettled.value.ok) {
+          try {
+            const dataLiv = await resLivSettled.value.json()
+            if (Array.isArray(dataLiv)) {
+              dataLiv.forEach((l: any) => {
+                if (String(l.application_status || l.status).toLowerCase() === "approved") {
+                  const ref = l.reference_number || `LP-2026-${l.id}`
+                  const apptId = `liv-appt-${l.id || ref}`
+                  const concern = "Livelihood Capital Assistance"
+                  const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${concern}`]
+                  const fullName = `${l.first_name || ""} ${l.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY"
+                  appts.push({
+                    id: apptId,
+                    referenceNo: ref,
+                    module: "Livelihood",
+                    applicantName: fullName,
+                    submittedAt: l.created_at || new Date().toISOString(),
+                    concern,
+                    status: (cached?.status || "pending") as AppointmentStatus,
+                    scheduledDate: cached?.scheduledDate,
+                    scheduledTime: cached?.scheduledTime,
+                    officeLocation: cached?.officeLocation || "Quezon City Hall - SSDD Livelihood Center",
+                    notes: cached?.notes,
+                  })
+                }
+              })
+            }
+          } catch {}
+        }
+
+        // 5. Process Child Welfare
+        if (resCwSettled.status === "fulfilled" && resCwSettled.value.ok) {
+          try {
+            const dataCw = await resCwSettled.value.json()
+            const cwApps = Array.isArray(dataCw.applications) ? dataCw.applications : []
+            cwApps.forEach((c: any) => {
+              const st = String(c.application_status || c.status).toLowerCase()
+              if (st === "approved" || st === "for_release" || st === "released" || st === "completed") {
+                const ref = c.reference_number || `CW-2026-${c.id}`
+                const apptId = `cw-appt-${c.id || ref}`
+                const concern = c.category_title ? `${c.category_title} (Child Welfare)` : "Child Welfare Support"
+                const cached = localScheduledMap[apptId] || localScheduledMap[ref] || localScheduledMap[`${ref}_${concern}`]
+                const fullName = [c.guardian_first_name, c.guardian_last_name].filter(Boolean).join(" ").trim().toUpperCase() || (c.child_name || "").toUpperCase() || "BENEFICIARY"
+                const isDone = st === "released" || st === "completed" || cached?.status === "completed"
+                appts.push({
                   id: apptId,
                   referenceNo: ref,
-                  module: (a.module || "AICS") as ModuleKey,
-                  applicantName: a.applicant_name,
-                  submittedAt: a.created_at || new Date().toISOString(),
-                  concern: a.concern,
-                  status: (cached?.status || a.status || "pending") as AppointmentStatus,
-                  scheduledDate: cached?.scheduledDate || a.scheduled_date,
-                  scheduledTime: cached?.scheduledTime || a.scheduled_time,
-                  officeLocation: cached?.officeLocation || a.office_location,
-                  notes: cached?.notes || a.notes,
-                }
-              })
-            appts.push(...mapped)
-          }
+                  module: "Child Welfare",
+                  applicantName: fullName,
+                  submittedAt: c.created_at || new Date().toISOString(),
+                  concern,
+                  status: isDone ? "completed" : ((cached?.status || "pending") as AppointmentStatus),
+                  scheduledDate: cached?.scheduledDate,
+                  scheduledTime: cached?.scheduledTime,
+                  officeLocation: cached?.officeLocation || "Quezon City Hall - SSDD Child Welfare Section",
+                  notes: cached?.notes,
+                })
+              }
+            })
+          } catch {}
         }
 
         // Filter out any dismissed / deleted appointments
         appts = appts.filter((a) => {
           const ref = String(a.referenceNo || '').toLowerCase().trim()
           const id = String(a.id || '').toLowerCase().trim()
-          const rawId = id.replace(/^(db-appt-|aics-appt-|pwd-senior-appt-|cw-appt-)/, '')
+          const rawId = id.replace(/^(db-appt-|aics-appt-|pwd-senior-appt-|cw-appt-|liv-appt-)/, '')
           return !dismissedSet.has(ref) && !dismissedSet.has(id) && !dismissedSet.has(rawId)
         })
 
-        // Strict single-appointment deduplication by normalized reference / applicant
+        // Strict single-appointment deduplication by normalized reference / applicant and concern
         const dedupedMap = new Map<string, AppointmentRequest>()
         const statusPriority: Record<AppointmentStatus, number> = { completed: 3, scheduled: 2, pending: 1 }
 

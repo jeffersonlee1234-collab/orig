@@ -98,11 +98,11 @@ async function syncAndCleanAppointments() {
       )
     `).catch(() => {});
 
-    // Deduplicate appointments table
+    // Deduplicate appointments table by reference_no and concern
     await db.query(`
       DELETE FROM appointments a
       USING appointments b
-      WHERE a.id < b.id AND a.reference_no = b.reference_no
+      WHERE a.id < b.id AND a.reference_no = b.reference_no AND a.concern = b.concern
     `).catch(() => {});
 
     // Purge any appointments that are purely ID or Booklet requests (non-assistance)
@@ -130,7 +130,7 @@ async function syncAndCleanAppointments() {
         `INSERT INTO appointments
           (reference_no, module, applicant_name, concern, status, office_location, notes)
          SELECT $1, 'AICS', $2, $3, 'pending', 'Quezon City Hall', 'Awtomatikong pumasok mula sa na-aprubahang AICS aplikasyon para sa scheduling.'
-         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1)`,
+         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1 AND concern = $3)`,
         [refNo, fullName, cleanType]
       ).catch(() => {});
     }
@@ -152,7 +152,7 @@ async function syncAndCleanAppointments() {
         `INSERT INTO appointments
           (reference_no, module, applicant_name, concern, status, office_location, notes)
          SELECT $1, 'Livelihood', $2, 'Livelihood Capital Assistance', 'pending', 'Quezon City Hall - SSDD Livelihood Center', 'Awtomatikong pumasok mula sa na-aprubahang Livelihood Capital allocation para sa appointment scheduling.'
-         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1)`,
+         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1 AND concern = 'Livelihood Capital Assistance')`,
         [refNo, fullName]
       ).catch(() => {});
     }
@@ -176,8 +176,29 @@ async function syncAndCleanAppointments() {
         `INSERT INTO appointments
           (reference_no, module, applicant_name, concern, status, office_location, notes)
          SELECT $1, $2, $3, $4, 'pending', 'Quezon City Hall', 'Awtomatikong pumasok mula sa na-aprubahang Social Assistance aplikasyon para sa scheduling.'
-         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1)`,
+         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1 AND concern = $4)`,
         [refNo, mod, fullName, concern]
+      ).catch(() => {});
+    }
+
+    // Auto-populate appointments from approved Child Welfare / Solo Parent
+    const approvedCw = await db.query(
+      `SELECT reference_number, category_title, guardian_first_name, guardian_last_name, child_name 
+       FROM child_welfare_applications 
+       WHERE application_status IN ('approved', 'completed', 'for_release', 'released')`
+    ).catch(() => ({ rows: [] }));
+
+    for (const row of approvedCw.rows) {
+      const refNo = String(row.reference_number || '').trim();
+      if (!refNo || deletedSet.has(refNo.toLowerCase())) continue;
+      const fullName = [row.guardian_first_name, row.guardian_last_name].filter(Boolean).join(' ').trim().toUpperCase() || (row.child_name || '').toUpperCase() || 'BENEFICIARY';
+      const concern = row.category_title ? `${row.category_title} (Child Welfare)` : 'Child Welfare Support';
+      await db.query(
+        `INSERT INTO appointments
+          (reference_no, module, applicant_name, concern, status, office_location, notes)
+         SELECT $1, 'Child Welfare', $2, $3, 'pending', 'Quezon City Hall - SSDD Child Welfare Section', 'Awtomatikong pumasok mula sa na-aprubahang Child Welfare aplikasyon para sa scheduling.'
+         WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE reference_no = $1 AND concern = $3)`,
+        [refNo, fullName, concern]
       ).catch(() => {});
     }
   } catch (err) {
@@ -353,8 +374,8 @@ async function syncAppointmentWithDisbursement(appt) {
     const disbursementId = `DISB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const checkDisb = await db.query(
-      `SELECT * FROM financial_aid_disbursements WHERE application_ref = $1`,
-      [appt.reference_no]
+      `SELECT * FROM financial_aid_disbursements WHERE application_ref = $1 AND (assistance_type = $2 OR assistance_type ILIKE $3)`,
+      [appt.reference_no, cleanAssistance, `%${appt.concern}%`]
     );
 
     if (checkDisb.rows.length > 0) {
@@ -364,8 +385,8 @@ async function syncAppointmentWithDisbursement(appt) {
              appointment_time = $2,
              venue = $3,
              updated_at = NOW()
-         WHERE application_ref = $4`,
-        [appt.scheduled_date, appt.scheduled_time, appt.office_location || 'Quezon City Hall', appt.reference_no]
+         WHERE application_ref = $4 AND (assistance_type = $5 OR assistance_type ILIKE $6)`,
+        [appt.scheduled_date, appt.scheduled_time, appt.office_location || 'Quezon City Hall', appt.reference_no, cleanAssistance, `%${appt.concern}%`]
       );
     } else {
       await db.query(
@@ -438,12 +459,12 @@ exports.completeAppointment = async (req, res) => {
       [cleanId]
     );
 
-    // Deduplicate any duplicate appointment records with the same reference_no
+    // Deduplicate any duplicate appointment records with the exact same reference_no and concern
     try {
       await db.query(`
         DELETE FROM appointments a
         USING appointments b
-        WHERE a.id < b.id AND a.reference_no = b.reference_no
+        WHERE a.id < b.id AND a.reference_no = b.reference_no AND a.concern = b.concern
       `);
     } catch (_) {}
 
