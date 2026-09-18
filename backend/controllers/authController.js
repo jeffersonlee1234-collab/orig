@@ -2258,7 +2258,43 @@ exports.resetTestCitizenAccount = async (req, res) => {
       [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => {});
 
-    // 8. Notifications
+    // 8. Clean Beneficiaries & History
+    const benRes = await db.query(
+      `SELECT id FROM beneficiaries 
+       WHERE qcid_number = ANY($1::text[]) 
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'`,
+      [qcIds]
+    ).catch(() => ({ rows: [] }));
+    if (benRes.rows.length > 0) {
+      const benIds = benRes.rows.map(r => r.id);
+      await db.query(`DELETE FROM beneficiary_history WHERE beneficiary_id = ANY($1::int[])`, [benIds]).catch(() => {});
+      await db.query(`DELETE FROM beneficiary_verifications WHERE beneficiary_id = ANY($1::int[])`, [benIds]).catch(() => {});
+      await db.query(`DELETE FROM beneficiaries WHERE id = ANY($1::int[])`, [benIds]).catch(() => {});
+    }
+
+    // 9. Clean Case Records
+    await db.query(
+      `DELETE FROM case_records 
+       WHERE qcid_number = ANY($1::text[]) 
+          OR client_name ILIKE '%kris%'
+          OR client_name ILIKE '%topher%'
+          OR client_name ILIKE '%renz%'
+          OR client_name ILIKE '%millares%'`,
+      [qcIds]
+    ).catch(() => {});
+
+    // 10. Clean Archived Applications
+    await db.query(
+      `DELETE FROM archived_applications 
+       WHERE qcid = ANY($1::text[]) 
+          OR reference_number = ANY($1::text[])
+          OR applicant_name ILIKE '%kris%'
+          OR applicant_name ILIKE '%renz%'`,
+      [qcIds]
+    ).catch(() => {});
+
+    // 11. Clean Notifications
     await db.query(
       `DELETE FROM user_notifications 
        WHERE user_id = ANY($1::text[]) 
@@ -2266,7 +2302,7 @@ exports.resetTestCitizenAccount = async (req, res) => {
       [userIds.map(String).length ? userIds.map(String) : [''], qcIds]
     ).catch(() => {});
 
-    // 9. Activity Log
+    // 12. Clean Activity Log
     await db.query(
       `DELETE FROM activity_log 
        WHERE actor ILIKE '%kris%'
