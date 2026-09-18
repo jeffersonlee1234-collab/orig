@@ -229,11 +229,11 @@ export function getSavedDisbursements(): SyncedDisbursementRecord[] {
             !deletedKeys.has(p.applicationRef)
         )
 
-        // Deduplicate records by applicationRef or assistanceType
+        // Deduplicate records by applicationRef + assistanceType
         const recordMap = new Map<string, SyncedDisbursementRecord>()
         realOnes.forEach((r) => {
-          const key = (r.applicationRef || r.disbursementId || r.id || "").trim()
-          if (!key) return
+          const key = `${(r.applicationRef || r.disbursementId || r.id || "").trim()}_${(r.assistanceType || "").trim()}`
+          if (!key || key === "_") return
           // Ensure correct fixed amount is applied
           const correctAmount = resolveFixedAmount(r.assistanceType)
           const recordWithCorrectAmount: SyncedDisbursementRecord = {
@@ -279,8 +279,8 @@ export function saveDisbursements(records: SyncedDisbursementRecord[]) {
     // Deduplicate before saving
     const recordMap = new Map<string, SyncedDisbursementRecord>()
     records.forEach((r) => {
-      const key = (r.applicationRef || r.disbursementId || r.id || "").trim()
-      if (!key) return
+      const key = `${(r.applicationRef || r.disbursementId || r.id || "").trim()}_${(r.assistanceType || "").trim()}`
+      if (!key || key === "_") return
       if (!recordMap.has(key)) {
         recordMap.set(key, r)
       } else {
@@ -399,12 +399,12 @@ export function syncAppointmentToFinancialAid(params: {
   } catch {}
 
   const updatedDisbursements = currentDisbursements.map((d) => {
-    if (
-      d.applicationRef === params.referenceNo ||
-      (d.applicantName.toLowerCase().trim() === params.applicantName.toLowerCase().trim() &&
-        d.status === "PENDING" &&
-        d.assistanceType.toLowerCase().includes(rawConcern.toLowerCase()))
-    ) {
+    const isSameRef = d.applicationRef === params.referenceNo
+    const isSameName = d.applicantName.toLowerCase().trim() === params.applicantName.toLowerCase().trim()
+    const matchesConcern = d.assistanceType.toLowerCase().includes(rawConcern.toLowerCase()) || rawConcern.toLowerCase().includes(d.assistanceType.toLowerCase().replace(/\s*assistance/gi, "").trim())
+    const singleForRef = currentDisbursements.filter((x) => x.applicationRef === params.referenceNo).length === 1
+
+    if ((isSameRef && (matchesConcern || singleForRef)) || (isSameName && d.status === "PENDING" && matchesConcern)) {
       found = true
       return {
         ...d,
