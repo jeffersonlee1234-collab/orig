@@ -23,9 +23,130 @@ import { getLoggedInUserQcid, getCurrentUserProfile } from "../../utils/userProf
 import { useLanguage } from "../ui/language-context"
 import { subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 
+function getInitialDisbursementsForUser(): SyncedDisbursementRecord[] {
+  try {
+    const userProfile = getCurrentUserProfile()
+    const qcId = getLoggedInUserQcid() || userProfile.qcidNo
+    const userFirst = (userProfile.firstName || "").trim().toLowerCase()
+    const userLast = (userProfile.lastName || "").trim().toLowerCase()
+    const userFull = `${userFirst} ${userLast}`.trim().toLowerCase()
+
+    const saved = getSavedDisbursements()
+    const results: SyncedDisbursementRecord[] = []
+    const seenRefs = new Set<string>()
+
+    // 1. Saved disbursements from cache
+    if (Array.isArray(saved) && saved.length > 0) {
+      saved.forEach((s) => {
+        const name = (s.applicantName || "").toLowerCase().trim()
+        const match =
+          (s.applicationRef && qcId && s.applicationRef === qcId) ||
+          (userFull && name === userFull) ||
+          (userFirst && userLast && name.startsWith(userFirst) && name.endsWith(userLast))
+        if (match) {
+          const key = `${s.applicationRef}_${s.assistanceType}`
+          if (!seenRefs.has(key)) {
+            seenRefs.add(key)
+            results.push(s)
+          }
+        }
+      })
+    }
+
+    // 2. Check local storage approved applications
+    try {
+      const pwdApps = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+      if (Array.isArray(pwdApps)) {
+        pwdApps.forEach((app: any) => {
+          const matchUser =
+            app.referenceNumber === qcId ||
+            app.reference_number === qcId ||
+            app.id === qcId ||
+            (userFirst && userLast && String(app.firstName).toLowerCase() === userFirst && String(app.lastName).toLowerCase() === userLast)
+          const isAssistance =
+            app.type === "assistance" ||
+            app.type === "social-assistance" ||
+            String(app.category || "").toLowerCase().includes("assistance") ||
+            String(app.disabilityClass || "").toLowerCase().includes("assistance")
+          const isApproved = app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released"
+
+          if (matchUser && isAssistance && isApproved) {
+            const isPwd = String(app.category || "").toUpperCase().includes("PWD")
+            const type = isPwd ? "PWD Social Assistance" : "Senior Social Assistance"
+            const ref = app.referenceNumber || app.reference_number || qcId
+            const key = `${ref}_${type}`
+            if (!seenRefs.has(key)) {
+              seenRefs.add(key)
+              results.push({
+                id: `local-pwd-${app.id || ref}`,
+                disbursementId: `DISB-2026-${String(app.id || ref).slice(-4).padStart(4, "0")}`,
+                applicationRef: ref,
+                applicantName: [app.firstName, app.middleName, app.lastName, app.suffix].filter(Boolean).join(" ").toUpperCase() || userFull.toUpperCase(),
+                assistanceType: type,
+                fixedAmount: 2000,
+                dateApproved: new Date(app.approvedDate || app.submittedAt || Date.now()).toLocaleDateString("en-PH", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }),
+                status: (app.status === "released" || app.status === "completed") ? "RELEASED" : "PENDING",
+                venue: "Quezon City Hall",
+                remarks: "PWD / Senior Social Assistance payout.",
+              })
+            }
+          }
+        })
+      }
+    } catch {}
+
+    try {
+      const aicsApps = JSON.parse(localStorage.getItem("aics_applications") || "[]")
+      if (Array.isArray(aicsApps)) {
+        aicsApps.forEach((app: any) => {
+          const matchUser =
+            app.reference_number === qcId ||
+            app.reference_no === qcId ||
+            app.qc_id === qcId ||
+            (userFirst && userLast && String(app.first_name).toLowerCase() === userFirst && String(app.last_name).toLowerCase() === userLast)
+          const isApproved = app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released"
+
+          if (matchUser && isApproved) {
+            const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
+            const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
+            const ref = app.reference_number || app.reference_no || `AICS-2026-${String(app.id || 1).padStart(4, "0")}`
+            const key = `${ref}_${type}`
+            if (!seenRefs.has(key)) {
+              seenRefs.add(key)
+              results.push({
+                id: `local-aics-${app.id || ref}`,
+                disbursementId: `DISB-2026-${String(app.id || 1).padStart(4, "0")}`,
+                applicationRef: ref,
+                applicantName: `${app.first_name || userProfile.firstName} ${app.last_name || userProfile.lastName}`.trim().toUpperCase(),
+                assistanceType: type,
+                fixedAmount: FIXED_ASSISTANCE_AMOUNTS[type] || 5000,
+                dateApproved: new Date(app.updated_at || app.created_at || Date.now()).toLocaleDateString("en-PH", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }),
+                status: (app.status === "released" || app.status === "completed") ? "RELEASED" : "PENDING",
+                venue: "Quezon City Hall",
+                remarks: "AICS financial aid payout.",
+              })
+            }
+          }
+        })
+      }
+    } catch {}
+
+    return results
+  } catch {}
+  return []
+}
+
 export default function ApplyFinancialAid() {
   const { t } = useLanguage()
-  const [disbursements, setDisbursements] = useState<SyncedDisbursementRecord[]>([])
+  const [disbursements, setDisbursements] = useState<SyncedDisbursementRecord[]>(() => getInitialDisbursementsForUser())
   const isFetchingRef = useRef(false)
 
   // Auto-sync approved disbursements and scheduled payout appointments
