@@ -647,34 +647,8 @@ export default function ApplyPWDSenior() {
           </div>
 
           <div className="w-full pt-2 flex flex-col gap-2">
-            {/* Primary Action: Re-apply / Submit New Application */}
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  localStorage.setItem(`pwd_senior_reapplying_${urlCategory || "pwd"}_${urlType || "new"}`, "true")
-                  localStorage.setItem("pwd_senior_reapplying", "true")
-                } catch {}
-                bypassedBlockRef.current = true
-                setBypassedBlock(true)
-                setIsBlocked(false)
-                setBlockedApp(null)
-                setHasApprovedApp(false)
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>
-                {language === "en"
-                  ? "RE-APPLY (SUBMIT NEW APPLICATION)"
-                  : language === "bis"
-                  ? "MAG-APPLY PAG-USAB (RE-APPLY)"
-                  : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
-              </span>
-            </button>
-
-            {/* Approved ID Application Extras: Renewal & Replacement Options */}
-            {isAppApproved && !isAssistance && !isSeniorSocial && !isSeniorMedicine && !isSeniorMovie && (
+            {/* Approved ID Applications: NO Re-apply allowed. Only Renewal, Replacement/Lost ID, and History */}
+            {isAppApproved && !isAssistance && !isSeniorSocial && !isSeniorMedicine && !isSeniorMovie ? (
               <>
                 <button
                   type="button"
@@ -682,7 +656,7 @@ export default function ApplyPWDSenior() {
                     const cat = isSenior ? "senior" : "pwd"
                     window.location.href = `/portal/apply-pwd-senior?category=${cat}&type=renewal`
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-blue-600 text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
                 >
                   {isSenior
                     ? (language === "en" ? "Apply for Renewal (Renewal SENIOR ID)" : language === "bis" ? "Pag-apply para sa Renewal (Renewal SENIOR ID)" : "Mag-apply para sa Renewal (Renewal SENIOR ID)")
@@ -699,9 +673,35 @@ export default function ApplyPWDSenior() {
                   {language === "en" ? "Apply for Replacement / Lost ID" : language === "bis" ? "Pag-apply para sa Replacement / Nawala nga ID" : "Mag-apply para sa Replacement / Nawalang ID"}
                 </button>
               </>
-            )}
+            ) : isAppRejected ? (
+              /* Rejected Applications: Allowed to re-apply / submit fresh application */
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.setItem(`pwd_senior_reapplying_${urlCategory || "pwd"}_${urlType || "new"}`, "true")
+                    localStorage.setItem("pwd_senior_reapplying", "true")
+                  } catch {}
+                  bypassedBlockRef.current = true
+                  setBypassedBlock(true)
+                  setIsBlocked(false)
+                  setBlockedApp(null)
+                  setHasApprovedApp(false)
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>
+                  {language === "en"
+                    ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                    : language === "bis"
+                    ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                    : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+                </span>
+              </button>
+            ) : null}
 
-            {/* Secondary: Navigation Button */}
+            {/* Navigation Button */}
             <button
               type="button"
               onClick={() => {
