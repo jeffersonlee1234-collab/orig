@@ -17,9 +17,7 @@ import {
   ClipboardList,
   IdCard,
   ShieldAlert,
-  Download,
 } from "lucide-react"
-import { toPng } from "html-to-image"
 import { API_BASE } from "../../config/api"
 import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
@@ -1820,34 +1818,6 @@ function OfficialSoloParentIdCardModal({
   })
 
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const frontDownloadRef = useRef<HTMLDivElement>(null)
-  const backDownloadRef = useRef<HTMLDivElement>(null)
-
-  const handleDownloadSide = async (mode: "front" | "back") => {
-    setIsDownloading(true)
-    try {
-      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
-      if (targetElement) {
-        const dataUrl = await toPng(targetElement, {
-          pixelRatio: 3,
-          cacheBust: true,
-          quality: 1,
-          width: 500,
-          height: 315,
-        })
-        const link = document.createElement("a")
-        link.download = `QC_SOLO_PARENT_${mode.toUpperCase()}_${idNumber}.png`
-        link.href = dataUrl
-        link.click()
-      }
-    } catch (err) {
-      console.error("Failed to export PNG:", err)
-    } finally {
-      setIsDownloading(false)
-    }
-  }
 
   const photoUrl = getApplicantPhotoUrl(app)
 
@@ -1957,49 +1927,7 @@ function OfficialSoloParentIdCardModal({
           )}
         </div>
 
-        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Isolated with 0 offset and exact dimensions) ── */}
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <SoloParentCardFront
-            cardRef={frontDownloadRef}
-            app={app}
-            photoUrl={photoUrl}
-            idNumber={idNumber}
-            appDate={appDate}
-            expiryDateStr={expiryDateStr}
-          />
-        </div>
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <SoloParentCardBack
-            cardRef={backDownloadRef}
-            app={app}
-            emergencyPerson={emergencyPerson}
-            emergencyPhone={emergencyPhone}
-            emergencyRel={emergencyRel}
-            emergencyAddr={emergencyAddr}
-          />
-        </div>
+
 
         {/* Modal Footer */}
         <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-end gap-3">

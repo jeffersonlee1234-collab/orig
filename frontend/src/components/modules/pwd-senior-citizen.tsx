@@ -13,9 +13,7 @@ import {
   Image as ImageIcon,
   HeartHandshake,
   IdCard,
-  Download,
 } from "lucide-react"
-import { toPng } from "html-to-image"
 import { API_BASE } from "../../config/api"
 import {
   pushUserNotification,
@@ -1578,34 +1576,6 @@ function OfficialIdCardModal({
   })
 
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const frontDownloadRef = useRef<HTMLDivElement>(null)
-  const backDownloadRef = useRef<HTMLDivElement>(null)
-
-  const handleDownloadSide = async (mode: "front" | "back") => {
-    setIsDownloading(true)
-    try {
-      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
-      if (targetElement) {
-        const dataUrl = await toPng(targetElement, {
-          pixelRatio: 3,
-          cacheBust: true,
-          quality: 1,
-          width: 500,
-          height: 315,
-        })
-        const link = document.createElement("a")
-        link.download = `QC_${isPwdApp ? "PDAO" : "OSCA"}_${mode.toUpperCase()}_${idNumber}.png`
-        link.href = dataUrl
-        link.click()
-      }
-    } catch (err) {
-      console.error("Failed to export PNG:", err)
-    } finally {
-      setIsDownloading(false)
-    }
-  }
 
   const contactNumber =
     (app as any).phone ||
@@ -1748,52 +1718,7 @@ function OfficialIdCardModal({
           )}
         </div>
 
-        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Isolated with 0 offset and exact dimensions) ── */}
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <OfficialIdCardFront
-            cardRef={frontDownloadRef}
-            app={app}
-            isPwdApp={isPwdApp}
-            photoUrl={photoUrl}
-            idNumber={idNumber}
-            appDate={appDate}
-            expiryDateStr={expiryDateStr}
-          />
-        </div>
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <OfficialIdCardBack
-            cardRef={backDownloadRef}
-            isPwdApp={isPwdApp}
-            appDate={appDate}
-            expiryDateStr={expiryDateStr}
-            emergencyPerson={emergencyPerson}
-            emergencyPhone={emergencyPhone}
-            emergencyRel={emergencyRel}
-            emergencyAddr={emergencyAddr}
-          />
-        </div>
+
 
         {/* Modal Footer */}
         <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-end gap-3">

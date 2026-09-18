@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { toPng } from "html-to-image"
 import {
   FileText,
   Search,
@@ -21,8 +20,6 @@ import {
   Wrench,
   ExternalLink,
   Award,
-  Download,
-  Printer,
   IdCard,
   User,
   X,
@@ -1390,54 +1387,6 @@ function DigitalIdCardModal({
   const theme = getCardTheme(app)
   const emergencyInfo = getEmergencyInfo(app)
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const frontDownloadRef = useRef<HTMLDivElement>(null)
-  const backDownloadRef = useRef<HTMLDivElement>(null)
-
-  const issueDateObj = new Date(app.submittedAt || Date.now())
-  const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
-  const appDate = validIssueDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-  const expiryDateObj = new Date(validIssueDate)
-  expiryDateObj.setFullYear(expiryDateObj.getFullYear() + 1)
-  const expiryDateStr = expiryDateObj.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-
-
-  const handleDownloadSide = async (mode: "front" | "back") => {
-    setIsDownloading(true)
-    try {
-      const targetElement = mode === "front" ? frontDownloadRef.current : backDownloadRef.current
-      if (targetElement) {
-        // High-resolution rasterization centered perfectly with exact 500x315 dimensions
-        const dataUrl = await toPng(targetElement, {
-          pixelRatio: 3,
-          cacheBust: true,
-          quality: 1,
-          width: 500,
-          height: 315,
-        })
-        const link = document.createElement("a")
-        link.download = `QC_ID_${mode.toUpperCase()}_${app.applicationNo}.png`
-        link.href = dataUrl
-        link.click()
-      } else {
-        await downloadIdCardAsImage(app, photoUrl, mode)
-      }
-    } catch (err) {
-      console.warn("DOM to PNG failed, falling back to canvas:", err)
-      await downloadIdCardAsImage(app, photoUrl, mode)
-    } finally {
-      setIsDownloading(false)
-    }
-  }
 
   return (
     <div
@@ -1518,48 +1467,7 @@ function DigitalIdCardModal({
           )}
         </div>
 
-        {/* ── OFF-SCREEN CAPTURE CONTAINERS (Bound directly with 0 offset and exact dimensions) ── */}
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <OfficialFrontCardView
-            cardRef={frontDownloadRef}
-            app={app}
-            theme={theme}
-            photoUrl={photoUrl}
-            appDate={appDate}
-            expiryDateStr={expiryDateStr}
-          />
-        </div>
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            width: "500px",
-            height: "315px",
-            pointerEvents: "none",
-            zIndex: -999,
-          }}
-          aria-hidden="true"
-        >
-          <OfficialBackCardView
-            cardRef={backDownloadRef}
-            theme={theme}
-            emergencyInfo={emergencyInfo}
-            appDate={appDate}
-            expiryDateStr={expiryDateStr}
-          />
-        </div>
+
 
         {/* ── MODAL FOOTER ACTION BAR ── */}
         <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-end gap-3">
