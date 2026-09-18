@@ -19,6 +19,7 @@ import {
 
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
+import { DataPrivacyConsent } from "../ui/data-privacy-consent"
 import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
 import { cachedApiFetch } from "../../utils/cachedApiFetch"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
@@ -1608,6 +1609,7 @@ export default function SoloParentApplicationWizard({
   const requiredDocs = getRequiredDocuments(idStatus, selectedCategoryId)
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, File[]>>({})
   const [uploadedDocsBase64, setUploadedDocsBase64] = useState<Record<string, string>>({})
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
 
   // Reload / Navigation warning protection — active from Step 2 onwards when modal is closed and form is actively being filled
   const isFormDirty =
@@ -1900,7 +1902,7 @@ export default function SoloParentApplicationWizard({
   const step3Valid = requiredDocs.every((doc) => (uploadedDocs[doc.id]?.length ?? 0) > 0)
 
   const canGoNext =
-    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : true
+    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : privacyAgreed
 
   const goNext = () => {
     if (step === 1 && !step1Valid) {
@@ -3467,6 +3469,15 @@ export default function SoloParentApplicationWizard({
                   })}
                 </div>
               </ReviewSection>
+
+              <div className="mt-6">
+                <DataPrivacyConsent
+                  checked={privacyAgreed}
+                  onChange={setPrivacyAgreed}
+                  moduleName="Solo Parent Assistance Program"
+                  error={attemptedNext && !privacyAgreed ? "Mandatory: You must agree to the Data Privacy Policy to submit your application." : undefined}
+                />
+              </div>
             </div>
           )}
         </div>

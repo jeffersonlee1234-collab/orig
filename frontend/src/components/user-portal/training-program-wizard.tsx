@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
+import { DataPrivacyConsent } from "../ui/data-privacy-consent"
+import DocumentCameraModal from "../ui/document-camera-modal"
 
 function generateReference(qcid?: string) {
   if (qcid && qcid.trim()) return qcid.trim()
@@ -426,13 +428,16 @@ export default function TrainingProgramWizard({ onBack }: TrainingProgramWizardP
     })
   }
 
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
+
   const formValid =
     formData.desiredCourse !== "" &&
     formData.fullName.trim() !== "" &&
     formData.yearsResident.trim() !== "" &&
     formData.address.trim() !== "" &&
     formData.contactNumber.trim().length === 11 &&
-    REQUIRED_DOCUMENTS.every((doc) => (uploadedDocs[doc.id]?.length ?? 0) > 0)
+    REQUIRED_DOCUMENTS.every((doc) => (uploadedDocs[doc.id]?.length ?? 0) > 0) &&
+    privacyAgreed
 
   const handleSubmit = () => {
     if (!formValid) {
@@ -635,6 +640,13 @@ export default function TrainingProgramWizard({ onBack }: TrainingProgramWizardP
           By clicking "SUBMIT", your application will be forwarded to the SSDD office. You will receive a notification once reviewed by a social worker.
         </p>
       </div>
+
+      <DataPrivacyConsent
+        checked={privacyAgreed}
+        onChange={setPrivacyAgreed}
+        moduleName="Skills Training Program"
+        error={attempted && !privacyAgreed ? "Mandatory: You must agree to the Data Privacy Policy to submit your application." : undefined}
+      />
 
       <button
         onClick={handleSubmit}

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, type ReactNode } from "react"
 import { Check, CheckCircle2, Upload, Camera, ChevronDown, Pencil, FileText, AlertCircle, Info, X, Sparkles, Loader2 } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
+import { DataPrivacyConsent } from "../ui/data-privacy-consent"
 import { API_BASE } from "../../config/api"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
@@ -1343,10 +1344,11 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
           ...BASE_DOCS,
           ...(effectiveDisabilityClass === "apparent" ? APPARENT_DOCS : [NON_APPARENT_BASE_DOC]),
         ]
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
   const step3Valid = requiredDocs.every((doc) => !!uploaded[doc.title])
 
   const canGoNext =
-    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : true
+    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : privacyAgreed
 
   const goNext = () => {
     if (!canGoNext) {
@@ -3234,6 +3236,15 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
 
               <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                 <p className="text-sm text-green-700">{t("pwdAllCompleteNote")}</p>
+              </div>
+
+              <div className="mt-4">
+                <DataPrivacyConsent
+                  checked={privacyAgreed}
+                  onChange={setPrivacyAgreed}
+                  moduleName="PWD & Senior Citizen Assistance Program"
+                  error={attemptedNext && !privacyAgreed ? "Mandatory: You must agree to the Data Privacy Policy to submit your application." : undefined}
+                />
               </div>
             </div>
           )}

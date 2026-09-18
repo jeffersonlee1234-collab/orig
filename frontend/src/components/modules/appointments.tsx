@@ -588,14 +588,12 @@ export default function Appointments() {
         })
 
         const finalAppts = Array.from(dedupedMap.values())
-        if (finalAppts.length > 0) {
-          setAppointments(finalAppts)
-          try {
-            localStorage.setItem("cached_appointments_list", JSON.stringify(finalAppts))
-            localStorage.setItem("all_appointments", JSON.stringify(finalAppts))
-            localStorage.setItem("appointments", JSON.stringify(finalAppts))
-          } catch {}
-        }
+        setAppointments(finalAppts)
+        try {
+          localStorage.setItem("cached_appointments_list", JSON.stringify(finalAppts))
+          localStorage.setItem("all_appointments", JSON.stringify(finalAppts))
+          localStorage.setItem("appointments", JSON.stringify(finalAppts))
+        } catch {}
       } catch (err) {
         console.warn("Could not fetch appointments from backend:", err)
       } finally {

@@ -18,6 +18,7 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
+import { DataPrivacyConsent } from "../ui/data-privacy-consent"
 import { getCurrentUserProfile } from "../../utils/userProfile"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { API_BASE, getAuthHeaders, getAuthToken } from "../../config/api"
@@ -982,6 +983,7 @@ export default function ChildWelfareApplicationWizard({
   const [submissionStage, setSubmissionStage] = useState<"form" | "matching" | "pending">("form")
   const [appStatus, setAppStatus] = useState<"pending" | "approved" | "rejected">("pending")
   const [reference, setReference] = useState("")
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
   const [isReapplying, setIsReapplying] = useState(() => {
     try {
       const progKey = initialProgramKey || "nutritional-assistance"
@@ -1209,7 +1211,7 @@ export default function ChildWelfareApplicationWizard({
   const step3Valid = requiredDocItems.every((d) => (uploadedFiles[d.id] || []).length > 0)
 
   const canGoNext =
-    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : true
+    step === 1 ? step1Valid : step === 2 ? step2Valid : step === 3 ? step3Valid : privacyAgreed
 
   const handleNext = () => {
     if (!canGoNext) {
@@ -2559,6 +2561,15 @@ export default function ChildWelfareApplicationWizard({
                     ? "Sa pag-click sa \"Isumite\", gipamatud-an nimo nga ang tanang impormasyon nga gihatag tinuod ug kompleto. Susihon ang imong aplikasyon sa evaluator."
                     : "By clicking \"Submit\", you confirm that all information provided is true and complete. Your application will be reviewed by an evaluator, and you will receive a notification to your email about the status of your application."}
                 </p>
+              </div>
+
+              <div className="mt-4">
+                <DataPrivacyConsent
+                  checked={privacyAgreed}
+                  onChange={setPrivacyAgreed}
+                  moduleName="Child Welfare Assistance Program"
+                  error={attemptedNext && !privacyAgreed ? "Mandatory: You must agree to the Data Privacy Policy to submit your application." : undefined}
+                />
               </div>
             </div>
           )}

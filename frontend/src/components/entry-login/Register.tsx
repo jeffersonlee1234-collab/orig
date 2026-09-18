@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, User, Check, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { DataPrivacyConsent } from '../ui/data-privacy-consent';
 import { API_BASE } from '../../config/api';
 import { applyTheme, getThemePreference, getEffectiveTheme } from '../../utils/theme';
 
@@ -122,6 +123,7 @@ export const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmTouched, setConfirmTouched] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
 
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -492,6 +494,10 @@ export const Register = () => {
     }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!privacyConsent) {
+      setError('Mandatory: You must agree to the Data Privacy Policy and RA 10173 to create your account.');
       return;
     }
 
@@ -1140,6 +1146,13 @@ export const Register = () => {
                     </div>
                   )}
                 </div>
+
+                <DataPrivacyConsent
+                  checked={privacyConsent}
+                  onChange={setPrivacyConsent}
+                  moduleName="GovServe Account Registration"
+                  className="mt-4"
+                />
 
                 <button
                   type="submit"
