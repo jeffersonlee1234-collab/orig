@@ -101,11 +101,11 @@ exports.getNotifications = async (req, res) => {
     const userFn = (firstName || '').trim().toLowerCase();
     const userLn = (lastName || '').trim().toLowerCase();
 
-    // 0. Auto-discover all application references belonging to this user
+    // 0. Auto-discover all application references belonging to this user concurrently
     if (identifiers.length > 0 || userEmail || (userFn && userLn)) {
-      // Collect from solo_parent_child_welfare_applications
-      try {
-        const spRes = await db.query(
+      const discoveryQueries = [
+        // Collect from solo_parent_child_welfare_applications
+        db.query(
           `SELECT reference_number, user_id, assigned_id_number, solo_parent_id_number, qcid_number 
            FROM solo_parent_child_welfare_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
@@ -116,19 +116,10 @@ exports.getNotifications = async (req, res) => {
               OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        spRes.rows.forEach((r) => {
-          if (r.reference_number) identifiers.push(String(r.reference_number));
-          if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
-          if (r.solo_parent_id_number) identifiers.push(String(r.solo_parent_id_number));
-          if (r.qcid_number) identifiers.push(String(r.qcid_number));
-          if (r.user_id) identifiers.push(String(r.user_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
 
-      // Collect from pwd_senior_applications
-      try {
-        const pwdRes = await db.query(
+        // Collect from pwd_senior_applications
+        db.query(
           `SELECT reference_number, user_id, assigned_id_number, qcid 
            FROM pwd_senior_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
@@ -138,18 +129,10 @@ exports.getNotifications = async (req, res) => {
               OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        pwdRes.rows.forEach((r) => {
-          if (r.reference_number) identifiers.push(String(r.reference_number));
-          if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
-          if (r.qcid) identifiers.push(String(r.qcid));
-          if (r.user_id) identifiers.push(String(r.user_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
 
-      // Collect from livelihood_applications
-      try {
-        const livRes = await db.query(
+        // Collect from livelihood_applications
+        db.query(
           `SELECT reference_number, user_id, qcid 
            FROM livelihood_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
@@ -158,17 +141,10 @@ exports.getNotifications = async (req, res) => {
               OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        livRes.rows.forEach((r) => {
-          if (r.reference_number) identifiers.push(String(r.reference_number));
-          if (r.qcid) identifiers.push(String(r.qcid));
-          if (r.user_id) identifiers.push(String(r.user_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
 
-      // Collect from aics_applications
-      try {
-        const aicsRes = await db.query(
+        // Collect from aics_applications
+        db.query(
           `SELECT reference_no, qc_id 
            FROM aics_applications 
            WHERE (COALESCE(qc_id::text, '') = ANY($1::text[]) 
@@ -176,16 +152,10 @@ exports.getNotifications = async (req, res) => {
               OR (LOWER(COALESCE(email, '')) = $2 AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(first_name, '')) = $3 AND LOWER(COALESCE(last_name, '')) = $4))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        aicsRes.rows.forEach((r) => {
-          if (r.reference_no) identifiers.push(String(r.reference_no));
-          if (r.qc_id) identifiers.push(String(r.qc_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
 
-      // Collect from child welfare records in solo_parent_child_welfare_applications
-      try {
-        const cwRes = await db.query(
+        // Collect from child welfare records
+        db.query(
           `SELECT reference_number, user_id 
            FROM solo_parent_child_welfare_applications 
            WHERE module_type = 'CHILD_WELFARE'
@@ -194,16 +164,10 @@ exports.getNotifications = async (req, res) => {
                OR (LOWER(COALESCE(guardian_email, '')) = $2 AND $2 != '')
                OR ($3 != '' AND $4 != '' AND (LOWER(COALESCE(guardian_first_name, '')) = $3 AND LOWER(COALESCE(guardian_last_name, '')) = $4)))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        cwRes.rows.forEach((r) => {
-          if (r.reference_number) identifiers.push(String(r.reference_number));
-          if (r.user_id) identifiers.push(String(r.user_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
 
-      // Collect from training_applications
-      try {
-        const trnRes = await db.query(
+        // Collect from training_applications
+        db.query(
           `SELECT reference_number, user_id, qcid 
            FROM training_applications 
            WHERE (COALESCE(user_id::text, '') = ANY($1::text[]) 
@@ -212,13 +176,24 @@ exports.getNotifications = async (req, res) => {
               OR (COALESCE(applicant_info::text, '') ILIKE '%' || $2 || '%' AND $2 != '')
               OR ($3 != '' AND $4 != '' AND (COALESCE(applicant_info::text, '') ILIKE '%' || $3 || '%' AND COALESCE(applicant_info::text, '') ILIKE '%' || $4 || '%'))`,
           [identifiers, userEmail, userFn, userLn]
-        );
-        trnRes.rows.forEach((r) => {
-          if (r.reference_number) identifiers.push(String(r.reference_number));
-          if (r.qcid) identifiers.push(String(r.qcid));
-          if (r.user_id) identifiers.push(String(r.user_id));
-        });
-      } catch (_) {}
+        ).catch(() => ({ rows: [] })),
+      ];
+
+      const discoveryResults = await Promise.allSettled(discoveryQueries);
+      discoveryResults.forEach((res) => {
+        if (res.status === 'fulfilled' && res.value && Array.isArray(res.value.rows)) {
+          res.value.rows.forEach((r) => {
+            if (r.reference_number) identifiers.push(String(r.reference_number));
+            if (r.reference_no) identifiers.push(String(r.reference_no));
+            if (r.assigned_id_number) identifiers.push(String(r.assigned_id_number));
+            if (r.solo_parent_id_number) identifiers.push(String(r.solo_parent_id_number));
+            if (r.qcid_number) identifiers.push(String(r.qcid_number));
+            if (r.qcid) identifiers.push(String(r.qcid));
+            if (r.qc_id) identifiers.push(String(r.qc_id));
+            if (r.user_id) identifiers.push(String(r.user_id));
+          });
+        }
+      });
 
       identifiers = Array.from(new Set(identifiers.filter((s) => s && s !== 'undefined' && s !== 'null')));
     }

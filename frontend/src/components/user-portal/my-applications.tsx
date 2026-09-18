@@ -1597,12 +1597,34 @@ function DigitalIdCardModal({
   )
 }
 
+function getInitialApplications(): ApplicationRecord[] {
+  try {
+    const cached = localStorage.getItem("cached_my_applications")
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return []
+}
+
+function getInitialDeletedApplications(): ApplicationRecord[] {
+  try {
+    const storedDel = localStorage.getItem("deleted_user_applications")
+    if (storedDel) {
+      const parsed = JSON.parse(storedDel)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return []
+}
+
 export default function MyApplications() {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<"active" | "deleted">("active")
-  const [applications, setApplications] = useState<ApplicationRecord[]>([])
-  const [deletedApplications, setDeletedApplications] = useState<ApplicationRecord[]>([])
+  const [applications, setApplications] = useState<ApplicationRecord[]>(() => getInitialApplications())
+  const [deletedApplications, setDeletedApplications] = useState<ApplicationRecord[]>(() => getInitialDeletedApplications())
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedApp, setSelectedApp] = useState<ApplicationRecord | null>(null)
   const [idCardApp, setIdCardApp] = useState<ApplicationRecord | null>(null)
@@ -2542,6 +2564,9 @@ export default function MyApplications() {
 
         if (isMounted) {
           setApplications(filteredActive)
+          try {
+            localStorage.setItem("cached_my_applications", JSON.stringify(filteredActive))
+          } catch {}
         }
       } finally {
         isFetchingUserAppsRef.current = false
