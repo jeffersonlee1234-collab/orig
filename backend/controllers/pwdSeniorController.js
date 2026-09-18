@@ -613,26 +613,26 @@ exports.createApplication = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    let { status, assignedIdNumber, approvedBy, approvedDate, rejectionReason, referenceNumber, category } = req.body;
+    let { status, assignedIdNumber, approvedBy, approvedDate, rejectionReason, referenceNumber, category, type } = req.body;
     const lookupRef = referenceNumber || id;
 
     let targetApp = null;
     try {
       // 1. Lookup strictly by unique ID first
       let q = await db.query(
-        `SELECT * FROM pwd_senior_applications WHERE id = $1 OR id::text = $1`,
+        `SELECT * FROM pwd_senior_applications WHERE id = $1 OR id::text = $1 LIMIT 1`,
         [id]
       );
-      if (q.rows.length === 0 && lookupRef) {
-        if (category) {
+      if (q.rows.length === 0 && lookupRef && lookupRef !== id) {
+        if (category && type) {
+          q = await db.query(
+            `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 AND category = $2 AND type = $3 LIMIT 1`,
+            [lookupRef, category, type]
+          );
+        } else if (category) {
           q = await db.query(
             `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 AND category = $2 LIMIT 1`,
             [lookupRef, category]
-          );
-        } else {
-          q = await db.query(
-            `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 LIMIT 1`,
-            [lookupRef]
           );
         }
       }
@@ -642,9 +642,9 @@ exports.updateApplicationStatus = async (req, res) => {
     } catch (_) {}
 
     if (!targetApp) {
-      targetApp = memoryApplications.find((a) => a.id === id) ||
-        memoryApplications.find((a) => a.referenceNumber === lookupRef && (!category || a.category === category)) ||
-        memoryApplications.find((a) => a.referenceNumber === id);
+      targetApp = memoryApplications.find((a) => String(a.id) === String(id)) ||
+        (type && category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && a.category === category && a.type === type) : null) ||
+        (category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && a.category === category) : null);
     }
 
     const exactAppId = targetApp?.id || id;
@@ -655,8 +655,8 @@ exports.updateApplicationStatus = async (req, res) => {
       targetApp.last_name || targetApp.lastName,
       targetApp.suffix
     ].filter(Boolean).join(' ').trim().toUpperCase() : 'BENEFICIARY';
-    const isPwd = String(targetApp?.category || '').toUpperCase().includes('PWD');
-    const appType = String(targetApp?.type || '').toLowerCase();
+    const isPwd = String(targetApp?.category || category || '').toUpperCase().includes('PWD');
+    const appType = String(targetApp?.type || type || '').toLowerCase();
     const isAssistance = appType === 'assistance' || appType === 'social-assistance' || String(targetApp?.category || '').toLowerCase().includes('assistance') || String(targetApp?.service || '').toLowerCase().includes('assistance') || String(targetApp?.disability_class || '').toLowerCase().includes('assistance') || String(targetApp?.disabilityClass || '').toLowerCase().includes('assistance');
     const isSeniorBooklet = !isPwd && (
       appType === 'medicine-booklet' ||
@@ -707,14 +707,9 @@ exports.updateApplicationStatus = async (req, res) => {
       const q = await db.query(
         `UPDATE pwd_senior_applications
          SET status = $1, assigned_id_number = $2, approved_by = $3, approved_date = $4, rejection_reason = $5
-         WHERE id = $6 
-            OR id::text = $6 
-            OR id = $7 
-            OR (reference_number = $8 AND category = $9)
-            OR reference_number = $8
-            OR reference_number = $6
+         WHERE id = $6 OR id::text = $6
          RETURNING *`,
-        [status, assignedIdNumber || null, approvedBy || null, approvedDate || null, rejectionReason || null, exactAppId, id, lookupRef, category || '']
+        [status, assignedIdNumber || null, approvedBy || null, approvedDate || null, rejectionReason || null, exactAppId]
       );
       if (q.rows.length > 0) {
         targetApp = q.rows[0];
@@ -723,9 +718,9 @@ exports.updateApplicationStatus = async (req, res) => {
       console.warn('[DB Error] Updating DB failed, updating in memory fallback:', dbErr.message);
     }
 
-    // Always keep in-memory sync updated
+    // Always keep in-memory sync updated strictly for this exact single application
     memoryApplications = memoryApplications.map((app) => {
-      if (app.id === exactAppId || app.id === id || app.referenceNumber === lookupRef) {
+      if (String(app.id) === String(exactAppId) || String(app.id) === String(id)) {
         const updated = {
           ...app,
           status,

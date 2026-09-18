@@ -2891,6 +2891,7 @@ export default function PWDSeniorCitizen() {
           approvedDate,
           referenceNumber: refNo,
           category: targetApp.category,
+          type: targetApp.type,
         }),
       })
       clearApiCache("/api/pwd-senior/applications")
