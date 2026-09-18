@@ -16,8 +16,10 @@ import {
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
+import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
+import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { formatAppDate } from "./my-applications"
 
 export interface UserProfile {
@@ -48,8 +50,6 @@ export interface UserProfile {
   emergencyRelationship?: string
   emergencyAddress?: string
 }
-
-import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 
 const ASSISTANCE_TYPES = [
   "Financial Assistance / Cash Aid",

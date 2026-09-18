@@ -2863,10 +2863,10 @@ export default function PWDSeniorCitizen() {
     const approvedDate = new Date().toISOString()
 
     clearApiCache("/api/pwd-senior/applications")
-    // Strict 1-application update only: match by exact unique application id
+    // Strict 1-application update only: match by exact unique application id or referenceNumber + type
     updateApplications((prev) =>
       prev.map((app) =>
-        app.id === id
+        app.id === id || (id && app.id === id) || (refNo && app.referenceNumber === refNo && String(app.type || "").toLowerCase() === String(targetApp.type || "").toLowerCase())
           ? {
             ...app,
             status: "approved" as const,

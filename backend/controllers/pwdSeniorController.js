@@ -623,16 +623,30 @@ exports.updateApplicationStatus = async (req, res) => {
         `SELECT * FROM pwd_senior_applications WHERE id = $1 OR id::text = $1 LIMIT 1`,
         [id]
       );
-      if (q.rows.length === 0 && lookupRef && lookupRef !== id) {
+      if (q.rows.length === 0 && lookupRef) {
         if (category && type) {
           q = await db.query(
-            `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 AND category = $2 AND type = $3 LIMIT 1`,
+            `SELECT * FROM pwd_senior_applications 
+             WHERE (reference_number = $1 OR id::text = $1)
+               AND (category ILIKE '%' || $2 || '%' OR category = $2)
+               AND (type ILIKE '%' || $3 || '%' OR type = $3)
+             ORDER BY created_at DESC LIMIT 1`,
             [lookupRef, category, type]
           );
-        } else if (category) {
+        }
+        if (q.rows.length === 0 && category) {
           q = await db.query(
-            `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 AND category = $2 LIMIT 1`,
+            `SELECT * FROM pwd_senior_applications 
+             WHERE (reference_number = $1 OR id::text = $1)
+               AND (category ILIKE '%' || $2 || '%' OR category = $2)
+             ORDER BY created_at DESC LIMIT 1`,
             [lookupRef, category]
+          );
+        }
+        if (q.rows.length === 0) {
+          q = await db.query(
+            `SELECT * FROM pwd_senior_applications WHERE reference_number = $1 OR id::text = $1 ORDER BY created_at DESC LIMIT 1`,
+            [lookupRef]
           );
         }
       }
@@ -643,8 +657,9 @@ exports.updateApplicationStatus = async (req, res) => {
 
     if (!targetApp) {
       targetApp = memoryApplications.find((a) => String(a.id) === String(id)) ||
-        (type && category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && a.category === category && a.type === type) : null) ||
-        (category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && a.category === category) : null);
+        (type && category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && String(a.category).toLowerCase().includes(String(category).toLowerCase()) && String(a.type).toLowerCase().includes(String(type).toLowerCase())) : null) ||
+        (category ? memoryApplications.find((a) => a.referenceNumber === lookupRef && String(a.category).toLowerCase().includes(String(category).toLowerCase())) : null) ||
+        memoryApplications.find((a) => a.referenceNumber === lookupRef);
     }
 
     const exactAppId = targetApp?.id || id;
@@ -720,7 +735,7 @@ exports.updateApplicationStatus = async (req, res) => {
 
     // Always keep in-memory sync updated strictly for this exact single application
     memoryApplications = memoryApplications.map((app) => {
-      if (String(app.id) === String(exactAppId) || String(app.id) === String(id)) {
+      if (String(app.id) === String(exactAppId) || String(app.id) === String(id) || (app.referenceNumber === lookupRef && type && String(app.type).toLowerCase() === String(type).toLowerCase())) {
         const updated = {
           ...app,
           status,

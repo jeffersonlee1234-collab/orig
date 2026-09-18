@@ -868,7 +868,7 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
             <button
               type="button"
               onClick={() => {
-                setSubmissionStage("form")
+                setSubmitted(false)
                 setStep(1)
               }}
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wider flex items-center justify-center gap-2"
