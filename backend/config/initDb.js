@@ -694,17 +694,17 @@ async function initDb() {
       console.warn('[DB] Warning during admin account seed:', adminSeedErr.message);
     }
 
-    // Cleanup application history for test citizen renzoe09062@gmail.com / renzoe test accounts
+    // Cleanup application history for test citizen renzoe09062@gmail.com / Kris Topher (110000872276939)
     try {
       const targetEmails = ['renzoe09062@gmail.com', 'renzoe0906@gmail.com'];
       const userRes = await db.query(
-        `SELECT id, email, qcid_number, first_name, last_name FROM users WHERE LOWER(email) = ANY($1) OR email ILIKE '%renzoe0906%'`,
+        `SELECT id, email, qcid_number, first_name, last_name FROM users WHERE LOWER(email) = ANY($1) OR email ILIKE '%renzoe%' OR first_name ILIKE '%kris%' OR first_name ILIKE '%renz%' OR qcid_number ILIKE '%110000872276939%'`,
         [targetEmails]
       );
       
       const userIds = userRes.rows.map(r => r.id);
       const userEmails = userRes.rows.map(r => r.email);
-      const qcIds = userRes.rows.map(r => r.qcid_number).filter(Boolean);
+      const qcIds = [...new Set([...userRes.rows.map(r => r.qcid_number).filter(Boolean), '110000872276939', '110000572516915'])];
 
       // 1. Clean appointments
       await db.query(
@@ -713,18 +713,27 @@ async function initDb() {
             OR email = ANY($2::text[]) 
             OR qcid = ANY($3::text[])
             OR reference_no = ANY($3::text[])
-            OR applicant_name ILIKE '%renz%millares%'
+            OR applicant_name ILIKE '%kris%'
+            OR applicant_name ILIKE '%topher%'
+            OR applicant_name ILIKE '%renz%'
+            OR applicant_name ILIKE '%millares%'
             OR applicant_name ILIKE '%renzoe%'`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => {});
 
       // 2. Clean disbursements
       await db.query(
         `DELETE FROM financial_aid_disbursements 
          WHERE application_ref = ANY($1::text[]) 
-            OR applicant_name ILIKE '%renz%millares%'
+            OR application_ref ILIKE '%110000872276939%'
+            OR application_ref ILIKE '%110000572516915%'
+            OR disbursement_id = 'DISB-2026-4213'
+            OR applicant_name ILIKE '%kris%'
+            OR applicant_name ILIKE '%topher%'
+            OR applicant_name ILIKE '%renz%'
+            OR applicant_name ILIKE '%millares%'
             OR applicant_name ILIKE '%renzoe%'`,
-        [qcIds.length ? qcIds : ['']]
+        [qcIds]
       ).catch(() => {});
 
       // 3. Clean AICS applications & documents
@@ -734,8 +743,11 @@ async function initDb() {
             OR email = ANY($2::text[]) 
             OR qcid_number = ANY($3::text[]) 
             OR qc_id = ANY($3::text[])
+            OR reference_no = ANY($3::text[])
+            OR first_name ILIKE '%kris%'
+            OR first_name ILIKE '%renz%'
             OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => ({ rows: [] }));
       if (aicsApps.rows.length > 0) {
         const aicsIds = aicsApps.rows.map(r => r.id);
@@ -750,8 +762,10 @@ async function initDb() {
             OR email = ANY($2::text[]) 
             OR qcid = ANY($3::text[]) 
             OR reference_number = ANY($3::text[])
+            OR first_name ILIKE '%kris%'
+            OR first_name ILIKE '%renz%'
             OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => {});
 
       // 5. Clean Solo Parent & Child Welfare
@@ -761,8 +775,10 @@ async function initDb() {
             OR email = ANY($2::text[]) 
             OR qcid_number = ANY($3::text[]) 
             OR reference_number = ANY($3::text[])
+            OR first_name ILIKE '%kris%'
+            OR first_name ILIKE '%renz%'
             OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => {});
 
       // 6. Clean Livelihood
@@ -772,8 +788,10 @@ async function initDb() {
             OR email = ANY($2::text[]) 
             OR qcid = ANY($3::text[]) 
             OR reference_number = ANY($3::text[])
+            OR first_name ILIKE '%kris%'
+            OR first_name ILIKE '%renz%'
             OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => ({ rows: [] }));
       if (lhApps.rows.length > 0) {
         const lhIds = lhApps.rows.map(r => r.id);
@@ -788,8 +806,10 @@ async function initDb() {
          WHERE user_id = ANY($1::int[]) 
             OR email = ANY($2::text[]) 
             OR qcid = ANY($3::text[]) 
-            OR reference_number = ANY($3::text[])`,
-        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+            OR reference_number = ANY($3::text[])
+            OR first_name ILIKE '%kris%'
+            OR first_name ILIKE '%renz%'`,
+        [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
       ).catch(() => {});
 
       // 8. Clean Notifications
@@ -797,19 +817,21 @@ async function initDb() {
         `DELETE FROM user_notifications 
          WHERE user_id = ANY($1::text[]) 
             OR qcid_number = ANY($2::text[])`,
-        [userIds.map(String).length ? userIds.map(String) : [''], qcIds.length ? qcIds : ['']]
+        [userIds.map(String).length ? userIds.map(String) : [''], qcIds]
       ).catch(() => {});
 
       // 9. Clean Activity Log
       await db.query(
         `DELETE FROM activity_log 
-         WHERE actor ILIKE '%renzoe%' 
+         WHERE actor ILIKE '%kris%'
+            OR actor ILIKE '%topher%'
+            OR actor ILIKE '%renzoe%' 
             OR actor ILIKE '%renz%millares%' 
             OR reference_no = ANY($1::text[])`,
-        [qcIds.length ? qcIds : ['']]
+        [qcIds]
       ).catch(() => {});
 
-      console.log('[DB] Cleaned all application history for renzoe09062@gmail.com - Fresh citizen account ready.');
+      console.log('[DB] Cleaned all application history for renzoe09062@gmail.com / Kris (110000872276939) - Fresh citizen account ready.');
     } catch (cleanupErr) {
       console.warn('[DB] Warning during citizen account reset:', cleanupErr.message);
     }

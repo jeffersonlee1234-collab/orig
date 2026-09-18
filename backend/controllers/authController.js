@@ -2136,7 +2136,7 @@ exports.migrateAllPasswords = async (req, res) => {
 };
 
 /**
- * Resets application history for test citizen account (renzoe09062@gmail.com / renzoe test accounts)
+ * Resets application history for test citizen account (renzoe09062@gmail.com / Kris 110000872276939)
  */
 exports.resetTestCitizenAccount = async (req, res) => {
   try {
@@ -2144,13 +2144,13 @@ exports.resetTestCitizenAccount = async (req, res) => {
     const targetEmails = [targetEmail.toLowerCase().trim(), 'renzoe09062@gmail.com', 'renzoe0906@gmail.com'];
 
     const userRes = await db.query(
-      `SELECT id, email, qcid_number, first_name, last_name FROM users WHERE LOWER(email) = ANY($1) OR email ILIKE '%renzoe0906%'`,
+      `SELECT id, email, qcid_number, first_name, last_name FROM users WHERE LOWER(email) = ANY($1) OR email ILIKE '%renzoe%' OR first_name ILIKE '%kris%' OR first_name ILIKE '%renz%' OR qcid_number ILIKE '%110000872276939%'`,
       [targetEmails]
     );
 
     const userIds = userRes.rows.map(r => r.id);
     const userEmails = userRes.rows.map(r => r.email);
-    const qcIds = userRes.rows.map(r => r.qcid_number).filter(Boolean);
+    const qcIds = [...new Set([...userRes.rows.map(r => r.qcid_number).filter(Boolean), '110000872276939', '110000572516915'])];
 
     // 1. Appointments
     await db.query(
@@ -2159,18 +2159,27 @@ exports.resetTestCitizenAccount = async (req, res) => {
           OR email = ANY($2::text[]) 
           OR qcid = ANY($3::text[])
           OR reference_no = ANY($3::text[])
-          OR applicant_name ILIKE '%renz%millares%'
+          OR applicant_name ILIKE '%kris%'
+          OR applicant_name ILIKE '%topher%'
+          OR applicant_name ILIKE '%renz%'
+          OR applicant_name ILIKE '%millares%'
           OR applicant_name ILIKE '%renzoe%'`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => {});
 
     // 2. Disbursements
     await db.query(
       `DELETE FROM financial_aid_disbursements 
        WHERE application_ref = ANY($1::text[]) 
-          OR applicant_name ILIKE '%renz%millares%'
+          OR application_ref ILIKE '%110000872276939%'
+          OR application_ref ILIKE '%110000572516915%'
+          OR disbursement_id = 'DISB-2026-4213'
+          OR applicant_name ILIKE '%kris%'
+          OR applicant_name ILIKE '%topher%'
+          OR applicant_name ILIKE '%renz%'
+          OR applicant_name ILIKE '%millares%'
           OR applicant_name ILIKE '%renzoe%'`,
-      [qcIds.length ? qcIds : ['']]
+      [qcIds]
     ).catch(() => {});
 
     // 3. AICS
@@ -2180,8 +2189,11 @@ exports.resetTestCitizenAccount = async (req, res) => {
           OR email = ANY($2::text[]) 
           OR qcid_number = ANY($3::text[]) 
           OR qc_id = ANY($3::text[])
+          OR reference_no = ANY($3::text[])
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'
           OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => ({ rows: [] }));
     if (aicsApps.rows.length > 0) {
       const aicsIds = aicsApps.rows.map(r => r.id);
@@ -2196,8 +2208,10 @@ exports.resetTestCitizenAccount = async (req, res) => {
           OR email = ANY($2::text[]) 
           OR qcid = ANY($3::text[]) 
           OR reference_number = ANY($3::text[])
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'
           OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => {});
 
     // 5. Solo Parent & Child Welfare
@@ -2207,8 +2221,10 @@ exports.resetTestCitizenAccount = async (req, res) => {
           OR email = ANY($2::text[]) 
           OR qcid_number = ANY($3::text[]) 
           OR reference_number = ANY($3::text[])
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'
           OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => {});
 
     // 6. Livelihood
@@ -2218,8 +2234,10 @@ exports.resetTestCitizenAccount = async (req, res) => {
           OR email = ANY($2::text[]) 
           OR qcid = ANY($3::text[]) 
           OR reference_number = ANY($3::text[])
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'
           OR (first_name ILIKE '%renz%' AND last_name ILIKE '%millares%')`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => ({ rows: [] }));
     if (lhApps.rows.length > 0) {
       const lhIds = lhApps.rows.map(r => r.id);
@@ -2234,8 +2252,10 @@ exports.resetTestCitizenAccount = async (req, res) => {
        WHERE user_id = ANY($1::int[]) 
           OR email = ANY($2::text[]) 
           OR qcid = ANY($3::text[]) 
-          OR reference_number = ANY($3::text[])`,
-      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds.length ? qcIds : ['']]
+          OR reference_number = ANY($3::text[])
+          OR first_name ILIKE '%kris%'
+          OR first_name ILIKE '%renz%'`,
+      [userIds.length ? userIds : [-1], userEmails.length ? userEmails : [''], qcIds]
     ).catch(() => {});
 
     // 8. Notifications
@@ -2243,21 +2263,23 @@ exports.resetTestCitizenAccount = async (req, res) => {
       `DELETE FROM user_notifications 
        WHERE user_id = ANY($1::text[]) 
           OR qcid_number = ANY($2::text[])`,
-      [userIds.map(String).length ? userIds.map(String) : [''], qcIds.length ? qcIds : ['']]
+      [userIds.map(String).length ? userIds.map(String) : [''], qcIds]
     ).catch(() => {});
 
     // 9. Activity Log
     await db.query(
       `DELETE FROM activity_log 
-       WHERE actor ILIKE '%renzoe%' 
+       WHERE actor ILIKE '%kris%'
+          OR actor ILIKE '%topher%'
+          OR actor ILIKE '%renzoe%' 
           OR actor ILIKE '%renz%millares%' 
           OR reference_no = ANY($1::text[])`,
-      [qcIds.length ? qcIds : ['']]
+      [qcIds]
     ).catch(() => {});
 
     return res.status(200).json({
       success: true,
-      message: `Cleaned all application history for ${targetEmail}. The citizen account is now fresh and ready for testing.`,
+      message: `Cleaned all application history for ${targetEmail} / Kris (110000872276939). The citizen account is now fresh and ready for testing.`,
       usersFound: userRes.rows.length,
       user: userRes.rows[0] || null,
     });
@@ -2266,7 +2288,3 @@ exports.resetTestCitizenAccount = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to reset test citizen account', error: err.message });
   }
 };
-
-
-
-
