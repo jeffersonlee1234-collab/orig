@@ -382,10 +382,6 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
           setLatestSubmittedApp(activeAssistanceApp)
           setSubmitted(true)
           setReferenceNumber(activeRef)
-          const dateStr = activeAssistanceApp.submittedAt || activeAssistanceApp.created_at || activeAssistanceApp.dateSubmitted
-          if (dateStr) {
-            setSubmissionDate(new Date(dateStr).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }))
-          }
         }
       } catch (err) {
         console.warn("Real-time sync error:", err)
@@ -699,13 +695,6 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
     setIsSubmitting(true)
     const qcid = userProfile?.qcidNo || formData.qcidNumber || "110000116932100"
     setReferenceNumber(qcid)
-    setSubmissionDate(
-      new Date().toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    )
 
     const newApp = {
       id: `APP-SNR-AST-${Date.now()}`,
