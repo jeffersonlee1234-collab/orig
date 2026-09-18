@@ -100,7 +100,7 @@ function invalidateAppsCache() {
 function stripLargeDataUrls(obj, depth = 0) {
   if (depth > 6 || obj === null || obj === undefined) return obj;
   if (typeof obj === 'string') {
-    if (obj.length > 300 && obj.startsWith('blob:')) {
+    if (obj.length > 500 && (obj.startsWith('blob:') || obj.startsWith('data:'))) {
       return '';
     }
     return obj;
@@ -111,7 +111,7 @@ function stripLargeDataUrls(obj, depth = 0) {
   if (typeof obj === 'object') {
     const res = {};
     for (const [key, val] of Object.entries(obj)) {
-      if (typeof val === 'string' && val.length > 300 && val.startsWith('blob:')) {
+      if (typeof val === 'string' && val.length > 500 && (val.startsWith('blob:') || val.startsWith('data:'))) {
         res[key] = '';
       } else if (typeof val === 'object' && val !== null) {
         res[key] = stripLargeDataUrls(val, depth + 1);
