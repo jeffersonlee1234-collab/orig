@@ -15,8 +15,7 @@ import {
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
-import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
-import { notifyApplicationChange } from "../../utils/realtimeSync"
+import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 import { formatAppDate } from "./my-applications"
 
@@ -566,7 +565,8 @@ export default function PWDSocialAssistanceWizard({
     }
 
     checkStatus()
-    const pollInterval = setInterval(checkStatus, 8000)
+    const pollInterval = setInterval(checkStatus, 3000)
+    const unsubscribe = subscribeToRealtimeChanges(checkStatus)
 
     const handleUpdated = () => checkStatus()
     window.addEventListener("pwd_senior_applications_updated", handleUpdated)
@@ -577,6 +577,7 @@ export default function PWDSocialAssistanceWizard({
     return () => {
       isMounted = false
       clearInterval(pollInterval)
+      unsubscribe()
       window.removeEventListener("pwd_senior_applications_updated", handleUpdated)
       window.removeEventListener("applications_updated", handleUpdated)
       window.removeEventListener("financial_disbursements_updated", handleUpdated)

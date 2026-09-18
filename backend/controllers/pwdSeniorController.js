@@ -707,31 +707,38 @@ exports.updateApplicationStatus = async (req, res) => {
       const q = await db.query(
         `UPDATE pwd_senior_applications
          SET status = $1, assigned_id_number = $2, approved_by = $3, approved_date = $4, rejection_reason = $5
-         WHERE id = $6 OR id::text = $6
+         WHERE id = $6 
+            OR id::text = $6 
+            OR id = $7 
+            OR (reference_number = $8 AND category = $9)
+            OR reference_number = $8
+            OR reference_number = $6
          RETURNING *`,
-        [status, assignedIdNumber || null, approvedBy || null, approvedDate || null, rejectionReason || null, exactAppId]
+        [status, assignedIdNumber || null, approvedBy || null, approvedDate || null, rejectionReason || null, exactAppId, id, lookupRef, category || '']
       );
       if (q.rows.length > 0) {
         targetApp = q.rows[0];
       }
     } catch (dbErr) {
       console.warn('[DB Error] Updating DB failed, updating in memory fallback:', dbErr.message);
-      memoryApplications = memoryApplications.map((app) => {
-        if (app.id === exactAppId) {
-          const updated = {
-            ...app,
-            status,
-            assignedIdNumber: assignedIdNumber || app.assignedIdNumber,
-            approvedBy: approvedBy || app.approvedBy,
-            approvedDate: approvedDate || app.approvedDate,
-            rejectionReason: rejectionReason || app.rejectionReason,
-          };
-          targetApp = updated;
-          return updated;
-        }
-        return app;
-      });
     }
+
+    // Always keep in-memory sync updated
+    memoryApplications = memoryApplications.map((app) => {
+      if (app.id === exactAppId || app.id === id || app.referenceNumber === lookupRef) {
+        const updated = {
+          ...app,
+          status,
+          assignedIdNumber: assignedIdNumber || app.assignedIdNumber,
+          approvedBy: approvedBy || app.approvedBy,
+          approvedDate: approvedDate || app.approvedDate,
+          rejectionReason: rejectionReason || app.rejectionReason,
+        };
+        if (!targetApp) targetApp = updated;
+        return updated;
+      }
+      return app;
+    });
 
     if (status === 'approved') {
       if (isAssistance) {

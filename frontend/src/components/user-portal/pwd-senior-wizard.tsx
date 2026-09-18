@@ -3,7 +3,7 @@ import { Check, CheckCircle2, Upload, Camera, ChevronDown, Pencil, FileText, Ale
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
-import { notifyApplicationChange } from "../../utils/realtimeSync"
+import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { getCurrentUserProfile, getLoggedInUserQcid } from "../../utils/userProfile"
 import { readFileAsDataUrl } from "../../utils/fileUpload"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
@@ -885,7 +885,8 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     }
 
     checkActiveApp()
-    const interval = setInterval(checkActiveApp, 8000)
+    const interval = setInterval(checkActiveApp, 3000)
+    const unsubscribe = subscribeToRealtimeChanges(checkActiveApp)
     window.addEventListener("pwd_senior_applications_updated", checkActiveApp)
     window.addEventListener("applications_updated", checkActiveApp)
     window.addEventListener("storage", checkActiveApp)
@@ -893,6 +894,7 @@ export default function PWDApplicationWizard({ onBack, userProfile: propUserProf
     return () => {
       isMounted = false
       clearInterval(interval)
+      unsubscribe()
       window.removeEventListener("pwd_senior_applications_updated", checkActiveApp)
       window.removeEventListener("applications_updated", checkActiveApp)
       window.removeEventListener("storage", checkActiveApp)

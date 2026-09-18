@@ -18,7 +18,7 @@ import {
 import DocumentCameraModal from "../ui/document-camera-modal"
 import { API_BASE } from "../../config/api"
 import { useLanguage } from "../ui/language-context"
-import { notifyApplicationChange } from "../../utils/realtimeSync"
+import { notifyApplicationChange, subscribeToRealtimeChanges } from "../../utils/realtimeSync"
 import { fetchPwdSeniorApplications } from "../../utils/cachedApiFetch"
 import { formatAppDate } from "./my-applications"
 
@@ -770,13 +770,15 @@ export default function SeniorCitizenApplicationWizard({
     }
 
     checkActiveApp()
-    const interval = setInterval(checkActiveApp, 8000)
+    const interval = setInterval(checkActiveApp, 3000)
+    const unsubscribe = subscribeToRealtimeChanges(checkActiveApp)
     window.addEventListener("pwd_senior_applications_updated", checkActiveApp)
     window.addEventListener("storage", checkActiveApp)
 
     return () => {
       isMounted = false
       clearInterval(interval)
+      unsubscribe()
       window.removeEventListener("pwd_senior_applications_updated", checkActiveApp)
       window.removeEventListener("storage", checkActiveApp)
     }
