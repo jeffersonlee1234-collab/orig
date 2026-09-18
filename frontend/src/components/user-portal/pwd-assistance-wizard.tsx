@@ -11,6 +11,7 @@ import {
   X,
   Loader2,
   Info,
+  RotateCcw,
 } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
@@ -1062,10 +1063,27 @@ export default function PWDSocialAssistanceWizard({
             <button
               type="button"
               onClick={() => {
+                setSubmissionStage("form")
+                setStep(1)
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>
+                {language === "en"
+                  ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                  : language === "bis"
+                  ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                  : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 ;(window as any).__isFormDirty = false
                 window.location.href = "/portal/financial-aid"
               }}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wide"
+              className="w-full py-2.5 px-4 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wide"
             >
               {language === "bis" ? "TAN-AWA SA FINANCIAL AID / MY APPLICATIONS" : "VIEW IN FINANCIAL AID / MY APPLICATIONS"}
             </button>

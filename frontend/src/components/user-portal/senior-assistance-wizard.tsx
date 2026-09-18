@@ -13,6 +13,7 @@ import {
   Info,
   Home,
   Search,
+  RotateCcw,
 } from "lucide-react"
 import { useLanguage } from "../ui/language-context"
 import DocumentCameraModal from "../ui/document-camera-modal"
@@ -867,13 +868,30 @@ export default function SeniorSocialAssistanceWizard({ onBack, userProfile: prop
             <button
               type="button"
               onClick={() => {
+                setSubmissionStage("form")
+                setStep(1)
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>
+                {language === "en"
+                  ? "RE-APPLY (SUBMIT NEW APPLICATION)"
+                  : language === "bis"
+                  ? "MAG-APPLY PAG-USAB (RE-APPLY)"
+                  : "MAG-APPLY MULI (RE-APPLY APPLICATION)"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 try {
                   localStorage.removeItem("pwd_senior_reapplying_senior_social-assistance")
                   localStorage.removeItem("pwd_senior_reapplying")
                 } catch {}
                 window.location.href = "/portal/financial-aid"
               }}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs uppercase tracking-wider"
+              className="w-full py-2.5 px-4 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-bold transition-colors cursor-pointer uppercase tracking-wider"
             >
               {language === "tl"
                 ? "TINGNAN SA FINANCIAL AID / APPLICATION HISTORY"
