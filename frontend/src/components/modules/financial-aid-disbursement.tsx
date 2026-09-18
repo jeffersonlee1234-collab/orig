@@ -28,8 +28,99 @@ import MaskedText from "../ui/masked-text"
 
 export { FIXED_ASSISTANCE_AMOUNTS, type DisbursementStage, type SyncedDisbursementRecord }
 
+function getInitialDisbursementsForAdmin(): SyncedDisbursementRecord[] {
+  try {
+    const deletedKeys = getDeletedDisbursementKeys()
+    const saved = getSavedDisbursements()
+    const records: SyncedDisbursementRecord[] = []
+    const seenKeys = new Set<string>()
+
+    if (Array.isArray(saved) && saved.length > 0) {
+      saved.forEach((s) => {
+        if (!s || isIdOrDocumentService(s.assistanceType) || deletedKeys.has(s.id) || deletedKeys.has(s.applicationRef) || deletedKeys.has(s.disbursementId)) {
+          return
+        }
+        const key = `${s.applicationRef}_${s.assistanceType}`
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key)
+          records.push(s)
+        }
+      })
+    }
+
+    // AICS
+    try {
+      const aics = JSON.parse(localStorage.getItem("aics_applications") || "[]")
+      if (Array.isArray(aics)) {
+        aics.forEach((app: any) => {
+          if (app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released") {
+            const rawType = (app.assistance_type || "Medical").replace(/\s*assistance/gi, "").trim()
+            const type = (rawType.charAt(0).toUpperCase() + rawType.slice(1)) + " Assistance"
+            const ref = app.qc_id || app.reference_no || app.reference_number || `AICS-2026-${String(app.id || 1).padStart(4, "0")}`
+            const key = `${ref}_${type}`
+            if (!seenKeys.has(key) && !deletedKeys.has(ref)) {
+              seenKeys.add(key)
+              records.push({
+                id: `remote-${app.id || ref}`,
+                disbursementId: `DISB-2026-${String(app.id || 101).padStart(4, "0")}`,
+                applicationRef: ref,
+                applicantName: `${app.first_name || ""} ${app.middle_name || ""} ${app.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY APPLICANT",
+                assistanceType: type,
+                fixedAmount: resolveFixedAmount(type),
+                dateApproved: new Date(app.created_at || Date.now()).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+                status: (app.status === "released" || app.status === "completed") ? "RELEASED" : "PENDING",
+                venue: "Quezon City Hall",
+                remarks: "Automatically synced from AICS application.",
+              })
+            }
+          }
+        })
+      }
+    } catch {}
+
+    // PWD / Senior
+    try {
+      const pwd = JSON.parse(localStorage.getItem("pwd_senior_applications") || "[]")
+      if (Array.isArray(pwd)) {
+        pwd.forEach((app: any) => {
+          const isAssistance =
+            app.type === "assistance" ||
+            app.type === "social-assistance" ||
+            String(app.category || "").toLowerCase().includes("assistance") ||
+            String(app.service || "").toLowerCase().includes("assistance") ||
+            String(app.assistanceType || "").toLowerCase().includes("assistance")
+          if (isAssistance && (app.status === "approved" || app.status === "completed" || app.status === "for_release" || app.status === "released")) {
+            const isPwdApp = String(app.category || "").toUpperCase().includes("PWD")
+            const type = isPwdApp ? "PWD Social Assistance" : "Senior Social Assistance"
+            const ref = app.referenceNumber || app.reference_number || "PWD-QC-2026"
+            const key = `${ref}_${type}`
+            if (!seenKeys.has(key) && !deletedKeys.has(ref)) {
+              seenKeys.add(key)
+              records.push({
+                id: `remote-pwd-${app.id || ref}`,
+                disbursementId: `DISB-2026-${String(app.id || ref).slice(-4).padStart(4, "0")}`,
+                applicationRef: ref,
+                applicantName: [app.firstName, app.middleName, app.lastName, app.suffix].filter(Boolean).join(" ").toUpperCase() || "BENEFICIARY APPLICANT",
+                assistanceType: type,
+                fixedAmount: 2000,
+                dateApproved: new Date(app.approvedDate || app.submittedAt || Date.now()).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+                status: (app.status === "released" || app.status === "completed") ? "RELEASED" : "PENDING",
+                venue: "Quezon City Hall",
+                remarks: "Automatically synced from PWD/Senior application.",
+              })
+            }
+          }
+        })
+      }
+    } catch {}
+
+    return records
+  } catch {}
+  return []
+}
+
 export default function FinancialAidDisbursement() {
-  const [disbursements, setDisbursements] = useState<SyncedDisbursementRecord[]>([])
+  const [disbursements, setDisbursements] = useState<SyncedDisbursementRecord[]>(() => getInitialDisbursementsForAdmin())
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>("ALL")
   const [selectedDetailsRecord, setSelectedDetailsRecord] = useState<SyncedDisbursementRecord | null>(null)
