@@ -36,12 +36,35 @@ function getInitialDisbursementsForAdmin(): SyncedDisbursementRecord[] {
     const records: SyncedDisbursementRecord[] = []
     const seenKeys = new Set<string>()
 
+    // Load local appointments cache to map appointment dates/times immediately
+    let appointmentsMap: Record<string, any> = {}
+    try {
+      const rawAppts = localStorage.getItem("all_appointments") || localStorage.getItem("appointments")
+      if (rawAppts) {
+        const parsedAppts = JSON.parse(rawAppts)
+        if (Array.isArray(parsedAppts)) {
+          parsedAppts.forEach((a: any) => {
+            if (a.reference_no) appointmentsMap[a.reference_no] = a
+            if (a.referenceNo) appointmentsMap[a.referenceNo] = a
+            if (a.applicant_name) appointmentsMap[a.applicant_name.toLowerCase().trim()] = a
+            if (a.applicantName) appointmentsMap[a.applicantName.toLowerCase().trim()] = a
+          })
+        }
+      }
+    } catch {}
+
+    let localScheduledMap: Record<string, any> = {}
+    try {
+      const rawSched = localStorage.getItem("all_appointments_scheduled")
+      if (rawSched) localScheduledMap = JSON.parse(rawSched)
+    } catch {}
+
     if (Array.isArray(saved) && saved.length > 0) {
       saved.forEach((s) => {
         if (!s || isIdOrDocumentService(s.assistanceType) || deletedKeys.has(s.id) || deletedKeys.has(s.applicationRef) || deletedKeys.has(s.disbursementId)) {
           return
         }
-        const key = `${s.applicationRef}_${s.assistanceType}`
+        const key = `${s.applicationRef || s.disbursementId}_${s.assistanceType}`
         if (!seenKeys.has(key)) {
           seenKeys.add(key)
           records.push(s)
@@ -115,7 +138,90 @@ function getInitialDisbursementsForAdmin(): SyncedDisbursementRecord[] {
       }
     } catch {}
 
-    return records
+    // Livelihood
+    try {
+      const liv = JSON.parse(localStorage.getItem("livelihood_applications") || "[]")
+      if (Array.isArray(liv)) {
+        liv.forEach((l: any) => {
+          if (String(l.application_status || l.status).toLowerCase() === "approved") {
+            const ref = l.reference_number || `LP-2026-${l.id}`
+            const key = `${ref}_Livelihood Capital Assistance`
+            if (!seenKeys.has(key) && !deletedKeys.has(ref)) {
+              seenKeys.add(key)
+              records.push({
+                id: `remote-liv-${l.id || ref}`,
+                disbursementId: `DISB-2026-${String(l.id || 101).padStart(4, "0")}`,
+                applicationRef: ref,
+                applicantName: `${l.first_name || ""} ${l.last_name || ""}`.trim().toUpperCase() || "BENEFICIARY",
+                assistanceType: "Livelihood Capital Assistance",
+                fixedAmount: 15000,
+                dateApproved: new Date(l.created_at || Date.now()).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+                status: "PENDING",
+                venue: "Quezon City Hall - SSDD Livelihood Center",
+                remarks: "Automatically synced from Livelihood application.",
+              })
+            }
+          }
+        })
+      }
+    } catch {}
+
+    // Attach appointments & evaluate auto-release
+    const now = new Date()
+    const processed = records.map((d) => {
+      const appt = appointmentsMap[d.applicationRef] || appointmentsMap[d.applicantName.toLowerCase().trim()]
+      const cachedSched =
+        localScheduledMap[d.id] ||
+        localScheduledMap[d.disbursementId] ||
+        localScheduledMap[d.applicationRef] ||
+        localScheduledMap[d.applicantName.toLowerCase().trim()]
+
+      let finalApptDate = d.appointmentDate
+      let finalApptTime = d.appointmentTime
+      let finalVenue = d.venue || "Quezon City Hall"
+
+      if (appt) {
+        let fmtDate = appt.date || appt.appointment_date || appt.appointmentDate
+        try {
+          const dt = new Date(fmtDate)
+          if (!isNaN(dt.getTime())) {
+            fmtDate = dt.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
+          }
+        } catch {}
+        finalApptDate = fmtDate || finalApptDate
+        finalApptTime = appt.time || appt.appointment_time || appt.appointmentTime || finalApptTime
+        finalVenue = appt.location || appt.venue || finalVenue
+      } else if (cachedSched) {
+        finalApptDate = cachedSched.appointmentDate || cachedSched.date || finalApptDate
+        finalApptTime = cachedSched.appointmentTime || cachedSched.time || finalApptTime
+        finalVenue = cachedSched.venue || cachedSched.location || finalVenue
+      }
+
+      let finalStatus: DisbursementStage = d.status
+      let finalReleasedDate = d.releasedDate
+      let finalReleasedBy = d.releasedBy
+
+      if (finalStatus === "PENDING" && finalApptDate) {
+        const scheduledDt = parseAppointmentDateTime(finalApptDate, finalApptTime)
+        if (scheduledDt && now.getTime() >= scheduledDt.getTime()) {
+          finalStatus = "RELEASED"
+          finalReleasedDate = finalReleasedDate || `${now.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} ${finalApptTime || ""}`
+          finalReleasedBy = finalReleasedBy || "Automated Scheduled Payout System / Disbursing Officer"
+        }
+      }
+
+      return {
+        ...d,
+        appointmentDate: finalApptDate,
+        appointmentTime: finalApptTime,
+        venue: finalVenue,
+        status: finalStatus,
+        releasedDate: finalReleasedDate,
+        releasedBy: finalReleasedBy,
+      }
+    })
+
+    return processed
   } catch {}
   return []
 }
