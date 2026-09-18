@@ -516,15 +516,15 @@ export default function ApplyFinancialAid() {
     }
     if (hasAppointment) {
       return {
-        bg: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700/80",
-        icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
+        bg: "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700/80",
+        icon: <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />,
         label: "APPROVED • APPOINTMENT SCHEDULED",
       }
     }
     return {
-      bg: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700/80",
-      icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
-      label: "APPROVED • READY FOR PAYOUT",
+      bg: "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700/80",
+      icon: <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />,
+      label: "APPROVED • FOR SCHEDULING",
     }
   }
 
@@ -550,7 +550,7 @@ export default function ApplyFinancialAid() {
             {t("autoConnectNoticeTitle") || "Awtomatikong Konektado ang Ayuda at Appointment"}
           </span>
           <p className="text-blue-800/90 dark:text-blue-300 leading-relaxed">
-            {t("autoConnectNoticeDesc") || "Hindi na kailangan mag-set ng halaga o magsumite ulit. Kapag na-aprubahan ng Admin ang inyong aplikasyon, awtomatikong lalabas ang itinakdang Fixed Amount at ang petsa/oras ng inyong Payout Appointment."}
+            {t("autoConnectNoticeDesc") || "Hindi na kailangan mag-set ng halaga o magsumite ulit. Kapag na-aprubahan ng Admin ang inyong aplikasyon, awtomatikong lalabas ang itinakdang Fixed Amount at ang petsa/oras ng inyong Payout Appointment kapag na-iskedyul."}
           </p>
         </div>
       </div>
@@ -584,8 +584,6 @@ export default function ApplyFinancialAid() {
               const isReleased = d.status === "RELEASED"
               const hasAppt = Boolean(d.appointmentDate)
               const badge = getStageBadge(d.status, hasAppt)
-              const displayApptDate = d.appointmentDate || d.dateApproved || new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
-              const displayApptTime = d.appointmentTime || "10:00 AM"
 
               return (
                 <div
@@ -627,15 +625,27 @@ export default function ApplyFinancialAid() {
                         <Calendar className="w-3.5 h-3.5" />
                         {t("payoutApptSchedule") || "Payout Appointment Schedule"}
                       </span>
-                      <div>
-                        <p className="text-sm font-extrabold text-gray-900 dark:text-white">
-                          {displayApptDate}
-                        </p>
-                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                          {displayApptTime}
-                        </p>
-                      </div>
+                      {d.appointmentDate ? (
+                        <div>
+                          <p className="text-sm font-extrabold text-gray-900 dark:text-white">
+                            {d.appointmentDate}
+                          </p>
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            {d.appointmentTime || "10:00 AM"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            Hinihintay ang Iskedyul mula sa Admin
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Itatakda ng Social Worker ang inyong petsa at oras ng appointment sa City Hall.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Payout Location Box */}
@@ -671,16 +681,22 @@ export default function ApplyFinancialAid() {
                       <div
                         className={`p-3 rounded-xl border text-center transition-all ${
                           !isReleased
-                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
+                            ? hasAppt
+                              ? "bg-blue-500/15 border-blue-500/40 text-blue-900 dark:text-blue-200 font-extrabold shadow-2xs ring-1 ring-blue-500/30"
+                              : "bg-amber-500/15 border-amber-500/40 text-amber-900 dark:text-amber-200 font-extrabold shadow-2xs ring-1 ring-amber-500/30"
                             : "bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 font-semibold"
                         }`}
                       >
-                        <span className="text-[10px] block text-emerald-700 dark:text-emerald-400 uppercase font-semibold">Step 1</span>
+                        <span className={`text-[10px] block uppercase font-semibold ${hasAppt ? "text-blue-700 dark:text-blue-400" : "text-amber-700 dark:text-amber-400"}`}>
+                          Step 1
+                        </span>
                         <span className="text-xs font-bold text-gray-900 dark:text-white">
-                          {t("step1ApprovedScheduled") || "STEP 1: APPROVED / SCHEDULED"}
+                          {hasAppt ? "STEP 1: APPOINTMENT SCHEDULED" : "STEP 1: FOR SCHEDULING"}
                         </span>
                         <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">
-                          {t("step1ApprovedDesc") || "Na-aprubahan na. Pumunta sa City Hall sa nakatakdang petsa."}
+                          {hasAppt
+                            ? `Pumunta sa City Hall sa ${d.appointmentDate} ${d.appointmentTime || ""}`
+                            : "Hinihintay ang pagtakda ng iskedyul ng Admin sa Appointments"}
                         </p>
                       </div>
 

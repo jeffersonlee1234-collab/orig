@@ -3275,10 +3275,19 @@ export default function MyApplications() {
 
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl p-3.5 border border-emerald-100 dark:border-slate-700 space-y-1">
                   <span className="text-gray-500 dark:text-slate-400 block uppercase font-bold text-[10px]">Appointment Schedule</span>
-                  <span className="text-sm font-extrabold text-gray-900 dark:text-white block">{apptDate}</span>
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {apptTime}
-                  </span>
+                  {matchDisb?.appointmentDate ? (
+                    <>
+                      <span className="text-sm font-extrabold text-gray-900 dark:text-white block">{matchDisb.appointmentDate}</span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {matchDisb.appointmentTime || "10:00 AM"}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 block">Hinihintay ang Iskedyul</span>
+                      <span className="text-[10px] text-gray-400 block">Itatakda ng Admin sa Appointments</span>
+                    </>
+                  )}
                 </div>
 
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl p-3.5 border border-emerald-100 dark:border-slate-700 space-y-1">
@@ -3700,7 +3709,11 @@ export default function MyApplications() {
                           </p>
                           <p className="text-[11px] text-gray-600 dark:text-slate-300 flex items-center gap-1">
                             <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                            <span>Payout Appointment: <strong className="text-gray-900 dark:text-white">{apptDate} – {apptTime}</strong> ({payoutVenue})</span>
+                            {matchDisb?.appointmentDate ? (
+                              <span>Payout Appointment: <strong className="text-gray-900 dark:text-white">{matchDisb.appointmentDate} – {matchDisb.appointmentTime || "10:00 AM"}</strong> ({payoutVenue})</span>
+                            ) : (
+                              <span>Payout Appointment: <strong className="text-amber-700 dark:text-amber-400">Hinihintay ang Iskedyul mula sa Admin</strong> ({payoutVenue})</span>
+                            )}
                           </p>
                         </div>
                       </div>
