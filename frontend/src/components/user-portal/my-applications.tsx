@@ -1562,32 +1562,11 @@ function DigitalIdCardModal({
         </div>
 
         {/* ── MODAL FOOTER ACTION BAR ── */}
-        <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={isDownloading}
-              onClick={() => handleDownloadSide("front")}
-              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download Front (PNG)</span>
-            </button>
-            <button
-              type="button"
-              disabled={isDownloading}
-              onClick={() => handleDownloadSide("back")}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download Back (PNG)</span>
-            </button>
-          </div>
-
+        <div className="p-4 border-t border-gray-200 bg-slate-50 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+            className="px-6 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
           >
             Close
           </button>
@@ -3043,14 +3022,6 @@ export default function MyApplications() {
                       <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
                         HARAP (FRONT SIDE)
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "front")}
-                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Download Front</span>
-                      </button>
                     </div>
 
                     <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm bg-white select-none">
@@ -3148,14 +3119,6 @@ export default function MyApplications() {
                       <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
                         LIKOD (BACK SIDE)
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "back")}
-                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Download Back</span>
-                      </button>
                     </div>
 
                     <div className="border border-slate-300 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm bg-white select-none relative">
@@ -3207,32 +3170,14 @@ export default function MyApplications() {
                 </div>
 
                 {/* Action Bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "front")}
-                    className="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Front (PNG)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => downloadIdCardAsImage(selectedApp, photoUrl, "back")}
-                    className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Back (PNG)</span>
-                  </button>
-
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                   <button
                     type="button"
                     onClick={() => setIdCardApp(selectedApp)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    <span>View &amp; Print Official ID</span>
+                    <IdCard className="w-4 h-4" />
+                    <span>View ID (Front &amp; Back)</span>
                   </button>
                 </div>
               </div>
@@ -3595,30 +3540,18 @@ export default function MyApplications() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:justify-end shrink-0 pt-1 md:pt-0">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              downloadIdCardAsImage(app, getApplicantPhotoUrl(app))
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:hover:bg-blue-900/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
-                            title="Download ID as PNG image"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Download PNG</span>
-                          </button>
+                        <div className="flex items-center gap-2 md:justify-end shrink-0 pt-1 md:pt-0">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
                               setIdCardApp(app)
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
-                            title="View & Print Official ID Card"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                            title="View Official Digital ID Card"
                           >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>View &amp; Print ID</span>
+                            <IdCard className="w-3.5 h-3.5" />
+                            <span>View ID</span>
                           </button>
                         </div>
                       </div>
