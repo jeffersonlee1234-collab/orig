@@ -402,34 +402,43 @@ function mapUploadedDocuments(raw: any, isChildWelfare: boolean = false): Applic
 }
 
 function safeDateIso(dateVal: any): string {
-  if (!dateVal) return new Date().toISOString()
+  if (!dateVal) return ""
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+  return isNaN(d.getTime()) ? "" : d.toISOString()
 }
 
 function formatSafeDate(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleDateString()
+  if (!dateVal) return "—"
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toLocaleDateString() : d.toLocaleDateString()
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
 }
 
 function formatSafeTime(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  if (!dateVal) return ""
   const d = new Date(dateVal)
   return isNaN(d.getTime())
-    ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    ? ""
     : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
 function formatSafeDateTime(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleString()
+  if (!dateVal) return "—"
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString()
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString()
 }
 
 function mapSoloParentRow(row: any): SoloParentSubmission {
   if (!row) return {} as any
-  const rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.updated_at
+  let rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.extra_data?.submittedAt || row.extra_data?.created_at
+  if (!rawDate && row.id) {
+    const match = String(row.id).match(/\b(1\d{11,12})\b/)
+    if (match) {
+      const d = new Date(Number(match[1]))
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+        rawDate = d.toISOString()
+      }
+    }
+  }
   const safeSubmittedAt = safeDateIso(rawDate)
 
   if (row.id && String(row.id).startsWith("SP-") && row.category === "Solo Parent") {
@@ -599,7 +608,16 @@ function mapSoloParentRow(row: any): SoloParentSubmission {
 
 function mapChildWelfareRow(row: any): ChildWelfareSubmission {
   if (!row) return {} as any
-  const rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.updated_at
+  let rawDate = row.submittedAt || row.created_at || row.submitted_at || row.dateSubmitted || row.date_submitted || row.extra_data?.submittedAt || row.extra_data?.created_at
+  if (!rawDate && row.id) {
+    const match = String(row.id).match(/\b(1\d{11,12})\b/)
+    if (match) {
+      const d = new Date(Number(match[1]))
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+        rawDate = d.toISOString()
+      }
+    }
+  }
   const safeSubmittedAt = safeDateIso(rawDate)
 
   if (row.id && String(row.id).startsWith("CW-") && row.category === "Child Welfare") {
@@ -1321,7 +1339,14 @@ function ApplicationCard({ app, onView, onShowCard, allSubmissions }: CardProps)
           </div>
           <p className="gw-mono text-xs mb-1" style={{ color: "var(--ink-faint)" }}>REF {app.referenceNumber}</p>
           <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-            Submitted {formatSafeDate(app.submittedAt)} · {formatSafeTime(app.submittedAt)}
+            {app.submittedAt && formatSafeDate(app.submittedAt) !== "—" ? (
+              <>
+                Submitted {formatSafeDate(app.submittedAt)}
+                {formatSafeTime(app.submittedAt) ? ` · ${formatSafeTime(app.submittedAt)}` : ""}
+              </>
+            ) : (
+              <>Submitted —</>
+            )}
           </p>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>

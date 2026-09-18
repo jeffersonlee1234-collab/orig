@@ -70,8 +70,6 @@ async function initPwdSeniorTable() {
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS reason_for_replacement TEXT;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb;
       ALTER TABLE pwd_senior_applications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
-      UPDATE pwd_senior_applications SET submitted_at = CURRENT_TIMESTAMP WHERE submitted_at IS NULL;
-      UPDATE pwd_senior_applications SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;
     `);
     console.log('[DB] pwd_senior_applications table ready.');
 

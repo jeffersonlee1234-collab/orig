@@ -206,29 +206,29 @@ function isPWD(app: ApplicationSubmission): app is PWDApplicationSubmission {
 }
 
 function safeDateIso(dateVal: any): string {
-  if (!dateVal) return new Date().toISOString()
+  if (!dateVal) return ""
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+  return isNaN(d.getTime()) ? "" : d.toISOString()
 }
 
 function formatSafeDate(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleDateString()
+  if (!dateVal) return "—"
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toLocaleDateString() : d.toLocaleDateString()
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
 }
 
 function formatSafeTime(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  if (!dateVal) return ""
   const d = new Date(dateVal)
   return isNaN(d.getTime())
-    ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    ? ""
     : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
 function formatSafeDateTime(dateVal: any): string {
-  if (!dateVal) return new Date().toLocaleString()
+  if (!dateVal) return "—"
   const d = new Date(dateVal)
-  return isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString()
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString()
 }
 
 function findExistingIdForApplicant(app: ApplicationSubmission, allApps?: ApplicationSubmission[]): string | null {
@@ -1817,7 +1817,14 @@ function ApplicationCard({ app, onView, onShowCard }: ApplicationCardProps) {
           </div>
           <p className="gw-mono text-xs mb-1" style={{ color: "var(--ink-faint)" }}>REF {app.referenceNumber}</p>
           <p className="text-xs mb-3" style={{ color: "var(--ink-soft)" }}>
-            Submitted {formatSafeDate(app.submittedAt)} · {formatSafeTime(app.submittedAt)}
+            {app.submittedAt && formatSafeDate(app.submittedAt) !== "—" ? (
+              <>
+                Submitted {formatSafeDate(app.submittedAt)}
+                {formatSafeTime(app.submittedAt) ? ` · ${formatSafeTime(app.submittedAt)}` : ""}
+              </>
+            ) : (
+              <>Submitted —</>
+            )}
           </p>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-soft)" }}>
@@ -2741,9 +2748,18 @@ export default function PWDSeniorCitizen() {
         combined = combined.map((a: any) => {
           if (!a) return a
           const isPwd = isPWD(a)
-          const rawDate = a.submittedAt || a.created_at || a.submitted_at || a.dateSubmitted || a.date_submitted || a.updated_at
-          const safeSubmittedAt = safeDateIso(rawDate)
-          let updated = { ...a, submittedAt: safeSubmittedAt }
+          let resolvedDate = a.submittedAt || a.created_at || a.submitted_at || a.dateSubmitted || a.date_submitted || a.extra_data?.submittedAt || a.extra_data?.created_at
+          if (!resolvedDate && a.id) {
+            const match = String(a.id).match(/\b(1\d{11,12})\b/)
+            if (match) {
+              const d = new Date(Number(match[1]))
+              if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
+                resolvedDate = d.toISOString()
+              }
+            }
+          }
+          const safeSubmittedAt = safeDateIso(resolvedDate)
+          let updated = { ...a, submittedAt: safeSubmittedAt || a.submittedAt || "" }
           const rawAssigned = a.assignedIdNumber || (a as any).assigned_id_number
           if (rawAssigned && typeof rawAssigned === "string") {
             if (isPwd && (rawAssigned.toUpperCase().startsWith("SENIOR-") || rawAssigned.toUpperCase().startsWith("OSCA-"))) {
