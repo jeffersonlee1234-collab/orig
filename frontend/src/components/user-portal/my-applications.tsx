@@ -1388,6 +1388,21 @@ function DigitalIdCardModal({
   const emergencyInfo = getEmergencyInfo(app)
   const [activeSide, setActiveSide] = useState<"front" | "back">("front")
 
+  const issueDateObj = new Date((app as any).dateApproved || app.submittedAt || Date.now())
+  const validIssueDate = isNaN(issueDateObj.getTime()) ? new Date() : issueDateObj
+  const appDate = validIssueDate.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const expiryDateObj = new Date(validIssueDate)
+  expiryDateObj.setFullYear(expiryDateObj.getFullYear() + (theme.isPwd || theme.isSolo ? 3 : 5))
+  const expiryDateStr = expiryDateObj.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
   return (
     <div
       onClick={onClose}
