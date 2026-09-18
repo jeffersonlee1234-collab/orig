@@ -271,7 +271,7 @@ function AppointmentCard({
 
 // Helper: Robust single-key deduplicator for appointments
 function getAppointmentDeduplicationKey(a: { referenceNo?: string; applicantName?: string; concern?: string; module?: string }): string {
-  const cleanRef = String(a.referenceNo || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase().trim()
+  const cleanName = String(a.applicantName || "").toLowerCase().replace(/[^a-z0-9]/g, "").trim()
   const cleanConcern = String(a.concern || "")
     .toLowerCase()
     .replace(/assistance/g, "")
@@ -280,11 +280,11 @@ function getAppointmentDeduplicationKey(a: { referenceNo?: string; applicantName
     .replace(/capital/g, "")
     .replace(/[^a-z0-9]/g, "")
     .trim()
-  if (cleanRef) {
-    return `ref_${cleanRef}_${cleanConcern}`
+  if (cleanName) {
+    return `name_${cleanName}_${cleanConcern}`
   }
-  const cleanName = String(a.applicantName || "").toLowerCase().replace(/[^a-z0-9]/g, "").trim()
-  return `name_${cleanName}_${cleanConcern}`
+  const cleanRef = String(a.referenceNo || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase().trim()
+  return `ref_${cleanRef}_${cleanConcern}`
 }
 
 // ---- Main Component ----
@@ -576,6 +576,9 @@ export default function Appointments() {
             }
             if (a.id.startsWith('db-appt-')) {
               merged.id = a.id
+            }
+            if (a.referenceNo && String(a.referenceNo).length > String(merged.referenceNo || '').length) {
+              merged.referenceNo = a.referenceNo
             }
             if (a.concern && a.concern.length > (merged.concern || '').length) {
               merged.concern = a.concern
